@@ -488,7 +488,7 @@ export function Header() {
               onClick={() => setLanguageOpen((value) => !value)}
             >
               <Languages size={17} />
-              <span>{currentLanguage.shortLabel}</span>
+              <span className="language-current"><span aria-hidden="true">{currentLanguage.flag}</span>{currentLanguage.shortLabel}</span>
               <ChevronDown size={14} />
             </button>
             <div className="language-options" role="menu">
@@ -501,7 +501,7 @@ export function Header() {
                   className={selectedLanguage === language.code ? "active" : ""}
                   onClick={() => selectLanguage(language.code)}
                 >
-                  <span>{language.nativeLabel}</span>
+                  <span className="language-option-label"><span aria-hidden="true">{language.flag}</span>{language.nativeLabel}</span>
                   <small>{language.shortLabel}</small>
                 </button>
               ))}
@@ -527,6 +527,7 @@ export function Header() {
                   className={selectedLanguage === language.code ? "active" : ""}
                   onClick={() => selectLanguage(language.code)}
                 >
+                  <span aria-hidden="true">{language.flag}</span>
                   {language.nativeLabel}
                 </button>
               ))}

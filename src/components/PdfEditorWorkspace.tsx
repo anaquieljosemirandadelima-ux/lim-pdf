@@ -11,9 +11,11 @@ import {
   ImagePlus,
   LoaderCircle,
   MousePointer2,
+  PencilLine,
   Redo2,
   Save,
   ShieldCheck,
+  Signature,
   Trash2,
   Type,
   Undo2,
@@ -23,6 +25,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { downloadBytes } from "@/lib/browser-files";
 import { loadPdfJsDocument } from "@/lib/pdf-render";
 import { useTemporaryFiles } from "@/lib/use-temporary-files";
+import { SignaturePad } from "./SignaturePad";
 
 const MAX_FILE_SIZE = 60 * 1024 * 1024;
 const PREVIEW_SCALE = 1.2;
@@ -38,7 +41,7 @@ type PagePreview = {
   isBlank?: boolean;
 };
 
-type EditorObjectKind = "text-replacement" | "text" | "image";
+type EditorObjectKind = "text-replacement" | "text" | "image" | "redaction" | "highlight" | "comment" | "signature";
 
 type EditorObjectBase = {
   id: string;
@@ -70,7 +73,26 @@ type ImageObject = EditorObjectBase & {
   previewUrl: string;
 };
 
-type EditorObject = TextReplacementObject | TextObject | ImageObject;
+type RedactionObject = EditorObjectBase & {
+  kind: "redaction";
+};
+
+type HighlightObject = EditorObjectBase & {
+  kind: "highlight";
+  color: string;
+};
+
+type CommentObject = EditorObjectBase & {
+  kind: "comment";
+  text: string;
+};
+
+type SignatureObject = EditorObjectBase & {
+  kind: "signature";
+  dataUrl: string;
+};
+
+type EditorObject = TextReplacementObject | TextObject | ImageObject | RedactionObject | HighlightObject | CommentObject | SignatureObject;
 type EditorStatus = "idle" | "loading" | "ready" | "exporting" | "error";
 type DragMode = "move" | "resize";
 
@@ -140,8 +162,35 @@ function objectsEqual(a: EditorObject[], b: EditorObject[]) {
 
 function getObjectLabel(object: EditorObject) {
   if (object.kind === "image") return "Imagem";
+  if (object.kind === "signature") return "Assinatura";
+  if (object.kind === "redaction") return "Tarja de redacao";
+  if (object.kind === "highlight") return "Destaque";
+  if (object.kind === "comment") return object.text || "Comentario";
   if (object.kind === "text") return object.text || "Texto";
   return object.text !== object.originalText ? object.text : object.originalText;
+}
+
+function getObjectKindLabel(object: EditorObject) {
+  if (object.kind === "image") return "Imagem";
+  if (object.kind === "signature") return "Assinatura";
+  if (object.kind === "redaction") return "Redacao segura";
+  if (object.kind === "highlight") return "Destaque";
+  if (object.kind === "comment") return "Comentario";
+  if (object.kind === "text") return "Texto";
+  return "Texto detectado";
+}
+
+function hasEditableText(object: EditorObject): object is TextReplacementObject | TextObject | CommentObject {
+  return object.kind === "text-replacement" || object.kind === "text" || object.kind === "comment";
+}
+
+function hasFontSize(object: EditorObject): object is TextReplacementObject | TextObject {
+  return object.kind === "text-replacement" || object.kind === "text";
+}
+
+async function dataUrlToArrayBuffer(dataUrl: string) {
+  const response = await fetch(dataUrl);
+  return response.arrayBuffer();
 }
 
 function objectToCss(object: EditorObject, zoom: number) {
@@ -175,6 +224,7 @@ export function PdfEditorWorkspace() {
   const [message, setMessage] = useState("");
   const [undoStack, setUndoStack] = useState<EditorObject[][]>([]);
   const [redoStack, setRedoStack] = useState<EditorObject[][]>([]);
+  const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
 
   const currentPageId = pageSequence[currentPage];
   const page = pages.find((item) => item.pageIndex === currentPageId) || pages[0];
@@ -389,6 +439,80 @@ export function PdfEditorWorkspace() {
       y: 70,
       width: 180,
       height: 120,
+      zIndex: Math.max(0, ...objects.map((item) => item.zIndex)) + 1,
+    };
+    applyObjects((current) => [...current, object], id);
+  }
+
+  function addRedaction() {
+    if (!page) return;
+    const size = pagePdfSize(page);
+    const id = crypto.randomUUID();
+    const object: RedactionObject = {
+      id,
+      kind: "redaction",
+      pageIndex: page.pageIndex,
+      x: Math.max(18, size.width * 0.16),
+      y: Math.max(18, size.height * 0.58),
+      width: Math.min(230, size.width * 0.42),
+      height: 34,
+      zIndex: Math.max(0, ...objects.map((item) => item.zIndex)) + 1,
+    };
+    applyObjects((current) => [...current, object], id);
+  }
+
+  function addHighlight() {
+    if (!page) return;
+    const size = pagePdfSize(page);
+    const id = crypto.randomUUID();
+    const object: HighlightObject = {
+      id,
+      kind: "highlight",
+      pageIndex: page.pageIndex,
+      color: "#ffe15a",
+      x: Math.max(18, size.width * 0.16),
+      y: Math.max(18, size.height * 0.5),
+      width: Math.min(230, size.width * 0.42),
+      height: 26,
+      zIndex: Math.max(0, ...objects.map((item) => item.zIndex)) + 1,
+    };
+    applyObjects((current) => [...current, object], id);
+  }
+
+  function addComment() {
+    if (!page) return;
+    const size = pagePdfSize(page);
+    const id = crypto.randomUUID();
+    const object: CommentObject = {
+      id,
+      kind: "comment",
+      pageIndex: page.pageIndex,
+      text: "Comentario",
+      x: Math.max(18, size.width * 0.16),
+      y: Math.max(18, size.height * 0.38),
+      width: Math.min(190, size.width * 0.34),
+      height: 72,
+      zIndex: Math.max(0, ...objects.map((item) => item.zIndex)) + 1,
+    };
+    applyObjects((current) => [...current, object], id);
+  }
+
+  function addSignature() {
+    if (!page || !signatureDataUrl) {
+      setMessage("Desenhe a assinatura no painel para inserir no PDF.");
+      return;
+    }
+    const size = pagePdfSize(page);
+    const id = crypto.randomUUID();
+    const object: SignatureObject = {
+      id,
+      kind: "signature",
+      pageIndex: page.pageIndex,
+      dataUrl: signatureDataUrl,
+      x: Math.max(18, size.width * 0.16),
+      y: Math.max(18, size.height * 0.22),
+      width: Math.min(210, size.width * 0.38),
+      height: 74,
       zIndex: Math.max(0, ...objects.map((item) => item.zIndex)) + 1,
     };
     applyObjects((current) => [...current, object], id);
@@ -672,15 +796,22 @@ export function PdfEditorWorkspace() {
       for (const pageId of pageSequence) {
         const preview = pages.find((item) => item.pageIndex === pageId);
         if (!preview) continue;
+        const pageObjects = sortedObjects.filter((object) => object.pageIndex === preview.pageIndex);
+        const hasRedaction = pageObjects.some((object) => object.kind === "redaction");
         let pdfPage;
         if (preview.sourcePageIndex === null || preview.isBlank) {
           const size = pagePdfSize(preview);
           pdfPage = document.addPage([size.width, size.height]);
+        } else if (hasRedaction) {
+          const size = pagePdfSize(preview);
+          pdfPage = document.addPage([size.width, size.height]);
+          const previewImage = await document.embedJpg(await dataUrlToArrayBuffer(preview.dataUrl));
+          pdfPage.drawImage(previewImage, { x: 0, y: 0, width: size.width, height: size.height });
         } else {
           const [copiedPage] = await document.copyPages(sourceDocument, [preview.sourcePageIndex]);
           pdfPage = document.addPage(copiedPage);
         }
-        for (const item of sortedObjects.filter((object) => object.pageIndex === preview.pageIndex)) {
+        for (const item of pageObjects) {
           if (item.kind === "text-replacement") {
             if (item.text === item.originalText) continue;
             pdfPage.drawRectangle({
@@ -701,6 +832,46 @@ export function PdfEditorWorkspace() {
               });
             }
           }
+          if (item.kind === "redaction") {
+            pdfPage.drawRectangle({
+              x: item.x,
+              y: item.y,
+              width: item.width,
+              height: item.height,
+              color: pdfLib.rgb(0, 0, 0),
+            });
+          }
+          if (item.kind === "highlight") {
+            pdfPage.drawRectangle({
+              x: item.x,
+              y: item.y,
+              width: item.width,
+              height: item.height,
+              color: pdfLib.rgb(1, 0.88, 0.28),
+              opacity: 0.45,
+            });
+          }
+          if (item.kind === "comment") {
+            pdfPage.drawRectangle({
+              x: item.x,
+              y: item.y,
+              width: item.width,
+              height: item.height,
+              color: pdfLib.rgb(1, 0.96, 0.72),
+              borderColor: pdfLib.rgb(0.9, 0.62, 0.12),
+              borderWidth: 1,
+            });
+            if (item.text.trim()) {
+              pdfPage.drawText(item.text, {
+                x: item.x + 6,
+                y: item.y + item.height - 15,
+                size: 9,
+                font,
+                color: pdfLib.rgb(0.17, 0.14, 0.08),
+                maxWidth: Math.max(20, item.width - 12),
+              });
+            }
+          }
           if (item.kind === "text") {
             pdfPage.drawText(item.text, {
               x: item.x,
@@ -714,6 +885,10 @@ export function PdfEditorWorkspace() {
           if (item.kind === "image") {
             const bytes = await item.file.arrayBuffer();
             const image = item.file.type === "image/png" ? await document.embedPng(bytes) : await document.embedJpg(bytes);
+            pdfPage.drawImage(image, { x: item.x, y: item.y, width: item.width, height: item.height || item.width * (image.height / image.width) });
+          }
+          if (item.kind === "signature") {
+            const image = await document.embedPng(await dataUrlToArrayBuffer(item.dataUrl));
             pdfPage.drawImage(image, { x: item.x, y: item.y, width: item.width, height: item.height || item.width * (image.height / image.width) });
           }
         }
@@ -767,6 +942,10 @@ export function PdfEditorWorkspace() {
         <aside className="editor-tools">
           <button className="active" type="button"><MousePointer2 size={20} /><span>Selecionar</span></button>
           <button type="button" onClick={addText}><Type size={20} /><span>Adicionar texto</span></button>
+          <button type="button" onClick={addHighlight}><PencilLine size={20} /><span>Destacar</span></button>
+          <button type="button" onClick={addRedaction}><ShieldCheck size={20} /><span>Redigir</span></button>
+          <button type="button" onClick={addComment}><FileText size={20} /><span>Comentario</span></button>
+          <button type="button" onClick={addSignature}><Signature size={20} /><span>Assinatura</span></button>
           <button type="button" onClick={() => imageInputRef.current?.click()}><ImagePlus size={20} /><span>Adicionar imagem</span></button>
           <input ref={imageInputRef} type="file" accept="image/jpeg,image/png" hidden onChange={(event) => event.target.files?.[0] && addImage(event.target.files[0])} />
         </aside>
@@ -810,8 +989,12 @@ export function PdfEditorWorkspace() {
                   onPointerCancel={endDrag}
                 >
                   {object.kind === "image" ? <img src={object.previewUrl} alt="Imagem adicionada" draggable={false} /> : null}
+                  {object.kind === "signature" ? <img src={object.dataUrl} alt="Assinatura adicionada" draggable={false} /> : null}
                   {object.kind === "text" ? <span style={{ fontSize: object.fontSize * PREVIEW_SCALE * zoom }}>{object.text}</span> : null}
                   {object.kind === "text-replacement" && object.text !== object.originalText ? <span style={{ fontSize: object.fontSize * PREVIEW_SCALE * zoom }}>{object.text}</span> : null}
+                  {object.kind === "redaction" ? <span>REDACTED</span> : null}
+                  {object.kind === "highlight" ? <span>Destaque</span> : null}
+                  {object.kind === "comment" ? <span>{object.text}</span> : null}
                   {selectedObjectId === object.id ? (
                     <span
                       className="editor-resize-handle"
@@ -832,14 +1015,14 @@ export function PdfEditorWorkspace() {
           <h2>Propriedades</h2>
           {selectedObject ? (
             <div className="properties-panel">
-              <div className="object-layer-row"><strong>{selectedObjects.length > 1 ? `${selectedObjects.length} objetos selecionados` : selectedObject.kind === "image" ? "Imagem" : selectedObject.kind === "text" ? "Texto" : "Texto detectado"}</strong><button type="button" onClick={deleteSelected}><Trash2 size={15} /> Excluir</button></div>
+              <div className="object-layer-row"><strong>{selectedObjects.length > 1 ? `${selectedObjects.length} objetos selecionados` : getObjectKindLabel(selectedObject)}</strong><button type="button" onClick={deleteSelected}><Trash2 size={15} /> Excluir</button></div>
               <div className="selection-actions">
                 <button type="button" onClick={copySelected}>Copiar</button>
                 <button type="button" onClick={duplicateSelected}>Duplicar</button>
                 <button type="button" onClick={pasteObjects} disabled={!clipboard.length}>Colar</button>
               </div>
-              {selectedObjects.length === 1 && selectedObject.kind !== "image" ? <label><span>Conteúdo</span><textarea value={selectedObject.text} onChange={(event) => updateObject(selectedObject.id, { text: event.target.value } as Partial<EditorObject>)} /></label> : null}
-              {selectedObjects.length === 1 && selectedObject.kind !== "image" ? <label><span>Tamanho da fonte</span><input type="number" min="6" max="120" value={selectedObject.fontSize} onChange={(event) => updateObject(selectedObject.id, { fontSize: Number(event.target.value) || 12, height: Math.max(MIN_OBJECT_SIZE, (Number(event.target.value) || 12) * 1.35) } as Partial<EditorObject>)} /></label> : null}
+              {selectedObjects.length === 1 && hasEditableText(selectedObject) ? <label><span>Conteúdo</span><textarea value={selectedObject.text} onChange={(event) => updateObject(selectedObject.id, { text: event.target.value } as Partial<EditorObject>)} /></label> : null}
+              {selectedObjects.length === 1 && hasFontSize(selectedObject) ? <label><span>Tamanho da fonte</span><input type="number" min="6" max="120" value={selectedObject.fontSize} onChange={(event) => updateObject(selectedObject.id, { fontSize: Number(event.target.value) || 12, height: Math.max(MIN_OBJECT_SIZE, (Number(event.target.value) || 12) * 1.35) } as Partial<EditorObject>)} /></label> : null}
               {selectedObjects.length === 1 ? (
                 <div className="properties-grid">
                   <label><span>X</span><input type="number" value={Math.round(selectedObject.x)} onChange={(event) => updateObject(selectedObject.id, { x: Number(event.target.value) || 0 } as Partial<EditorObject>)} /></label>
@@ -870,8 +1053,13 @@ export function PdfEditorWorkspace() {
               <p>Atalhos: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+D, Ctrl+Z, Ctrl+Y, Delete, Esc e setas. Use Shift + seta para mover 10 pontos.</p>
             </div>
           ) : (
-            <div className="empty-properties"><MousePointer2 size={26} /><strong>Selecione um objeto</strong><p>Clique em textos detectados, textos novos ou imagens para editar, mover, redimensionar ou excluir.</p></div>
+            <div className="empty-properties"><MousePointer2 size={26} /><strong>Selecione um objeto</strong><p>Clique em textos, imagens, destaques, tarjas, comentarios ou assinaturas para editar, mover, redimensionar ou excluir.</p></div>
           )}
+          <div className="editor-signature-panel">
+            <strong>Assinatura</strong>
+            <SignaturePad onChange={setSignatureDataUrl} />
+            <button type="button" className="secondary-button" onClick={addSignature} disabled={!signatureDataUrl}>Inserir assinatura</button>
+          </div>
           <div className="editor-status-card">
             {status === "exporting" ? <LoaderCircle className="spin" size={18} /> : <CheckCircle2 size={18} />}
             <span>{message || "Alterações locais e privadas."}</span>

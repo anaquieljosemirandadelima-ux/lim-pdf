@@ -365,8 +365,21 @@ img,svg{display:block}
 .editor-object.selected{border:2px solid var(--blue);background:rgba(239,21,28,.08);box-shadow:0 0 0 2px #fff}
 .editor-object.changed{border-color:var(--green)}
 .editor-object span:not(.editor-resize-handle){display:block;line-height:1;white-space:nowrap;pointer-events:none}
-.editor-object-image{background:transparent}
-.editor-object-image img{width:100%;height:100%;object-fit:fill;display:block;pointer-events:none}
+.editor-object-image,.editor-object-signature{background:transparent}
+.editor-object-image img,.editor-object-signature img{width:100%;height:100%;object-fit:fill;display:block;pointer-events:none}
+.editor-object-redaction{background:#050505;border-color:#050505;color:#fff;display:grid;place-items:center}
+.editor-object-redaction:hover,.editor-object-redaction.selected{background:#050505;border-color:var(--blue)}
+.editor-object-redaction span:not(.editor-resize-handle){font-size:9px;font-weight:900;letter-spacing:0;color:#fff;text-align:center}
+.editor-object-highlight{background:rgba(255,225,90,.5);border-color:rgba(238,190,34,.6)}
+.editor-object-highlight span:not(.editor-resize-handle){font-size:8px;font-weight:850;color:#8a5f00;padding:5px 7px}
+.editor-object-comment{background:#fff4b8;border:1px solid #e6b64a;border-radius:6px;padding:7px;box-shadow:0 7px 16px rgba(91,62,10,.12)}
+.editor-object-comment span:not(.editor-resize-handle){font-size:10px;line-height:1.25;white-space:normal;color:#3f2d04}
+.editor-signature-panel{display:grid;gap:9px;margin-top:14px;border:1px solid var(--line);border-radius:12px;background:#fbfcfe;padding:10px}
+.editor-signature-panel>strong{font-size:11px;color:#17233a}
+.editor-signature-panel .signature-field{gap:7px}
+.editor-signature-panel .signature-label span{font-size:9px}
+.editor-signature-panel .signature-canvas{height:92px}
+.editor-signature-panel small{font-size:8px}
 .editor-resize-handle{position:absolute;right:-7px;bottom:-7px;width:14px;height:14px;border:2px solid #fff;border-radius:4px;background:var(--blue);box-shadow:0 2px 8px #0003;cursor:nwse-resize}
 .editor-page-navigation{position:sticky;bottom:6px;left:50%;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:5px 7px;box-shadow:var(--shadow-soft);margin:14px auto 0;width:max-content}
 .editor-page-navigation button{width:30px;height:30px;border:0;border-radius:7px;background:#f1f5f9;display:grid;place-items:center}

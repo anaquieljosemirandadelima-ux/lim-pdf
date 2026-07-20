@@ -27,6 +27,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { downloadBytes } from "@/lib/browser-files";
 import { loadPdfJsDocument } from "@/lib/pdf-render";
 import { useTemporaryFiles } from "@/lib/use-temporary-files";
+import { useLanguage } from "@/lib/use-language";
 import { SignaturePad } from "./SignaturePad";
 
 const MAX_FILE_SIZE = 60 * 1024 * 1024;
@@ -35,6 +36,87 @@ const MIN_OBJECT_SIZE = 12;
 const HISTORY_LIMIT = 60;
 const EDITOR_DRAFT_PREFIX = "limpdf-editor-draft:";
 const EDITOR_RECENTS_KEY = "limpdf-editor-recents-v1";
+
+const editorText = {
+  "pt-BR": {
+    openTitle: "Abra o PDF que deseja editar",
+    openDescription: "O arquivo ficará armazenado temporariamente no navegador para evitar perda durante o trabalho.",
+    selectPdf: "Selecionar PDF",
+    noUpload: "Sem upload para o LIM PDF",
+    recentDrafts: "Rascunhos recentes",
+    select: "Selecionar",
+    addText: "Adicionar texto",
+    highlight: "Destacar",
+    redact: "Redigir",
+    comment: "Comentário",
+    signature: "Assinatura",
+    addImage: "Adicionar imagem",
+    pages: "Páginas",
+    properties: "Propriedades",
+    delete: "Excluir",
+    copy: "Copiar",
+    duplicate: "Duplicar",
+    paste: "Colar",
+    content: "Conteúdo",
+    fontSize: "Tamanho da fonte",
+    layers: "Camadas da página",
+    noLayers: "Nenhuma camada adicionada nesta página.",
+    insertSignature: "Inserir assinatura",
+    cache: "Processamento local com cache temporário de até 4 horas. Nenhum documento é enviado ao LIM PDF.",
+  },
+  en: {
+    openTitle: "Open the PDF you want to edit",
+    openDescription: "The file will be stored temporarily in the browser to avoid losing your work.",
+    selectPdf: "Select PDF",
+    noUpload: "No upload to LIM PDF",
+    recentDrafts: "Recent drafts",
+    select: "Select",
+    addText: "Add text",
+    highlight: "Highlight",
+    redact: "Redact",
+    comment: "Comment",
+    signature: "Signature",
+    addImage: "Add image",
+    pages: "Pages",
+    properties: "Properties",
+    delete: "Delete",
+    copy: "Copy",
+    duplicate: "Duplicate",
+    paste: "Paste",
+    content: "Content",
+    fontSize: "Font size",
+    layers: "Page layers",
+    noLayers: "No layer added to this page.",
+    insertSignature: "Insert signature",
+    cache: "Local processing with temporary cache for up to 4 hours. No document is sent to LIM PDF.",
+  },
+  es: {
+    openTitle: "Abre el PDF que quieres editar",
+    openDescription: "El archivo se guardará temporalmente en el navegador para evitar perder el trabajo.",
+    selectPdf: "Seleccionar PDF",
+    noUpload: "Sin subida a LIM PDF",
+    recentDrafts: "Borradores recientes",
+    select: "Seleccionar",
+    addText: "Añadir texto",
+    highlight: "Resaltar",
+    redact: "Redactar",
+    comment: "Comentario",
+    signature: "Firma",
+    addImage: "Añadir imagen",
+    pages: "Páginas",
+    properties: "Propiedades",
+    delete: "Eliminar",
+    copy: "Copiar",
+    duplicate: "Duplicar",
+    paste: "Pegar",
+    content: "Contenido",
+    fontSize: "Tamaño de fuente",
+    layers: "Capas de la página",
+    noLayers: "No se añadió ninguna capa a esta página.",
+    insertSignature: "Insertar firma",
+    cache: "Procesamiento local con caché temporal de hasta 4 horas. Ningún documento se envía a LIM PDF.",
+  },
+} as const;
 
 type PagePreview = {
   pageIndex: number;
@@ -280,6 +362,8 @@ function objectToCss(object: EditorObject, zoom: number) {
 }
 
 export function PdfEditorWorkspace() {
+  const language = useLanguage();
+  const et = editorText[language];
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -1041,13 +1125,13 @@ export function PdfEditorWorkspace() {
     return (
       <section className="editor-upload-card">
         <span className="editor-upload-icon"><UploadCloud size={31} /></span>
-        <h2>Abra o PDF que deseja editar</h2>
-        <p>O arquivo ficará armazenado temporariamente no navegador para evitar perda durante o trabalho.</p>
-        <button className="primary-button large-button" type="button" onClick={() => fileInputRef.current?.click()}><FileText size={18} /> Selecionar PDF</button>
+        <h2>{et.openTitle}</h2>
+        <p>{et.openDescription}</p>
+        <button className="primary-button large-button" type="button" onClick={() => fileInputRef.current?.click()}><FileText size={18} /> {et.selectPdf}</button>
         <input ref={fileInputRef} type="file" accept="application/pdf" hidden onChange={(event) => event.target.files?.[0] && openFile(event.target.files[0])} />
         {recentDrafts.length ? (
           <div className="editor-recent-drafts">
-            <strong>Rascunhos recentes</strong>
+            <strong>{et.recentDrafts}</strong>
             {recentDrafts.map((draft) => (
               <div key={draft.fileKey}>
                 <span>{draft.fileName}</span>
@@ -1056,7 +1140,7 @@ export function PdfEditorWorkspace() {
             ))}
           </div>
         ) : null}
-        <div className="editor-upload-security"><ShieldCheck size={17} /> Sem upload para o LIM PDF</div>
+        <div className="editor-upload-security"><ShieldCheck size={17} /> {et.noUpload}</div>
       </section>
     );
   }
@@ -1070,17 +1154,17 @@ export function PdfEditorWorkspace() {
       </div>
       <div className="editor-body">
         <aside className="editor-tools">
-          <button className="active" type="button"><MousePointer2 size={20} /><span>Selecionar</span></button>
-          <button type="button" onClick={addText}><Type size={20} /><span>Adicionar texto</span></button>
-          <button type="button" onClick={addHighlight}><PencilLine size={20} /><span>Destacar</span></button>
-          <button type="button" onClick={addRedaction}><ShieldCheck size={20} /><span>Redigir</span></button>
-          <button type="button" onClick={addComment}><FileText size={20} /><span>Comentario</span></button>
-          <button type="button" onClick={addSignature}><Signature size={20} /><span>Assinatura</span></button>
-          <button type="button" onClick={() => imageInputRef.current?.click()}><ImagePlus size={20} /><span>Adicionar imagem</span></button>
+          <button className="active" type="button"><MousePointer2 size={20} /><span>{et.select}</span></button>
+          <button type="button" onClick={addText}><Type size={20} /><span>{et.addText}</span></button>
+          <button type="button" onClick={addHighlight}><PencilLine size={20} /><span>{et.highlight}</span></button>
+          <button type="button" onClick={addRedaction}><ShieldCheck size={20} /><span>{et.redact}</span></button>
+          <button type="button" onClick={addComment}><FileText size={20} /><span>{et.comment}</span></button>
+          <button type="button" onClick={addSignature}><Signature size={20} /><span>{et.signature}</span></button>
+          <button type="button" onClick={() => imageInputRef.current?.click()}><ImagePlus size={20} /><span>{et.addImage}</span></button>
           <input ref={imageInputRef} type="file" accept="image/jpeg,image/png" hidden onChange={(event) => event.target.files?.[0] && addImage(event.target.files[0])} />
         </aside>
         <aside className="editor-pages">
-          <h2>Páginas</h2>
+          <h2>{et.pages}</h2>
           <div className="page-production-controls">
             <button type="button" onClick={() => moveCurrentPage(-1)} disabled={currentPage === 0} title="Mover página para cima"><ArrowUp size={14} /></button>
             <button type="button" onClick={() => moveCurrentPage(1)} disabled={currentPage === pageSequence.length - 1} title="Mover página para baixo"><ArrowDown size={14} /></button>
@@ -1142,17 +1226,17 @@ export function PdfEditorWorkspace() {
           {pageSequence.length ? <div className="editor-page-navigation"><button type="button" disabled={currentPage === 0} onClick={() => setCurrentPage((value) => value - 1)}><ArrowLeft size={17} /></button><span>{currentPage + 1} / {pageSequence.length}</span><button type="button" disabled={currentPage === pageSequence.length - 1} onClick={() => setCurrentPage((value) => value + 1)}><ArrowRight size={17} /></button></div> : null}
         </div>
         <aside className="editor-properties">
-          <h2>Propriedades</h2>
+          <h2>{et.properties}</h2>
           {selectedObject ? (
             <div className="properties-panel">
-              <div className="object-layer-row"><strong>{selectedObjects.length > 1 ? `${selectedObjects.length} objetos selecionados` : getObjectKindLabel(selectedObject)}</strong><button type="button" onClick={deleteSelected}><Trash2 size={15} /> Excluir</button></div>
+              <div className="object-layer-row"><strong>{selectedObjects.length > 1 ? `${selectedObjects.length} objetos selecionados` : getObjectKindLabel(selectedObject)}</strong><button type="button" onClick={deleteSelected}><Trash2 size={15} /> {et.delete}</button></div>
               <div className="selection-actions">
-                <button type="button" onClick={copySelected}>Copiar</button>
-                <button type="button" onClick={duplicateSelected}>Duplicar</button>
-                <button type="button" onClick={pasteObjects} disabled={!clipboard.length}>Colar</button>
+                <button type="button" onClick={copySelected}>{et.copy}</button>
+                <button type="button" onClick={duplicateSelected}>{et.duplicate}</button>
+                <button type="button" onClick={pasteObjects} disabled={!clipboard.length}>{et.paste}</button>
               </div>
-              {selectedObjects.length === 1 && hasEditableText(selectedObject) ? <label><span>Conteúdo</span><textarea value={selectedObject.text} disabled={selectedObject.locked} onChange={(event) => updateObject(selectedObject.id, { text: event.target.value } as Partial<EditorObject>)} /></label> : null}
-              {selectedObjects.length === 1 && hasFontSize(selectedObject) ? <label><span>Tamanho da fonte</span><input type="number" min="6" max="120" value={selectedObject.fontSize} disabled={selectedObject.locked} onChange={(event) => updateObject(selectedObject.id, { fontSize: Number(event.target.value) || 12, height: Math.max(MIN_OBJECT_SIZE, (Number(event.target.value) || 12) * 1.35) } as Partial<EditorObject>)} /></label> : null}
+              {selectedObjects.length === 1 && hasEditableText(selectedObject) ? <label><span>{et.content}</span><textarea value={selectedObject.text} disabled={selectedObject.locked} onChange={(event) => updateObject(selectedObject.id, { text: event.target.value } as Partial<EditorObject>)} /></label> : null}
+              {selectedObjects.length === 1 && hasFontSize(selectedObject) ? <label><span>{et.fontSize}</span><input type="number" min="6" max="120" value={selectedObject.fontSize} disabled={selectedObject.locked} onChange={(event) => updateObject(selectedObject.id, { fontSize: Number(event.target.value) || 12, height: Math.max(MIN_OBJECT_SIZE, (Number(event.target.value) || 12) * 1.35) } as Partial<EditorObject>)} /></label> : null}
               {selectedObjects.length === 1 ? (
                 <div className="properties-grid">
                   <label><span>X</span><input type="number" value={Math.round(selectedObject.x)} disabled={selectedObject.locked} onChange={(event) => updateObject(selectedObject.id, { x: Number(event.target.value) || 0 } as Partial<EditorObject>)} /></label>
@@ -1189,7 +1273,7 @@ export function PdfEditorWorkspace() {
           )}
           <div className="editor-layers-panel">
             <div className="layers-panel-heading">
-              <strong>Camadas da página</strong>
+              <strong>{et.layers}</strong>
               <span>{currentPageLayers.length}</span>
             </div>
             {currentPageLayers.length ? (
@@ -1206,13 +1290,13 @@ export function PdfEditorWorkspace() {
                 ))}
               </div>
             ) : (
-              <p className="layers-empty">Nenhuma camada adicionada nesta página.</p>
+              <p className="layers-empty">{et.noLayers}</p>
             )}
           </div>
           <div className="editor-signature-panel">
-            <strong>Assinatura</strong>
+            <strong>{et.signature}</strong>
             <SignaturePad onChange={setSignatureDataUrl} />
-            <button type="button" className="secondary-button" onClick={addSignature} disabled={!signatureDataUrl}>Inserir assinatura</button>
+            <button type="button" className="secondary-button" onClick={addSignature} disabled={!signatureDataUrl}>{et.insertSignature}</button>
           </div>
           <div className="editor-status-card">
             {status === "exporting" ? <LoaderCircle className="spin" size={18} /> : <CheckCircle2 size={18} />}
@@ -1220,7 +1304,7 @@ export function PdfEditorWorkspace() {
           </div>
         </aside>
       </div>
-      <div className="editor-cache-bar"><ShieldCheck size={16} /><span>Processamento local com cache temporário de até 4 horas. Nenhum documento é enviado ao LIM PDF.</span><Save size={16} /></div>
+      <div className="editor-cache-bar"><ShieldCheck size={16} /><span>{et.cache}</span><Save size={16} /></div>
     </section>
   );
 }

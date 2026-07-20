@@ -1,7 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import { Globe2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { PrivacyPreferencesButton } from "@/components/ConsentBanner";
+import { getLanguage } from "@/lib/i18n";
+import { uiText } from "@/lib/i18n-content";
+import { useLanguage } from "@/lib/use-language";
 
 const columns = [
   {
@@ -35,27 +40,35 @@ const columns = [
 ];
 
 export function Footer() {
+  const language = useLanguage();
+  const currentLanguage = getLanguage(language);
+  const text = uiText[language];
+  const localizedColumns = language === "pt-BR" ? columns : [
+    { title: language === "en" ? "Tools" : "Herramientas", links: columns[0].links },
+    { title: language === "en" ? "Resources" : "Recursos", links: columns[1].links },
+    { title: language === "en" ? "Company" : "Institucional", links: columns[2].links },
+  ];
   return (
     <footer className="site-footer">
       <div className="container footer-grid">
         <div className="footer-brand">
           <Logo />
-          <p>Ferramentas gratuitas para editar, organizar, converter, assinar e otimizar documentos PDF diretamente no navegador.</p>
-          <div className="footer-language"><Globe2 size={15} /> Português (Brasil)</div>
+          <p>{text.footerDescription}</p>
+          <div className="footer-language"><Globe2 size={15} /> {currentLanguage.nativeLabel}</div>
         </div>
-        {columns.map((column) => (
+        {localizedColumns.map((column) => (
           <div className="footer-column" key={column.title}>
             <h2>{column.title}</h2>
             <ul>{column.links.map(([label, href]) => <li key={href}><Link href={href}>{label}</Link></li>)}</ul>
           </div>
         ))}
         <div className="footer-column footer-privacy-column">
-          <h2>Privacidade</h2>
-          <p>Arquivos processados localmente e cache temporário com expiração automática.</p>
+          <h2>{text.privacy}</h2>
+          <p>{text.privacyText}</p>
           <PrivacyPreferencesButton />
         </div>
       </div>
-      <div className="container footer-bottom"><span>© {new Date().getFullYear()} LIM PDF. Todos os direitos reservados.</span><span>Sem login · Sem marca-d’água · Processamento local</span></div>
+      <div className="container footer-bottom"><span>© {new Date().getFullYear()} LIM PDF. {text.rights}</span><span>{text.footerBadge}</span></div>
     </footer>
   );
 }

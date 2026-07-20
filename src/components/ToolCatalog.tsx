@@ -15,20 +15,14 @@ import {
 } from "lucide-react";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { ToolIcon } from "@/components/ToolIcon";
+import { sectionTranslations, toolText, uiText } from "@/lib/i18n-content";
 import { navigationGroups, type NavigationGroup } from "@/lib/navigation";
 import { saveTemporaryFiles } from "@/lib/temporary-cache";
 import { toolBySlug, tools, type ToolDefinition, type ToolSlug } from "@/lib/tools";
+import { useLanguage } from "@/lib/use-language";
 
 const FAVORITES_KEY = "limpdf-tool-favorites-v1";
 const RECENTS_KEY = "limpdf-tool-recents-v1";
-
-const quickActions = [
-  { title: "Selecionar arquivo", description: "Abrir no editor", href: "/ferramentas/editar-pdf", icon: UploadCloud, primary: true },
-  { title: "Arrastar PDF", description: "Solte o arquivo aqui", href: "/ferramentas/editar-pdf", icon: UploadCloud, drop: true },
-  { title: "Abrir editor", description: "Editar e assinar PDF", href: "/ferramentas/editar-pdf", icon: Sparkles },
-  { title: "Converter agora", description: "PDF, imagem e texto", href: "/categorias/converter", icon: ArrowRight },
-  { title: "Organizar páginas", description: "Reordenar, dividir e mais", href: "/categorias/organizar", icon: Grid2X2 },
-];
 
 const catalogSections: Array<{
   title: string;
@@ -111,6 +105,8 @@ function uniqueTools(slugs: ToolSlug[]) {
 }
 
 export function ToolCatalog() {
+  const language = useLanguage();
+  const text = uiText[language];
   const router = useRouter();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [active, setActive] = React.useState("todas");
@@ -120,15 +116,22 @@ export function ToolCatalog() {
   const [recents, setRecents] = React.useState<ToolSlug[]>(() => readStoredSlugs(RECENTS_KEY));
 
   const normalized = normalize(query.trim());
-  const visibleSections = catalogSections.filter((section) => active === "todas" || section.label === active);
+  const localizedSections = catalogSections.map((section) => {
+    const translated = language === "pt-BR" ? undefined : sectionTranslations[language]?.[section.title as keyof typeof sectionTranslations.en];
+    return { ...section, title: translated?.[0] ?? section.title, label: translated?.[1] ?? section.label, sourceLabel: section.label };
+  });
+  const visibleSections = localizedSections.filter((section) => active === "todas" || section.sourceLabel === active);
   const favoriteTools = uniqueTools(favorites);
   const recentTools = uniqueTools(recents);
   const searchResults = React.useMemo(() => {
     if (!normalized) return [];
     return tools
-      .filter((tool) => normalize([tool.name, tool.category, tool.shortDescription, tool.description, ...tool.keywords].join(" ")).includes(normalized))
+      .filter((tool) => {
+        const localized = toolText(language, tool.slug, tool);
+        return normalize([localized.name, tool.category, localized.shortDescription, tool.description, ...tool.keywords].join(" ")).includes(normalized);
+      })
       .slice(0, 12);
-  }, [normalized]);
+  }, [language, normalized]);
 
   function storeFavorites(next: ToolSlug[]) {
     setFavorites(next);
@@ -154,16 +157,17 @@ export function ToolCatalog() {
 
   function renderTool(tool: ToolDefinition) {
     const favorite = favorites.includes(tool.slug);
+    const localized = toolText(language, tool.slug, tool);
     return (
       <article className="catalog-tool-item" key={tool.slug}>
         <Link href={`/ferramentas/${tool.slug}`} onClick={() => rememberTool(tool.slug)}>
           <span className={`mini-tool-icon accent-${tool.accent}`}><ToolIcon icon={tool.icon} /></span>
-          <span><strong>{tool.name}</strong><small>{tool.shortDescription}</small></span>
+          <span><strong>{localized.name}</strong><small>{localized.shortDescription}</small></span>
         </Link>
         <button
           type="button"
           className={favorite ? "favorite-toggle active" : "favorite-toggle"}
-          aria-label={favorite ? `Remover ${tool.name} dos favoritos` : `Adicionar ${tool.name} aos favoritos`}
+          aria-label={favorite ? `Remover ${localized.name} dos favoritos` : `Adicionar ${localized.name} aos favoritos`}
           onClick={() => toggleFavorite(tool.slug)}
         >
           <Star size={15} fill={favorite ? "currentColor" : "none"} />
@@ -176,24 +180,30 @@ export function ToolCatalog() {
     <div className="tool-center">
       <section className="tool-center-hero">
         <div className="tool-center-copy">
-          <span>Central de Ferramentas</span>
-          <h1>Central de Ferramentas</h1>
-          <p>Todas as ferramentas que você precisa para trabalhar com PDFs de forma simples, rápida e segura.</p>
+          <span>{text.toolCenter}</span>
+          <h1>{text.toolCenter}</h1>
+          <p>{text.toolCenterDescription}</p>
         </div>
         <label className="tool-center-search">
           <Search size={20} />
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar: juntar, assinar, converter..." />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={text.searchPlaceholder} />
         </label>
       </section>
 
       <section className="quick-actions" aria-label="Ações rápidas">
-        {quickActions.map((action) => {
+        {[
+          { copy: text.quickActions.select, href: "/ferramentas/editar-pdf", icon: UploadCloud, primary: true },
+          { copy: text.quickActions.drop, href: "/ferramentas/editar-pdf", icon: UploadCloud, drop: true },
+          { copy: text.quickActions.editor, href: "/ferramentas/editar-pdf", icon: Sparkles },
+          { copy: text.quickActions.convert, href: "/categorias/converter", icon: ArrowRight },
+          { copy: text.quickActions.organize, href: "/categorias/organizar", icon: Grid2X2 },
+        ].map((action) => {
           const Icon = action.icon;
           if (action.drop) {
             return (
               <button
                 type="button"
-                key={action.title}
+                key={action.copy[0]}
                 className={`quick-action ${dragging ? "dragging" : ""}`}
                 onClick={() => fileInputRef.current?.click()}
                 onDragEnter={(event) => { event.preventDefault(); setDragging(true); }}
@@ -206,17 +216,17 @@ export function ToolCatalog() {
                 }}
               >
                 <span><Icon size={22} /></span>
-                <b>{action.title}</b>
-                <small>{dragging ? "Solte para abrir" : action.description}</small>
+                <b>{action.copy[0]}</b>
+                <small>{dragging ? action.copy[2] : action.copy[1]}</small>
                 <ArrowRight size={18} />
               </button>
             );
           }
           return (
-            <Link className={`quick-action ${action.primary ? "primary" : ""}`} href={action.href} key={action.title}>
+            <Link className={`quick-action ${action.primary ? "primary" : ""}`} href={action.href} key={action.copy[0]}>
               <span><Icon size={22} /></span>
-              <b>{action.title}</b>
-              <small>{action.description}</small>
+              <b>{action.copy[0]}</b>
+              <small>{action.copy[1]}</small>
               <ArrowRight size={18} />
             </Link>
           );
@@ -225,34 +235,34 @@ export function ToolCatalog() {
       </section>
 
       {(favoriteTools.length || recentTools.length) && !normalized ? (
-        <section className="personal-tool-row" aria-label="Ferramentas salvas">
+        <section className="personal-tool-row" aria-label={text.savedTools}>
           {favoriteTools.length ? (
             <div>
-              <h2><Star size={16} /> Favoritos</h2>
+              <h2><Star size={16} /> {text.favorites}</h2>
               <div>{favoriteTools.slice(0, 5).map(renderTool)}</div>
             </div>
           ) : null}
           {recentTools.length ? (
             <div>
-              <h2><Clock3 size={16} /> Recentes</h2>
+              <h2><Clock3 size={16} /> {text.recents}</h2>
               <div>{recentTools.slice(0, 5).map(renderTool)}</div>
             </div>
           ) : null}
         </section>
       ) : null}
 
-      <div className="catalog-tabs tool-center-tabs" role="tablist" aria-label="Filtrar por categoria">
-        <button className={active === "todas" ? "active" : ""} onClick={() => setActive("todas")}>Todas</button>
-        {[...new Set(catalogSections.map((section) => section.label))].map((label) => (
-          <button className={active === label ? "active" : ""} onClick={() => setActive(label)} key={label}>{label}</button>
+      <div className="catalog-tabs tool-center-tabs" role="tablist" aria-label={text.filterByCategory}>
+        <button className={active === "todas" ? "active" : ""} onClick={() => setActive("todas")}>{text.all}</button>
+        {[...new Map(localizedSections.map((section) => [section.sourceLabel, section.label])).entries()].map(([sourceLabel, label]) => (
+          <button className={active === sourceLabel ? "active" : ""} onClick={() => setActive(sourceLabel)} key={sourceLabel}>{label}</button>
         ))}
       </div>
 
       {normalized ? (
         <section className="catalog-search-results">
-          <h2>{searchResults.length} resultado{searchResults.length === 1 ? "" : "s"} para sua busca</h2>
+          <h2>{searchResults.length} {text.searchResults}</h2>
           <div className="catalog-tool-grid">{searchResults.map(renderTool)}</div>
-          {!searchResults.length ? <p>Nenhuma ferramenta encontrada. Tente outro termo.</p> : null}
+          {!searchResults.length ? <p>{text.noResults}</p> : null}
         </section>
       ) : (
         <section className="tool-center-groups">
@@ -266,7 +276,7 @@ export function ToolCatalog() {
                     <span>{group ? <CategoryIcon icon={group.icon} /> : <Grid2X2 size={22} />}</span>
                     <h2>{section.title}</h2>
                   </div>
-                  <Link href={section.href}>Ver todas <ArrowRight size={15} /></Link>
+                  <Link href={section.href}>{text.viewAll} <ArrowRight size={15} /></Link>
                 </header>
                 <div className="catalog-tool-grid">
                   {sectionTools.map(renderTool)}
@@ -279,8 +289,8 @@ export function ToolCatalog() {
 
       <section className="tool-center-safety">
         <ShieldCheck size={20} />
-        <span>Seus arquivos ficam nesta sessão do navegador durante o trabalho.</span>
-        <Link href="/seguranca">Saiba mais sobre segurança <ArrowRight size={15} /></Link>
+        <span>{text.safety}</span>
+        <Link href="/seguranca">{text.learnSecurity} <ArrowRight size={15} /></Link>
       </section>
 
     </div>

@@ -19,6 +19,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { HeaderToolSearch } from "@/components/HeaderToolSearch";
 import { Logo } from "@/components/Logo";
+import { toolText } from "@/lib/i18n-content";
 import { DEFAULT_LANGUAGE, getLanguage, normalizeLanguage, supportedLanguages, type LanguageCode } from "@/lib/i18n";
 import { getGroupTools, navigationGroups } from "@/lib/navigation";
 import { tools } from "@/lib/tools";
@@ -232,7 +233,7 @@ export function Header() {
                           </Link>
                           <div className="mega-tool-links">
                             {getGroupTools(group).slice(0, menu.id === "all" ? 4 : 10).map((tool) => (
-                              <Link key={tool.slug} href={`/ferramentas/${tool.slug}`} onClick={() => setActiveMenu(null)}><b>{tool.name}</b><small>{tool.shortDescription}</small></Link>
+                              <Link key={tool.slug} href={`/ferramentas/${tool.slug}`} onClick={() => setActiveMenu(null)}><b>{toolText(selectedLanguage, tool.slug, tool).name}</b><small>{toolText(selectedLanguage, tool.slug, tool).shortDescription}</small></Link>
                             ))}
                           </div>
                         </section>

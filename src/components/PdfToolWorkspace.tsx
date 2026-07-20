@@ -21,10 +21,12 @@ import {
   humanSize,
   outputName,
 } from "@/lib/browser-files";
+import { toolText, uiText, type UiTextBundle } from "@/lib/i18n-content";
 import { parsePageOrder, parsePages } from "@/lib/page-selection";
 import { canvasToBlob, extractTextByPage, renderPdfPages } from "@/lib/pdf-render";
 import type { ToolDefinition, ToolSlug } from "@/lib/tools";
 import { useTemporaryFiles } from "@/lib/use-temporary-files";
+import { useLanguage } from "@/lib/use-language";
 
 const MAX_FILE_SIZE = 60 * 1024 * 1024;
 const MM_TO_POINTS = 72 / 25.4;
@@ -187,12 +189,12 @@ function bookletOrder(totalPages: number) {
   return { paddedTotal, blankPages: paddedTotal - totalPages, sheets };
 }
 
-function workflowStepsFor(tool: ToolDefinition, files: File[]) {
+function workflowStepsFor(tool: ToolDefinition, files: File[], text: UiTextBundle) {
   const input = files.length > 1 ? `${files.length} arquivos` : files[0]?.name || "arquivo";
-  const shared = [`Entrada: ${input}`, "Processamento local no navegador"];
+  const shared = [`Entrada: ${input}`, text.processingLocal];
   const output = tool.slug === "pdf-para-jpg" || tool.slug === "pdf-para-png" || tool.slug === "extrair-texto-pdf"
-    ? "Saída: pacote ZIP organizado"
-    : "Saída: PDF pronto para download";
+    ? text.outputZip
+    : text.outputPdf;
   const byTool: Partial<Record<ToolSlug, string[]>> = {
     "compactar-pdf": ["Renderiza páginas", "Recria PDF com imagens otimizadas", output],
     "criar-livreto-pdf": ["Calcula imposição de caderno", "Reordena páginas para impressão frente e verso", output],
@@ -205,6 +207,9 @@ function workflowStepsFor(tool: ToolDefinition, files: File[]) {
 }
 
 export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
+  const language = useLanguage();
+  const text = uiText[language];
+  const localizedTool = toolText(language, tool.slug, tool);
   const inputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<File[]>([]);
@@ -811,7 +816,7 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
 
   async function processFiles() {
     if (!files.length) return;
-    setStatus({ type: "processing", message: "Processando no seu navegador. Não feche esta página." });
+    setStatus({ type: "processing", message: text.processingMessage });
     try {
       setSummary(null);
       const operations: Record<Exclude<ToolSlug, "editar-pdf">, () => Promise<void>> = {
@@ -848,7 +853,7 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
         "adicionar-fundo-pdf": processBackground,
       };
       await operations[tool.slug as Exclude<ToolSlug, "editar-pdf">]();
-      setStatus({ type: "success", message: "Arquivo criado com sucesso. O download foi iniciado." });
+      setStatus({ type: "success", message: text.successMessage });
       setSummary((current) => current || {
         title: "Processamento concluído",
         details: [`${files.length} arquivo(s) processado(s).`, "Resultado gerado localmente no navegador."],
@@ -866,8 +871,8 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
     <section className="workspace" aria-labelledby="workspace-title">
       <div className="workspace-heading">
         <div>
-          <h2 id="workspace-title">Selecione seu arquivo</h2>
-          <p>Escolha o arquivo e configure a operação antes de processar.</p>
+          <h2 id="workspace-title">{text.chooseFile}</h2>
+          <p>{text.chooseDescription}</p>
         </div>
       </div>
 
@@ -879,18 +884,18 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
         onDrop={(event) => { event.preventDefault(); setDragActive(false); addFiles(event.dataTransfer.files); }}
       >
         <span className="drop-icon"><UploadCloud size={31} strokeWidth={1.7} aria-hidden="true" /></span>
-        <strong>Arraste {tool.multiple ? "seus arquivos" : "seu arquivo"} aqui</strong>
-        <span>ou escolha no seu dispositivo</span>
+        <strong>{tool.multiple ? text.dropFiles : text.dropFile}</strong>
+        <span>{text.chooseDevice}</span>
         <button type="button" className="primary-button" onClick={() => inputRef.current?.click()}>
-          Selecionar {tool.multiple ? "arquivos" : "arquivo"}
+          {tool.multiple ? text.selectFiles : text.selectFile}
         </button>
-        <small>{acceptedLabel} · máximo recomendado de 60 MB por arquivo</small>
+        <small>{acceptedLabel} · {text.maxFile}</small>
         <input ref={inputRef} type="file" accept={tool.accept} multiple={tool.multiple} onChange={(event) => event.target.files && addFiles(event.target.files)} hidden />
       </div>
 
       {files.length ? (
         <div className="selected-files">
-          <div className="selected-files-title"><strong>{files.length} arquivo(s) selecionado(s)</strong><button type="button" onClick={() => setFiles([])}>Limpar</button></div>
+          <div className="selected-files-title"><strong>{files.length} {text.selectedFiles}</strong><button type="button" onClick={() => setFiles([])}>{text.clear}</button></div>
           <ol>
             {files.map((file, index) => (
               <li key={`${file.name}-${file.lastModified}-${index}`}>
@@ -906,9 +911,9 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
 
       {files.length ? (
         <div className="workflow-preview">
-          <strong>Fluxo desta tarefa</strong>
+          <strong>{text.workflow}</strong>
           <ol>
-            {workflowStepsFor(tool, files).map((step) => <li key={step}>{step}</li>)}
+            {workflowStepsFor(tool, files, text).map((step) => <li key={step}>{step}</li>)}
           </ol>
         </div>
       ) : null}
@@ -949,9 +954,9 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
         </div>
       ) : null}
 
-      {files.length ? <button type="button" className="process-button" onClick={processFiles} disabled={!canProcess}>{status.type === "processing" ? <LoaderCircle className="spin" size={20} /> : <Download size={20} />}{status.type === "processing" ? "Processando..." : `${tool.name} agora`}</button> : null}
+      {files.length ? <button type="button" className="process-button" onClick={processFiles} disabled={!canProcess}>{status.type === "processing" ? <LoaderCircle className="spin" size={20} /> : <Download size={20} />}{status.type === "processing" ? text.processing : `${localizedTool.name} ${text.processNow}`}</button> : null}
 
-      <p className="privacy-note">Arquivos mantidos nesta sessão do navegador. {cached ? "Cache temporário ativo por até 4 horas." : ""}{restored ? " Sessão recuperada automaticamente." : ""}</p>
+      <p className="privacy-note">{text.localFiles} {cached ? text.cacheActive : ""}{restored ? ` ${text.sessionRestored}` : ""}</p>
     </section>
   );
 }

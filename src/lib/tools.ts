@@ -27,6 +27,7 @@ export type ToolSlug =
   | "remover-metadados"
   | "recortar-pdf"
   | "redimensionar-pdf"
+  | "criar-livreto-pdf"
   | "paginas-por-folha"
   | "imagens-para-pdf"
   | "pdf-para-jpg"
@@ -60,6 +61,7 @@ export type ToolIconName =
   | "Eraser"
   | "Crop"
   | "Scaling"
+  | "BookOpen"
   | "LayoutGrid"
   | "Images"
   | "FileImage"
@@ -258,13 +260,22 @@ export const tools: ToolDefinition[] = [
     faq: [{ question: "O conteúdo recortado é apagado definitivamente?", answer: "A área visível é reduzida. Alguns leitores podem conservar dados fora da caixa de recorte." }, privacyFaq],
   },
   {
-    slug: "redimensionar-pdf", name: "Redimensionar PDF", shortDescription: "Ajuste as páginas para A4, A5, Carta ou Ofício.",
-    description: "Centralize e redimensione o conteúdo em um novo formato de página.", category: "Otimizar e proteger", icon: "Scaling", accent: "blue", accept: "application/pdf", multiple: false,
-    keywords: ["mudar tamanho pdf", "pdf a4", "redimensionar página", "pdf carta"],
-    intro: "Padronize documentos com páginas de tamanhos diferentes e prepare o conteúdo para impressão em formatos comuns.",
-    useCases: ["Converter páginas para A4", "Padronizar documentos misturados", "Preparar material em A5", "Ajustar conteúdo para Carta ou Ofício"],
-    limitations: ["O conteúdo é proporcionalmente reduzido para caber", "Uma margem técnica é preservada ao redor da página"],
-    faq: [{ question: "O conteúdo fica deformado?", answer: "Não. A proporção original é mantida e o conteúdo é centralizado." }, privacyFaq],
+    slug: "redimensionar-pdf", name: "Redimensionar PDF", shortDescription: "Ajuste páginas para formatos prontos ou personalizados.",
+    description: "Altere o tamanho das páginas com formatos predefinidos, tamanho personalizado, unidade, margens e modo de ajuste.", category: "Otimizar e proteger", icon: "Scaling", accent: "blue", accept: "application/pdf", multiple: false,
+    keywords: ["mudar tamanho pdf", "pdf a4", "redimensionar página", "pdf carta", "tamanho personalizado pdf"],
+    intro: "Padronize documentos com páginas de tamanhos diferentes e prepare o conteúdo para impressão em formatos comuns ou personalizados.",
+    useCases: ["Converter páginas para A4", "Padronizar documentos misturados", "Preparar material em A5", "Criar tamanho personalizado em mm, cm, polegadas ou pontos"],
+    limitations: ["O conteúdo pode ser ajustado dentro da página, preenchido ou mantido no tamanho original", "Margens muito grandes podem impedir o encaixe do conteúdo"],
+    faq: [{ question: "O conteúdo fica deformado?", answer: "Somente se você escolher esticar. No modo ajustar, a proporção original é mantida e o conteúdo é centralizado." }, privacyFaq],
+  },
+  {
+    slug: "criar-livreto-pdf", name: "Criar livreto PDF", shortDescription: "Reorganize páginas para impressão dobrada.",
+    description: "Gere um PDF imposto em formato livreto, com pares de páginas para frente e verso e páginas em branco quando necessário.", category: "Otimizar e proteger", icon: "BookOpen", accent: "orange", accept: "application/pdf", multiple: false,
+    keywords: ["livreto pdf", "booklet pdf", "imposição pdf", "imprimir livreto", "caderno pdf"],
+    intro: "Prepare o arquivo para impressão frente e verso com dobra central. A ferramenta calcula a ordem das páginas, completa múltiplos de quatro e monta duas páginas por folha.",
+    useCases: ["Criar apostila dobrada", "Preparar manual grampeado ao centro", "Imprimir caderno simples", "Revisar ordem de frente e verso antes da impressão"],
+    limitations: ["A saída usa imposição simples de duas páginas por lado", "Confira a opção de virar pela borda curta ou longa na sua impressora antes de imprimir o lote final"],
+    faq: [{ question: "A ferramenta adiciona páginas em branco?", answer: "Sim. Quando o total não fecha múltiplo de quatro, páginas em branco são adicionadas ao final para manter a ordem correta do livreto." }, privacyFaq],
   },
   {
     slug: "paginas-por-folha", name: "Páginas por folha", shortDescription: "Coloque 2 ou 4 páginas em uma única folha.",

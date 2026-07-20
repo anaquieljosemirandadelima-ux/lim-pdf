@@ -1,5 +1,6 @@
 import {
   CircleOff,
+  BookOpen,
   SquarePen,
   CopyPlus,
   Crop,
@@ -34,6 +35,7 @@ import type { ToolDefinition } from "@/lib/tools";
 
 const icons = {
   CircleOff,
+  BookOpen,
   SquarePen,
   CopyPlus,
   Crop,

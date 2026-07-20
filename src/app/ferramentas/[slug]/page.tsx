@@ -88,7 +88,7 @@ export default async function ToolPage({ params }: ToolPageProps) {
       <section className="tool-screen">
         <div className="container tool-screen-heading">
           <div className="tool-screen-title"><Link className="breadcrumb" href="/ferramentas">Ferramentas PDF <span>/</span> {tool.category}</Link><div><span className={`tool-icon large-icon accent-${tool.accent}`}><ToolIcon icon={tool.icon} /></span><span><h1>{tool.name}</h1><p>{tool.description}</p></span></div></div>
-          <div className="tool-screen-badges"><span><CheckCircle2 size={16} /> Grátis</span><span><ShieldCheck size={16} /> Processamento local</span><span><LockKeyhole size={16} /> Cache temporário</span></div>
+          <div className="tool-screen-badges"><span><CheckCircle2 size={16} /> Ferramenta pronta</span><span><LockKeyhole size={16} /> Sessão temporária</span></div>
         </div>
         <div className="container tool-workspace-layout">
           <PdfToolWorkspace tool={tool} />

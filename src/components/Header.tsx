@@ -12,7 +12,6 @@ import {
   ShieldCheck,
   Signature,
   SlidersHorizontal,
-  Sparkles,
   TableProperties,
   UploadCloud,
   X,
@@ -76,12 +75,11 @@ export function Header() {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [languageOpen, setLanguageOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [currentUrl, setCurrentUrl] = useState("https://limpdf.com.br");
+  const [currentUrl] = useState(() => typeof window === "undefined" ? "https://limpdf.com.br" : window.location.href);
   const headerRef = useRef<HTMLElement>(null);
   const groupMap = useMemo(() => new Map(navigationGroups.map((group) => [group.slug, group])), []);
 
   useEffect(() => {
-    setCurrentUrl(window.location.href);
     const onPointer = (event: MouseEvent) => {
       if (!headerRef.current?.contains(event.target as Node)) {
         setActiveMenu(null);
@@ -132,11 +130,11 @@ export function Header() {
                       <aside className="mega-featured">
                         <span><FileStack size={25} /></span>
                         <div><small>Destaque</small><h3>{menu.featured.title}</h3><p>{menu.featured.description}</p></div>
-                        <Link href={menu.featured.href} onClick={() => setActiveMenu(null)}>Abrir agora <Sparkles size={15} /></Link>
+                        <Link href={menu.featured.href} onClick={() => setActiveMenu(null)}>Abrir agora</Link>
                       </aside>
                     ) : null}
                   </div>
-                  <div className="mega-menu-bottom"><Link href={menu.href} onClick={() => setActiveMenu(null)}>Ver página completa de {menu.label.toLowerCase()}</Link><span>Sem cadastro · Processamento local</span></div>
+                  <div className="mega-menu-bottom"><Link href={menu.href} onClick={() => setActiveMenu(null)}>Ver página completa de {menu.label.toLowerCase()}</Link><span>{groups.length} grupo(s)</span></div>
                 </div>
               </div>
             );

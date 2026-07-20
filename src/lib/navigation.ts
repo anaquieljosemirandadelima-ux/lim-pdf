@@ -61,7 +61,6 @@ export const navigationGroups: NavigationGroup[] = [
       "pdf-para-png",
       "extrair-texto-pdf",
       "imagens-para-pdf",
-      "redimensionar-pdf",
     ],
   },
   {
@@ -102,6 +101,8 @@ export const navigationGroups: NavigationGroup[] = [
       "compactar-pdf",
       "pdf-em-escala-de-cinza",
       "recortar-pdf",
+      "redimensionar-pdf",
+      "criar-livreto-pdf",
       "paginas-por-folha",
     ],
   },

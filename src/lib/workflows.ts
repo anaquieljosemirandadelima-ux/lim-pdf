@@ -42,7 +42,7 @@ export const workflows: WorkflowDefinition[] = [
     title: "Preparar para impressao",
     description: "Ajuste tamanho, margens, orientacao e economia de papel.",
     accent: "orange",
-    tools: ["redimensionar-pdf", "recortar-pdf", "girar-pdf", "paginas-por-folha"],
+    tools: ["redimensionar-pdf", "criar-livreto-pdf", "recortar-pdf", "paginas-por-folha"],
   },
 ];
 

@@ -31,9 +31,11 @@ const HISTORY_LIMIT = 60;
 
 type PagePreview = {
   pageIndex: number;
+  sourcePageIndex: number | null;
   width: number;
   height: number;
   dataUrl: string;
+  isBlank?: boolean;
 };
 
 type EditorObjectKind = "text-replacement" | "text" | "image";
@@ -113,6 +115,11 @@ function pagePdfSize(page: PagePreview) {
   return { width: page.width / PREVIEW_SCALE, height: page.height / PREVIEW_SCALE };
 }
 
+function createBlankPageDataUrl(width: number, height: number) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${Math.ceil(width)}" height="${Math.ceil(height)}" viewBox="0 0 ${Math.ceil(width)} ${Math.ceil(height)}"><rect width="100%" height="100%" fill="#ffffff"/><rect x="1" y="1" width="${Math.max(0, Math.ceil(width) - 2)}" height="${Math.max(0, Math.ceil(height) - 2)}" fill="none" stroke="#eef2f6" stroke-width="2"/></svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
 function clampObject(object: EditorObject, page?: PagePreview): EditorObject {
   if (!page) return object;
   const size = pagePdfSize(page);
@@ -157,6 +164,7 @@ export function PdfEditorWorkspace() {
   const file = files[0] || null;
   const { restored, cached, clearCache } = useTemporaryFiles("tool:editar-pdf", files, setFiles);
   const [pages, setPages] = useState<PagePreview[]>([]);
+  const [pageSequence, setPageSequence] = useState<number[]>([]);
   const [objects, setObjects] = useState<EditorObject[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
@@ -168,7 +176,8 @@ export function PdfEditorWorkspace() {
   const [undoStack, setUndoStack] = useState<EditorObject[][]>([]);
   const [redoStack, setRedoStack] = useState<EditorObject[][]>([]);
 
-  const page = pages[currentPage];
+  const currentPageId = pageSequence[currentPage];
+  const page = pages.find((item) => item.pageIndex === currentPageId) || pages[0];
   const selectedObject = useMemo(
     () => objects.find((item) => item.id === selectedObjectId) || null,
     [objects, selectedObjectId],
@@ -185,8 +194,8 @@ export function PdfEditorWorkspace() {
     [activeSelectionIds, objects],
   );
   const currentPageObjects = useMemo(
-    () => objects.filter((item) => item.pageIndex === currentPage).sort((a, b) => a.zIndex - b.zIndex),
-    [objects, currentPage],
+    () => page ? objects.filter((item) => item.pageIndex === page.pageIndex).sort((a, b) => a.zIndex - b.zIndex) : [],
+    [objects, page],
   );
 
   useEffect(() => {
@@ -277,6 +286,7 @@ export function PdfEditorWorkspace() {
               });
             nextPages.push({
               pageIndex: pageNumber - 1,
+              sourcePageIndex: pageNumber - 1,
               width: canvas.width,
               height: canvas.height,
               dataUrl: canvas.toDataURL("image/jpeg", 0.82),
@@ -288,6 +298,7 @@ export function PdfEditorWorkspace() {
         }
         if (!cancelled) {
           setPages(nextPages);
+          setPageSequence(nextPages.map((item) => item.pageIndex));
           setObjects(nextObjects.map((object) => clampObject(object, nextPages[object.pageIndex])));
           setCurrentPage(0);
           clearSelection();
@@ -353,7 +364,7 @@ export function PdfEditorWorkspace() {
     const object: TextObject = {
       id,
       kind: "text",
-      pageIndex: currentPage,
+      pageIndex: page.pageIndex,
       text: "Novo texto",
       x: Math.max(20, size.width * 0.12),
       y: Math.max(20, size.height * 0.78),
@@ -371,7 +382,7 @@ export function PdfEditorWorkspace() {
     const object: ImageObject = {
       id,
       kind: "image",
-      pageIndex: currentPage,
+      pageIndex: page.pageIndex,
       file: fileToAdd,
       previewUrl: URL.createObjectURL(fileToAdd),
       x: 70,
@@ -408,13 +419,71 @@ export function PdfEditorWorkspace() {
     const copies = clipboard.map((object, index) => ({
       ...object,
       id: crypto.randomUUID(),
-      pageIndex: currentPage,
+      pageIndex: page.pageIndex,
       x: object.x + 18,
       y: object.y - 18,
       zIndex: maxZ + index + 1,
     })) as EditorObject[];
     applyObjects((current) => [...current, ...copies], copies.map((item) => item.id));
-  }, [applyObjects, clipboard, currentPage, objects, page]);
+  }, [applyObjects, clipboard, objects, page]);
+
+  function moveCurrentPage(direction: -1 | 1) {
+    setPageSequence((current) => {
+      const targetIndex = currentPage + direction;
+      if (targetIndex < 0 || targetIndex >= current.length) return current;
+      const next = [...current];
+      [next[currentPage], next[targetIndex]] = [next[targetIndex], next[currentPage]];
+      setCurrentPage(targetIndex);
+      clearSelection();
+      return next;
+    });
+  }
+
+  function duplicateCurrentPage() {
+    if (currentPageId === undefined) return;
+    setPageSequence((current) => {
+      const next = [...current];
+      next.splice(currentPage + 1, 0, currentPageId);
+      setCurrentPage(currentPage + 1);
+      clearSelection();
+      return next;
+    });
+  }
+
+  function deleteCurrentPage() {
+    if (pageSequence.length <= 1) {
+      setMessage("O documento precisa manter pelo menos uma página.");
+      return;
+    }
+    setPageSequence((current) => {
+      const next = current.filter((_, index) => index !== currentPage);
+      setCurrentPage(Math.max(0, Math.min(currentPage, next.length - 1)));
+      clearSelection();
+      return next;
+    });
+  }
+
+  function insertBlankPage() {
+    const basePage = page || pages[0];
+    if (!basePage) return;
+    const nextPageIndex = Math.max(-1, ...pages.map((item) => item.pageIndex)) + 1;
+    const blankPage: PagePreview = {
+      pageIndex: nextPageIndex,
+      sourcePageIndex: null,
+      width: basePage.width,
+      height: basePage.height,
+      dataUrl: createBlankPageDataUrl(basePage.width, basePage.height),
+      isBlank: true,
+    };
+    setPages((current) => [...current, blankPage]);
+    setPageSequence((current) => {
+      const next = [...current];
+      next.splice(currentPage + 1, 0, nextPageIndex);
+      return next;
+    });
+    setCurrentPage(currentPage + 1);
+    clearSelection();
+  }
 
   function alignSelected(mode: "left" | "center" | "right" | "top" | "middle" | "bottom") {
     if (selectedObjects.length < 2) return;
@@ -596,45 +665,57 @@ export function PdfEditorWorkspace() {
     setMessage("Aplicando as alterações e preparando o download...");
     try {
       const pdfLib = await getPdfLib();
-      const document = await pdfLib.PDFDocument.load(await file.arrayBuffer());
+      const sourceDocument = await pdfLib.PDFDocument.load(await file.arrayBuffer());
+      const document = await pdfLib.PDFDocument.create();
       const font = await document.embedFont(pdfLib.StandardFonts.Helvetica);
       const sortedObjects = [...objects].sort((a, b) => a.zIndex - b.zIndex);
-      for (const item of sortedObjects) {
-        const pdfPage = document.getPage(item.pageIndex);
-        if (item.kind === "text-replacement") {
-          if (item.text === item.originalText) continue;
-          pdfPage.drawRectangle({
-            x: item.x,
-            y: item.y,
-            width: item.width,
-            height: item.height,
-            color: pdfLib.rgb(1, 1, 1),
-          });
-          if (item.text.trim()) {
+      for (const pageId of pageSequence) {
+        const preview = pages.find((item) => item.pageIndex === pageId);
+        if (!preview) continue;
+        let pdfPage;
+        if (preview.sourcePageIndex === null || preview.isBlank) {
+          const size = pagePdfSize(preview);
+          pdfPage = document.addPage([size.width, size.height]);
+        } else {
+          const [copiedPage] = await document.copyPages(sourceDocument, [preview.sourcePageIndex]);
+          pdfPage = document.addPage(copiedPage);
+        }
+        for (const item of sortedObjects.filter((object) => object.pageIndex === preview.pageIndex)) {
+          if (item.kind === "text-replacement") {
+            if (item.text === item.originalText) continue;
+            pdfPage.drawRectangle({
+              x: item.x,
+              y: item.y,
+              width: item.width,
+              height: item.height,
+              color: pdfLib.rgb(1, 1, 1),
+            });
+            if (item.text.trim()) {
+              pdfPage.drawText(item.text, {
+                x: item.x + 1.5,
+                y: item.y + Math.max(1, item.height * 0.18),
+                size: Math.max(6, Math.min(72, item.fontSize)),
+                font,
+                color: pdfLib.rgb(0.05, 0.08, 0.15),
+                maxWidth: Math.max(20, pdfPage.getWidth() - item.x - 18),
+              });
+            }
+          }
+          if (item.kind === "text") {
             pdfPage.drawText(item.text, {
-              x: item.x + 1.5,
-              y: item.y + Math.max(1, item.height * 0.18),
-              size: Math.max(6, Math.min(72, item.fontSize)),
+              x: item.x,
+              y: item.y,
+              size: Math.max(6, Math.min(120, item.fontSize)),
               font,
               color: pdfLib.rgb(0.05, 0.08, 0.15),
-              maxWidth: Math.max(20, pdfPage.getWidth() - item.x - 18),
+              maxWidth: item.width,
             });
           }
-        }
-        if (item.kind === "text") {
-          pdfPage.drawText(item.text, {
-            x: item.x,
-            y: item.y,
-            size: Math.max(6, Math.min(120, item.fontSize)),
-            font,
-            color: pdfLib.rgb(0.05, 0.08, 0.15),
-            maxWidth: item.width,
-          });
-        }
-        if (item.kind === "image") {
-          const bytes = await item.file.arrayBuffer();
-          const image = item.file.type === "image/png" ? await document.embedPng(bytes) : await document.embedJpg(bytes);
-          pdfPage.drawImage(image, { x: item.x, y: item.y, width: item.width, height: item.height || item.width * (image.height / image.width) });
+          if (item.kind === "image") {
+            const bytes = await item.file.arrayBuffer();
+            const image = item.file.type === "image/png" ? await document.embedPng(bytes) : await document.embedJpg(bytes);
+            pdfPage.drawImage(image, { x: item.x, y: item.y, width: item.width, height: item.height || item.width * (image.height / image.width) });
+          }
         }
       }
       const output = await document.save({ useObjectStreams: true });
@@ -653,6 +734,7 @@ export function PdfEditorWorkspace() {
     });
     setFiles([]);
     setPages([]);
+    setPageSequence([]);
     setObjects([]);
     setCurrentPage(0);
     clearSelection();
@@ -690,12 +772,24 @@ export function PdfEditorWorkspace() {
         </aside>
         <aside className="editor-pages">
           <h2>Páginas</h2>
-          {pages.map((item) => (
-            <button className={item.pageIndex === currentPage ? "active" : ""} type="button" key={item.pageIndex} onClick={() => { setCurrentPage(item.pageIndex); clearSelection(); }}>
-              <img src={item.dataUrl} alt={`Miniatura da página ${item.pageIndex + 1}`} />
-              <span>{item.pageIndex + 1}</span>
+          <div className="page-production-controls">
+            <button type="button" onClick={() => moveCurrentPage(-1)} disabled={currentPage === 0} title="Mover página para cima"><ArrowUp size={14} /></button>
+            <button type="button" onClick={() => moveCurrentPage(1)} disabled={currentPage === pageSequence.length - 1} title="Mover página para baixo"><ArrowDown size={14} /></button>
+            <button type="button" onClick={duplicateCurrentPage} title="Duplicar página">Duplicar</button>
+            <button type="button" onClick={insertBlankPage} title="Inserir página em branco">Em branco</button>
+            <button type="button" onClick={deleteCurrentPage} disabled={pageSequence.length <= 1} title="Excluir página">Excluir</button>
+          </div>
+          {pageSequence.map((pageId, sequenceIndex) => {
+            const item = pages.find((candidate) => candidate.pageIndex === pageId);
+            if (!item) return null;
+            return (
+            <button className={sequenceIndex === currentPage ? "active" : ""} type="button" key={`${pageId}:${sequenceIndex}`} onClick={() => { setCurrentPage(sequenceIndex); clearSelection(); }}>
+              <img src={item.dataUrl} alt={`Miniatura da página ${sequenceIndex + 1}`} />
+              <span>{sequenceIndex + 1}</span>
+              {item.isBlank ? <small>Em branco</small> : null}
             </button>
-          ))}
+            );
+          })}
         </aside>
         <div className="editor-stage-wrap" onPointerDown={(event) => { if (event.target === event.currentTarget) clearSelection(); }}>
           {status === "loading" ? <div className="editor-loading"><LoaderCircle className="spin" size={27} /><strong>Preparando editor</strong><p>{message}</p></div> : null}
@@ -732,7 +826,7 @@ export function PdfEditorWorkspace() {
               ))}
             </div>
           ) : null}
-          {pages.length ? <div className="editor-page-navigation"><button type="button" disabled={currentPage === 0} onClick={() => setCurrentPage((value) => value - 1)}><ArrowLeft size={17} /></button><span>{currentPage + 1} / {pages.length}</span><button type="button" disabled={currentPage === pages.length - 1} onClick={() => setCurrentPage((value) => value + 1)}><ArrowRight size={17} /></button></div> : null}
+          {pageSequence.length ? <div className="editor-page-navigation"><button type="button" disabled={currentPage === 0} onClick={() => setCurrentPage((value) => value - 1)}><ArrowLeft size={17} /></button><span>{currentPage + 1} / {pageSequence.length}</span><button type="button" disabled={currentPage === pageSequence.length - 1} onClick={() => setCurrentPage((value) => value + 1)}><ArrowRight size={17} /></button></div> : null}
         </div>
         <aside className="editor-properties">
           <h2>Propriedades</h2>

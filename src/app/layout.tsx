@@ -3,6 +3,7 @@ import { AdSenseLoader } from "@/components/AdSenseLoader";
 import { ConsentBanner } from "@/components/ConsentBanner";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
+import { NativeTranslator } from "@/components/NativeTranslator";
 import { ADSENSE_CLIENT } from "@/lib/adsense";
 import { tools } from "@/lib/tools";
 import "./globals.css";
@@ -72,6 +73,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className="app-body">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
         <a className="skip-link" href="#conteudo">Pular para o conteúdo</a>
+        <NativeTranslator />
         <AdSenseLoader client={adsenseClient} />
         <Header />
         <main id="conteudo">{children}</main>

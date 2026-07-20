@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import React from "react";
 import { Search, ShieldCheck, Star, UploadCloud } from "lucide-react";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { ToolIcon } from "@/components/ToolIcon";
 import { getGroupTools, navigationGroups } from "@/lib/navigation";
+import { toolBySlug } from "@/lib/tools";
+import { workflows } from "@/lib/workflows";
 
 function normalize(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -36,6 +39,26 @@ export function ToolCatalog() {
           <button className={active === "todas" ? "active" : ""} onClick={() => setActive("todas")}>Todas</button>
           {navigationGroups.map((group) => <button className={active === group.slug ? "active" : ""} onClick={() => setActive(group.slug)} key={group.slug}>{group.label}</button>)}
         </div>
+        {!normalized && active === "todas" ? (
+          <section className="catalog-workflows" aria-labelledby="catalog-workflows-title">
+            <div className="catalog-workflows-heading">
+              <span>Fluxos combinados</span>
+              <h2 id="catalog-workflows-title">Atalhos para tarefas completas</h2>
+            </div>
+            <div className="workflow-grid">
+              {workflows.map((workflow) => {
+                const firstTool = toolBySlug.get(workflow.tools[0]);
+                return (
+                  <Link className={`workflow-card accent-${workflow.accent}`} href={firstTool ? `/ferramentas/${firstTool.slug}` : "/ferramentas"} key={workflow.slug}>
+                    <strong>{workflow.title}</strong>
+                    <p>{workflow.description}</p>
+                    <span>{workflow.tools.length} passos sugeridos</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
         <div className="catalog-groups">
           {groups.map((group) => {
             const groupTools = getGroupTools(group).filter((tool) => !normalized || normalize([tool.name, tool.shortDescription, ...tool.keywords].join(" ")).includes(normalized));
@@ -59,5 +82,3 @@ export function ToolCatalog() {
     </div>
   );
 }
-
-import React from "react";

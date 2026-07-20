@@ -50,6 +50,14 @@ const menuDefinitions: MenuDefinition[] = [
   { id: "optimize", label: "Otimizar", href: "/categorias/otimizar", groupSlugs: ["otimizar"], featured: { title: "Compactar PDF", description: "Reduza o tamanho do documento para compartilhar com facilidade.", href: "/ferramentas/compactar-pdf" } },
 ];
 
+const primaryMenuDefinitions: MenuDefinition[] = menuDefinitions.length > 0 ? [
+  { id: "all", label: "Ferramentas", href: "/ferramentas", groupSlugs: navigationGroups.map((group) => group.slug), featured: { title: "Todas as ferramentas", description: "Explore as 31 funcoes disponiveis no LIM PDF.", href: "/ferramentas" } },
+  { id: "organize", label: "Organizar e juntar", href: "/categorias/organizar", groupSlugs: ["organizar"], featured: { title: "Pacote de organizacao", description: "Junte, divida, gire, reordene e alterne documentos em um fluxo so.", href: "/ferramentas/juntar-pdf" } },
+  { id: "edit", label: "Editar e assinar", href: "/categorias/editar", groupSlugs: ["editar", "formularios", "assinar"], featured: { title: "Editar e finalizar PDF", description: "Edite textos, preencha campos, assine e fixe o documento final.", href: "/ferramentas/editar-pdf" } },
+  { id: "convert", label: "Converter", href: "/categorias/converter", groupSlugs: ["converter"], featured: { title: "Converter arquivos", description: "Transforme PDF em imagem, texto ou crie PDF a partir de imagens.", href: "/categorias/converter" } },
+  { id: "optimize", label: "Otimizar e proteger", href: "/categorias/otimizar", groupSlugs: ["otimizar", "seguranca"], featured: { title: "Preparar para envio", description: "Compacte, limpe metadados e ajuste o documento antes de compartilhar.", href: "/ferramentas/compactar-pdf" } },
+  ] : [];
+
 const languageOptions = [
   { code: "en", label: "English" },
   { code: "es", label: "Spanish" },
@@ -96,7 +104,7 @@ export function Header() {
       <div className="container header-inner">
         <Logo />
         <nav className="desktop-nav" aria-label="Menu principal">
-          {menuDefinitions.map((menu) => {
+          {primaryMenuDefinitions.map((menu) => {
             const groups = menu.groupSlugs.map((slug) => groupMap.get(slug)).filter((group) => group !== undefined);
             return (
               <div className={`nav-group ${activeMenu === menu.id ? "open" : ""}`} key={menu.id} onMouseEnter={() => setActiveMenu(menu.id)} onMouseLeave={() => setActiveMenu(null)}>
@@ -167,7 +175,7 @@ export function Header() {
         <div className="mobile-nav-panel">
           <div className="container mobile-nav-content">
             <Link href="/ferramentas" onClick={() => setMobileOpen(false)}>Todas as ferramentas</Link>
-            {menuDefinitions.slice(1).map((menu) => <Link key={menu.id} href={menu.href} onClick={() => setMobileOpen(false)}>{menu.label}</Link>)}
+            {primaryMenuDefinitions.slice(1).map((menu) => <Link key={menu.id} href={menu.href} onClick={() => setMobileOpen(false)}>{menu.label}</Link>)}
             <Link href="/guias" onClick={() => setMobileOpen(false)}>Guias e tutoriais</Link>
             <div className="mobile-language-list">
               <strong>Idiomas</strong>

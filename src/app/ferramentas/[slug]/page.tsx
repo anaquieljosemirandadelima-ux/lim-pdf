@@ -8,6 +8,7 @@ import { PdfToolWorkspace } from "@/components/PdfToolWorkspace";
 import { ToolCard } from "@/components/ToolCard";
 import { ToolIcon } from "@/components/ToolIcon";
 import { toolBySlug, tools, type ToolSlug } from "@/lib/tools";
+import { getWorkflowsForTool } from "@/lib/workflows";
 
 interface ToolPageProps { params: Promise<{ slug: string }> }
 
@@ -35,6 +36,13 @@ export default async function ToolPage({ params }: ToolPageProps) {
     .filter((item) => item.slug !== tool.slug)
     .sort((a, b) => Number(b.category === tool.category) - Number(a.category === tool.category))
     .slice(0, 4);
+  const suggestedWorkflow = getWorkflowsForTool(tool.slug)[0];
+  const workflowTools = suggestedWorkflow
+    ? suggestedWorkflow.tools.flatMap((item) => {
+        const nextTool = toolBySlug.get(item);
+        return nextTool && nextTool.slug !== tool.slug ? [nextTool] : [];
+      })
+    : [];
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://lim-pdf-preview.vercel.app";
   const softwareSchema = {
     "@context": "https://schema.org",
@@ -88,6 +96,14 @@ export default async function ToolPage({ params }: ToolPageProps) {
             <h2>Como usar</h2>
             <ol><li><span>1</span> Selecione {tool.multiple ? "os arquivos" : "o arquivo"}.</li><li><span>2</span> Ajuste as opções necessárias.</li><li><span>3</span> Processe e baixe o resultado.</li></ol>
             <div className="tool-guide-note"><ShieldCheck size={18} /><p>O arquivo permanece no dispositivo e pode ser recuperado temporariamente pelo cache local.</p></div>
+            {suggestedWorkflow ? (
+              <div className={`tool-next-flow accent-${suggestedWorkflow.accent}`}>
+                <span>Fluxo sugerido</span>
+                <h3>{suggestedWorkflow.title}</h3>
+                <p>{suggestedWorkflow.description}</p>
+                {workflowTools.slice(0, 3).map((item) => <Link href={`/ferramentas/${item.slug}`} key={item.slug}>{item.name} <ArrowRight size={14} /></Link>)}
+              </div>
+            ) : null}
             <h3>Ferramentas relacionadas</h3>
             {related.slice(0, 3).map((item) => <Link href={`/ferramentas/${item.slug}`} key={item.slug}>{item.name} <ArrowRight size={14} /></Link>)}
           </aside>

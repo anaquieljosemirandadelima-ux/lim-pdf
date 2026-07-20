@@ -620,6 +620,29 @@ body.modal-open{overflow:hidden}
 @media(max-width:900px){.editor-page-heading-v3 .container{display:block}.editor-heading-actions{justify-content:flex-start;margin-top:14px}}
 @media(max-width:560px){.editor-heading-title{align-items:flex-start}.editor-heading-title h1{font-size:28px}.editor-heading-actions{display:grid;grid-template-columns:1fr 1fr}.editor-heading-actions .primary-button{grid-column:1/-1}}
 
+/* Workflow improvements */
+.workflow-section{background:#fff;border-top:1px solid #f3e4e6;border-bottom:1px solid #f3e4e6}
+.workflow-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.workflow-card{position:relative;min-height:138px;border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:12px;background:#fff;padding:16px;display:flex;flex-direction:column;gap:8px;overflow:hidden;transition:.18s ease}
+.workflow-card:after{content:"";position:absolute;right:-28px;bottom:-34px;width:88px;height:88px;border-radius:50%;background:color-mix(in srgb,var(--accent) 12%,white)}
+.workflow-card:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--line));box-shadow:0 16px 34px rgba(15,34,68,.08);transform:translateY(-3px)}
+.workflow-card strong{font-size:13px;line-height:1.25;position:relative;z-index:1}
+.workflow-card p{font-size:9.5px;color:var(--muted);line-height:1.5;margin:0;position:relative;z-index:1}
+.workflow-card span{margin-top:auto;font-size:9px;font-weight:850;color:var(--accent);position:relative;z-index:1}
+.catalog-workflows{margin-bottom:16px}
+.catalog-workflows-heading{display:flex;align-items:end;justify-content:space-between;margin-bottom:10px}
+.catalog-workflows-heading span{font-size:9px;text-transform:uppercase;color:var(--blue);font-weight:850;letter-spacing:.07em}
+.catalog-workflows-heading h2{font-size:16px;margin:2px 0 0}
+.catalog-workflows .workflow-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.catalog-workflows .workflow-card{min-height:126px}
+.tool-next-flow{border:1px solid color-mix(in srgb,var(--accent) 28%,var(--line));border-top:3px solid var(--accent);border-radius:13px;background:#fff;padding:14px;margin:16px 0;display:grid;gap:7px}
+.tool-next-flow>span{font-size:8.5px;font-weight:850;text-transform:uppercase;letter-spacing:.08em;color:var(--accent)}
+.tool-next-flow h3{font-size:13px;margin:0}
+.tool-next-flow p{font-size:9.5px;color:var(--muted);margin:0;line-height:1.5}
+.tool-next-flow a{border-top:1px solid var(--line);padding-top:8px}
+@media(max-width:1100px){.workflow-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.workflow-grid,.catalog-workflows .workflow-grid{grid-template-columns:1fr}.workflow-card{min-height:120px}}
+
 
 /* ==========================================================================
    LIM PDF — identidade visual oficial vermelha

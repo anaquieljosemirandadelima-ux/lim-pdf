@@ -20,6 +20,7 @@ import { ToolIcon } from "@/components/ToolIcon";
 import { guides } from "@/lib/guides";
 import { navigationGroups } from "@/lib/navigation";
 import { toolBySlug, type ToolSlug } from "@/lib/tools";
+import { workflows } from "@/lib/workflows";
 
 export const metadata: Metadata = {
   title: "Ferramentas PDF grátis para editar, converter e organizar",
@@ -121,6 +122,24 @@ export default function Home() {
                 <ArrowRight size={16} />
               </Link>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="home-section workflow-section">
+        <div className="container">
+          <div className="compact-section-heading"><div><span>Fluxos inteligentes</span><h2>Combine ferramentas para terminar a tarefa inteira</h2></div><Link href="/ferramentas">Abrir catalogo <ArrowRight size={16} /></Link></div>
+          <div className="workflow-grid">
+            {workflows.slice(0, 4).map((workflow) => {
+              const firstTool = toolBySlug.get(workflow.tools[0]);
+              return (
+                <Link className={`workflow-card accent-${workflow.accent}`} href={firstTool ? `/ferramentas/${firstTool.slug}` : "/ferramentas"} key={workflow.slug}>
+                  <strong>{workflow.title}</strong>
+                  <p>{workflow.description}</p>
+                  <span>{workflow.tools.length} ferramentas conectadas</span>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </section>

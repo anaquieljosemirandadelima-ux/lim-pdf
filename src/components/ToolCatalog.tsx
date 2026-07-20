@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { ToolIcon } from "@/components/ToolIcon";
-import { getGroupTools, navigationGroups, type NavigationGroup } from "@/lib/navigation";
+import { navigationGroups, type NavigationGroup } from "@/lib/navigation";
 import { saveTemporaryFiles } from "@/lib/temporary-cache";
 import { toolBySlug, tools, type ToolDefinition, type ToolSlug } from "@/lib/tools";
 
@@ -283,9 +283,6 @@ export function ToolCatalog() {
         <Link href="/seguranca">Saiba mais sobre seguranca <ArrowRight size={15} /></Link>
       </section>
 
-      <div className="catalog-hidden-source" aria-hidden="true">
-        {navigationGroups.map((group) => getGroupTools(group).length).join(",")}
-      </div>
     </div>
   );
 }

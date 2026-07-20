@@ -5,6 +5,7 @@ import {
   ChevronDown,
   FileStack,
   Grid2X2,
+  Languages,
   Menu,
   PencilLine,
   Repeat2,
@@ -49,23 +50,46 @@ const menuDefinitions: MenuDefinition[] = [
   { id: "optimize", label: "Otimizar", href: "/categorias/otimizar", groupSlugs: ["otimizar"], featured: { title: "Compactar PDF", description: "Reduza o tamanho do documento para compartilhar com facilidade.", href: "/ferramentas/compactar-pdf" } },
 ];
 
+const languageOptions = [
+  { code: "en", label: "English" },
+  { code: "es", label: "Spanish" },
+  { code: "fr", label: "French" },
+  { code: "de", label: "German" },
+  { code: "it", label: "Italian" },
+  { code: "zh-CN", label: "Chinese" },
+  { code: "ja", label: "Japanese" },
+  { code: "ko", label: "Korean" },
+  { code: "ar", label: "Arabic" },
+  { code: "hi", label: "Hindi" },
+  { code: "ru", label: "Russian" },
+];
+
 export function Header() {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [languageOpen, setLanguageOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [currentUrl, setCurrentUrl] = useState("https://limpdf.com.br");
   const headerRef = useRef<HTMLElement>(null);
   const groupMap = useMemo(() => new Map(navigationGroups.map((group) => [group.slug, group])), []);
 
   useEffect(() => {
+    setCurrentUrl(window.location.href);
     const onPointer = (event: MouseEvent) => {
-      if (!headerRef.current?.contains(event.target as Node)) setActiveMenu(null);
+      if (!headerRef.current?.contains(event.target as Node)) {
+        setActiveMenu(null);
+        setLanguageOpen(false);
+      }
     };
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") { setActiveMenu(null); setMobileOpen(false); }
+      if (event.key === "Escape") { setActiveMenu(null); setLanguageOpen(false); setMobileOpen(false); }
     };
     document.addEventListener("mousedown", onPointer);
     window.addEventListener("keydown", onKey);
     return () => { document.removeEventListener("mousedown", onPointer); window.removeEventListener("keydown", onKey); };
   }, []);
+
+  const translateUrl = (code: string) =>
+    `https://translate.google.com/translate?sl=pt&tl=${encodeURIComponent(code)}&u=${encodeURIComponent(currentUrl)}`;
 
   return (
     <header className="site-header" ref={headerRef}>
@@ -114,6 +138,27 @@ export function Header() {
 
         <div className="header-actions">
           <HeaderToolSearch tools={tools} />
+          <div className={`language-menu ${languageOpen ? "open" : ""}`}>
+            <button
+              className="language-trigger"
+              type="button"
+              aria-label="Selecionar idioma"
+              aria-expanded={languageOpen}
+              onClick={() => setLanguageOpen((value) => !value)}
+            >
+              <Languages size={17} />
+              <span>Idioma</span>
+              <ChevronDown size={14} />
+            </button>
+            <div className="language-options">
+              <a href={currentUrl} onClick={() => setLanguageOpen(false)}>Português</a>
+              {languageOptions.map((language) => (
+                <a key={language.code} href={translateUrl(language.code)} target="_blank" rel="noopener noreferrer" onClick={() => setLanguageOpen(false)}>
+                  {language.label}
+                </a>
+              ))}
+            </div>
+          </div>
           <Link className="header-cta" href="/ferramentas/editar-pdf"><UploadCloud size={17} /> Selecionar arquivo</Link>
           <button className="mobile-menu" type="button" aria-label="Abrir menu" aria-expanded={mobileOpen} onClick={() => setMobileOpen((value) => !value)}>{mobileOpen ? <X size={22} /> : <Menu size={22} />}</button>
         </div>
@@ -124,6 +169,13 @@ export function Header() {
             <Link href="/ferramentas" onClick={() => setMobileOpen(false)}>Todas as ferramentas</Link>
             {menuDefinitions.slice(1).map((menu) => <Link key={menu.id} href={menu.href} onClick={() => setMobileOpen(false)}>{menu.label}</Link>)}
             <Link href="/guias" onClick={() => setMobileOpen(false)}>Guias e tutoriais</Link>
+            <div className="mobile-language-list">
+              <strong>Idiomas</strong>
+              <a href={currentUrl} onClick={() => setMobileOpen(false)}>Português</a>
+              {languageOptions.map((language) => (
+                <a key={language.code} href={translateUrl(language.code)} target="_blank" rel="noopener noreferrer" onClick={() => setMobileOpen(false)}>{language.label}</a>
+              ))}
+            </div>
             <Link className="mobile-upload-button" href="/ferramentas/editar-pdf" onClick={() => setMobileOpen(false)}><UploadCloud size={17} /> Selecionar arquivo</Link>
           </div>
         </div>

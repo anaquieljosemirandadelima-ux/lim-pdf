@@ -27,7 +27,7 @@ const quickActions = [
   { title: "Arrastar PDF", description: "Solte o arquivo aqui", href: "/ferramentas/editar-pdf", icon: UploadCloud, drop: true },
   { title: "Abrir editor", description: "Editar e assinar PDF", href: "/ferramentas/editar-pdf", icon: Sparkles },
   { title: "Converter agora", description: "PDF, imagem e texto", href: "/categorias/converter", icon: ArrowRight },
-  { title: "Organizar paginas", description: "Reordenar, dividir e mais", href: "/categorias/organizar", icon: Grid2X2 },
+  { title: "Organizar páginas", description: "Reordenar, dividir e mais", href: "/categorias/organizar", icon: Grid2X2 },
 ];
 
 const catalogSections: Array<{
@@ -53,35 +53,35 @@ const catalogSections: Array<{
   },
   {
     title: "Converter",
-    label: "Conversao",
+    label: "Conversão",
     href: "/categorias/converter",
     group: navigationGroups.find((group) => group.slug === "converter"),
     tools: ["pdf-para-jpg", "pdf-para-png", "extrair-texto-pdf", "imagens-para-pdf"],
   },
   {
     title: "Otimizar e proteger",
-    label: "Otimizacao",
+    label: "Otimização",
     href: "/categorias/otimizar",
     group: navigationGroups.find((group) => group.slug === "otimizar"),
     tools: ["compactar-pdf", "redimensionar-pdf", "criar-livreto-pdf", "recortar-pdf", "paginas-por-folha", "remover-metadados"],
   },
   {
-    title: "Revisao e anotacoes",
-    label: "Finalizacao",
+    title: "Revisão e anotações",
+    label: "Finalização",
     href: "/categorias/editar",
     group: navigationGroups.find((group) => group.slug === "editar"),
     tools: ["numerar-paginas", "adicionar-fundo-pdf", "espelhar-pdf", "marca-dagua-pdf"],
   },
   {
-    title: "Formularios e texto",
+    title: "Formulários e texto",
     label: "Dados",
     href: "/categorias/formularios",
     group: navigationGroups.find((group) => group.slug === "formularios"),
     tools: ["preencher-formulario-pdf", "achatar-formulario-pdf", "extrair-texto-pdf"],
   },
   {
-    title: "Impressao e producao",
-    label: "Producao",
+    title: "Impressão e produção",
+    label: "Produção",
     href: "/categorias/otimizar",
     group: navigationGroups.find((group) => group.slug === "otimizar"),
     tools: ["redimensionar-pdf", "criar-livreto-pdf", "paginas-por-folha", "pdf-em-escala-de-cinza"],
@@ -178,7 +178,7 @@ export function ToolCatalog() {
         <div className="tool-center-copy">
           <span>Central de Ferramentas</span>
           <h1>Central de Ferramentas</h1>
-          <p>Todas as ferramentas que voce precisa para trabalhar com PDFs de forma simples, rapida e segura.</p>
+          <p>Todas as ferramentas que você precisa para trabalhar com PDFs de forma simples, rápida e segura.</p>
         </div>
         <label className="tool-center-search">
           <Search size={20} />
@@ -186,7 +186,7 @@ export function ToolCatalog() {
         </label>
       </section>
 
-      <section className="quick-actions" aria-label="Acoes rapidas">
+      <section className="quick-actions" aria-label="Ações rápidas">
         {quickActions.map((action) => {
           const Icon = action.icon;
           if (action.drop) {
@@ -279,8 +279,8 @@ export function ToolCatalog() {
 
       <section className="tool-center-safety">
         <ShieldCheck size={20} />
-        <span>Seus arquivos ficam nesta sessao do navegador durante o trabalho.</span>
-        <Link href="/seguranca">Saiba mais sobre seguranca <ArrowRight size={15} /></Link>
+        <span>Seus arquivos ficam nesta sessão do navegador durante o trabalho.</span>
+        <Link href="/seguranca">Saiba mais sobre segurança <ArrowRight size={15} /></Link>
       </section>
 
     </div>

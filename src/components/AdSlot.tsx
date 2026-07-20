@@ -9,9 +9,7 @@ export type AdPlacement =
   | "home-bottom"
   | "catalog-side"
   | "catalog-inline"
-  | "tool-inline"
-  | "guides-side"
-  | "guides-inline";
+  | "tool-inline";
 
 interface AdSlotProps {
   placement: AdPlacement;
@@ -34,8 +32,6 @@ export function AdSlot({ placement, format = "auto", className = "" }: AdSlotPro
       "catalog-side": process.env.NEXT_PUBLIC_ADSENSE_SLOT_CATALOG_SIDE,
       "catalog-inline": process.env.NEXT_PUBLIC_ADSENSE_SLOT_CATALOG_INLINE,
       "tool-inline": process.env.NEXT_PUBLIC_ADSENSE_SLOT_TOOL_INLINE,
-      "guides-side": process.env.NEXT_PUBLIC_ADSENSE_SLOT_GUIDES_SIDE,
-      "guides-inline": process.env.NEXT_PUBLIC_ADSENSE_SLOT_GUIDES_INLINE,
     }),
     [],
   );

@@ -3,7 +3,6 @@ import Link from "next/link";
 import {
   ArrowRight,
   CheckCircle2,
-  Clock3,
   FileImage,
   FileText,
   HardDrive,
@@ -17,7 +16,6 @@ import {
 import { AdSlot } from "@/components/AdSlot";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { ToolIcon } from "@/components/ToolIcon";
-import { guides } from "@/lib/guides";
 import { navigationGroups } from "@/lib/navigation";
 import { toolBySlug, type ToolSlug } from "@/lib/tools";
 import { workflows } from "@/lib/workflows";
@@ -148,20 +146,6 @@ export default function Home() {
         <div className="container security-panel-v3">
           <div className="security-main"><span><ShieldCheck size={29} /></span><div><h2>Seus arquivos ficam seguros.</h2><p>O processamento acontece localmente. O cache temporário ajuda a recuperar uma tarefa interrompida e expira automaticamente.</p></div></div>
           <div className="security-facts"><div><HardDrive size={20} /><span><strong>100% local</strong><small>Processamento no navegador</small></span></div><div><FileText size={20} /><span><strong>Não armazenamos</strong><small>Arquivos não são enviados</small></span></div><div><ShieldCheck size={20} /><span><strong>Privacidade</strong><small>Dados permanecem no dispositivo</small></span></div></div>
-        </div>
-      </section>
-
-      <section className="home-section guides-preview-section home-guides-v3">
-        <div className="container">
-          <div className="compact-section-heading"><div><span>Guias populares</span><h2>Aprenda a trabalhar melhor com PDF</h2></div><Link href="/guias">Ver todos os guias <ArrowRight size={16} /></Link></div>
-          <div className="guide-preview-row">
-            {guides.slice(0, 3).map((guide, index) => (
-              <article className={`guide-preview-card guide-tone-${index + 1}`} key={guide.slug}>
-                <span className="guide-preview-visual"><FileText size={28} /><ArrowRight size={17} /><FileImage size={28} /></span>
-                <div><small><Clock3 size={13} /> {guide.readingTime}</small><h3>{guide.title}</h3><p>{guide.description}</p><Link href={`/guias/${guide.slug}`}>Ler guia <ArrowRight size={14} /></Link></div>
-              </article>
-            ))}
-          </div>
         </div>
       </section>
 

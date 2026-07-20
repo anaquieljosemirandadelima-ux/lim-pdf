@@ -17,7 +17,6 @@ const columns = [
   {
     title: "Recursos",
     links: [
-      ["Guias e tutoriais", "/guias"],
       ["Segurança dos arquivos", "/seguranca"],
       ["Perguntas frequentes", "/faq"],
       ["Acessibilidade", "/acessibilidade"],

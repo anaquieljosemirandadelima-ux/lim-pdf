@@ -1,5 +1,4 @@
 import type { MetadataRoute } from "next";
-import { guides } from "@/lib/guides";
 import { navigationGroups } from "@/lib/navigation";
 import { tools } from "@/lib/tools";
 
@@ -10,7 +9,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const staticRoutes = [
     "",
     "/ferramentas",
-    "/guias",
     "/faq",
     "/sobre",
     "/privacidade",
@@ -39,12 +37,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: CONTENT_UPDATED_AT,
       changeFrequency: "monthly" as const,
       priority: .9,
-    })),
-    ...guides.map((guide) => ({
-      url: `${base}/guias/${guide.slug}`,
-      lastModified: new Date(guide.updatedAt),
-      changeFrequency: "monthly" as const,
-      priority: .75,
     })),
   ];
 }

@@ -48,8 +48,6 @@ type HeaderText = {
   editSign: string;
   convert: string;
   optimizeProtect: string;
-  guides: string;
-  guidesTutorials: string;
   selectFile: string;
   languages: string;
   featured: string;
@@ -88,8 +86,6 @@ const headerTranslations: Record<LanguageCode, HeaderText> = {
     editSign: "Editar e assinar",
     convert: "Converter",
     optimizeProtect: "Otimizar e proteger",
-    guides: "Guias",
-    guidesTutorials: "Guias e tutoriais",
     selectFile: "Selecionar arquivo",
     languages: "Idiomas",
     featured: "Destaque",
@@ -114,8 +110,6 @@ const headerTranslations: Record<LanguageCode, HeaderText> = {
     editSign: "Edit and sign",
     convert: "Convert",
     optimizeProtect: "Optimize and protect",
-    guides: "Guides",
-    guidesTutorials: "Guides and tutorials",
     selectFile: "Select file",
     languages: "Languages",
     featured: "Featured",
@@ -140,8 +134,6 @@ const headerTranslations: Record<LanguageCode, HeaderText> = {
     editSign: "Editar y firmar",
     convert: "Convertir",
     optimizeProtect: "Optimizar y proteger",
-    guides: "Guías",
-    guidesTutorials: "Guías y tutoriales",
     selectFile: "Seleccionar archivo",
     languages: "Idiomas",
     featured: "Destacado",
@@ -259,7 +251,6 @@ export function Header() {
               </div>
             );
           })}
-          <Link className="nav-simple-link" href="/guias">{text.guides}</Link>
         </nav>
 
         <div className="header-actions">
@@ -287,7 +278,6 @@ export function Header() {
           <div className="container mobile-nav-content">
             <Link href="/ferramentas" onClick={() => setMobileOpen(false)}>{text.allTools}</Link>
             {localizedMenus.slice(1).map((menu) => <Link key={menu.id} href={menu.href} onClick={() => setMobileOpen(false)}>{menu.label}</Link>)}
-            <Link href="/guias" onClick={() => setMobileOpen(false)}>{text.guidesTutorials}</Link>
             <div className="mobile-language-list">
               <strong>{text.languages}</strong>
               {supportedLanguages.map((language) => (

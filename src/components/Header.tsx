@@ -68,6 +68,16 @@ type HeaderText = {
   optimizeDescription: string;
 };
 
+function FlagIcon({ code }: { code: string }) {
+  return (
+    <span
+      className="flag-icon"
+      aria-hidden="true"
+      style={{ backgroundImage: `url(https://flagcdn.com/${code}.svg)` }}
+    />
+  );
+}
+
 const headerTranslations: Record<LanguageCode, HeaderText> = {
   "pt-BR": {
     tools: "Ferramentas",
@@ -488,7 +498,7 @@ export function Header() {
               onClick={() => setLanguageOpen((value) => !value)}
             >
               <Languages size={17} />
-              <span className="language-current"><span aria-hidden="true">{currentLanguage.flag}</span>{currentLanguage.shortLabel}</span>
+              <span className="language-current"><FlagIcon code={currentLanguage.flagCode} />{currentLanguage.nativeLabel}</span>
               <ChevronDown size={14} />
             </button>
             <div className="language-options" role="menu">
@@ -501,8 +511,7 @@ export function Header() {
                   className={selectedLanguage === language.code ? "active" : ""}
                   onClick={() => selectLanguage(language.code)}
                 >
-                  <span className="language-option-label"><span aria-hidden="true">{language.flag}</span>{language.nativeLabel}</span>
-                  <small>{language.shortLabel}</small>
+                  <span className="language-option-label"><FlagIcon code={language.flagCode} />{language.nativeLabel}</span>
                 </button>
               ))}
             </div>
@@ -527,7 +536,7 @@ export function Header() {
                   className={selectedLanguage === language.code ? "active" : ""}
                   onClick={() => selectLanguage(language.code)}
                 >
-                  <span aria-hidden="true">{language.flag}</span>
+                  <FlagIcon code={language.flagCode} />
                   {language.nativeLabel}
                 </button>
               ))}

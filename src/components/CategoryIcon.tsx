@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Grid2X2,
   PencilLine,

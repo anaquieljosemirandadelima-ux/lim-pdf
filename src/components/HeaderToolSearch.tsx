@@ -1,104 +1,80 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowRight, Command, Search, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowRight, Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { navigationGroups } from "@/lib/navigation";
+import { toolText, uiText } from "@/lib/i18n-content";
 import type { ToolDefinition } from "@/lib/tools";
+import { useLanguage } from "@/lib/use-language";
 
 function normalize(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
-const popularSlugs = ["juntar-pdf", "editar-pdf", "compactar-pdf", "pdf-para-jpg", "assinar-pdf"];
-
 export function HeaderToolSearch({ tools }: { tools: ToolDefinition[] }) {
+  const router = useRouter();
+  const language = useLanguage();
   const [query, setQuery] = useState("");
-  const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const popular = tools.filter((tool) => popularSlugs.includes(tool.slug));
+  const text = uiText[language];
   const results = useMemo(() => {
     const value = normalize(query.trim());
-    if (!value) return tools.slice(0, 7);
+    if (!value) return tools;
     return tools
-      .filter((tool) => normalize([tool.name, tool.category, tool.description, ...tool.keywords].join(" ")).includes(value))
-      .slice(0, 10);
-  }, [query, tools]);
+      .filter((tool) => {
+        const localized = toolText(language, tool.slug, tool);
+        return normalize([localized.name, localized.shortDescription, tool.category, tool.description, ...tool.keywords].join(" ")).includes(value);
+      })
+      .slice(0, 8);
+  }, [language, query, tools]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
-        setOpen(true);
+        inputRef.current?.focus();
       }
-      if (event.key === "Escape") setOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  useEffect(() => {
-    if (!open) return;
-    document.body.classList.add("modal-open");
-    window.setTimeout(() => inputRef.current?.focus(), 30);
-    return () => document.body.classList.remove("modal-open");
-  }, [open]);
-
-  function close() {
-    setOpen(false);
-    setQuery("");
+  function openResult() {
+    const value = normalize(query.trim());
+    const exact = results.find((tool) => normalize(toolText(language, tool.slug, tool).name) === value);
+    const target = exact ?? results[0];
+    if (target) {
+      router.push(`/ferramentas/${target.slug}`);
+      setQuery("");
+      inputRef.current?.blur();
+      return;
+    }
+    router.push("/ferramentas");
   }
 
   return (
-    <>
-      <button className="search-trigger" type="button" aria-label="Pesquisar ferramentas" onClick={() => setOpen(true)}>
+    <form className="header-search" role="search" onSubmit={(event) => { event.preventDefault(); openResult(); }}>
+      <label htmlFor="header-tool-search">
         <Search size={20} />
-        <span className="search-trigger-label">Buscar</span>
-        <kbd>Ctrl K</kbd>
+        <input
+          ref={inputRef}
+          id="header-tool-search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={text.searchPlaceholder}
+          autoComplete="off"
+          list="header-tool-search-options"
+        />
+      </label>
+      <datalist id="header-tool-search-options">
+        {results.map((tool) => {
+          const localized = toolText(language, tool.slug, tool);
+          return <option key={tool.slug} value={localized.name} />;
+        })}
+      </datalist>
+      <button type="submit" aria-label="Abrir ferramenta pesquisada">
+        <ArrowRight size={18} />
       </button>
-      {open ? (
-        <div className="search-modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && close()}>
-          <section className="search-command" role="dialog" aria-modal="true" aria-label="Pesquisar ferramentas PDF">
-            <div className="search-command-input">
-              <Search size={20} />
-              <input ref={inputRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar uma ferramenta PDF..." autoComplete="off" />
-              <span><Command size={14} /> K</span>
-              <button type="button" aria-label="Fechar pesquisa" onClick={close}><X size={19} /></button>
-            </div>
-
-            {!query ? (
-              <>
-                <div className="search-command-section">
-                  <strong>Mais procuradas</strong>
-                  <div className="search-popular-chips">
-                    {popular.map((tool) => <Link key={tool.slug} href={`/ferramentas/${tool.slug}`} onClick={close}>{tool.name}</Link>)}
-                  </div>
-                </div>
-                <div className="search-command-section">
-                  <strong>Categorias</strong>
-                  <div className="search-category-chips">
-                    {navigationGroups.slice(0, 6).map((group) => <Link key={group.slug} href={`/categorias/${group.slug}`} onClick={close}>{group.title}</Link>)}
-                  </div>
-                </div>
-              </>
-            ) : null}
-
-            <div className="search-command-section results-section">
-              <strong>{query ? `${results.length} resultado${results.length === 1 ? "" : "s"}` : "Sugestões"}</strong>
-              <div className="search-command-results">
-                {results.map((tool) => (
-                  <Link key={tool.slug} href={`/ferramentas/${tool.slug}`} onClick={close}>
-                    <span><b>{tool.name}</b><small>{tool.shortDescription}</small></span>
-                    <ArrowRight size={17} />
-                  </Link>
-                ))}
-                {!results.length ? <p>Nenhuma ferramenta encontrada. Tente outro termo.</p> : null}
-              </div>
-            </div>
-            <div className="search-command-footer"><span>Enter para abrir</span><span>Esc para fechar</span><Link href="/ferramentas" onClick={close}>Ver todas as ferramentas</Link></div>
-          </section>
-        </div>
-      ) : null}
-    </>
+    </form>
   );
 }

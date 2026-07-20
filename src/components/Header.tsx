@@ -13,7 +13,6 @@ import {
   Signature,
   SlidersHorizontal,
   TableProperties,
-  UploadCloud,
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -49,6 +48,7 @@ type HeaderText = {
   editSign: string;
   convert: string;
   optimizeProtect: string;
+  guides: string;
   selectFile: string;
   languages: string;
   featured: string;
@@ -87,6 +87,7 @@ const headerTranslations: Record<LanguageCode, HeaderText> = {
     editSign: "Editar e assinar",
     convert: "Converter",
     optimizeProtect: "Otimizar e proteger",
+    guides: "Guias",
     selectFile: "Selecionar arquivo",
     languages: "Idiomas",
     featured: "Destaque",
@@ -111,6 +112,7 @@ const headerTranslations: Record<LanguageCode, HeaderText> = {
     editSign: "Edit and sign",
     convert: "Convert",
     optimizeProtect: "Optimize and protect",
+    guides: "Guides",
     selectFile: "Select file",
     languages: "Languages",
     featured: "Featured",
@@ -135,6 +137,7 @@ const headerTranslations: Record<LanguageCode, HeaderText> = {
     editSign: "Editar y firmar",
     convert: "Convertir",
     optimizeProtect: "Optimizar y proteger",
+    guides: "Guías",
     selectFile: "Seleccionar archivo",
     languages: "Idiomas",
     featured: "Destacado",
@@ -252,6 +255,7 @@ export function Header() {
               </div>
             );
           })}
+          <Link className="nav-simple-link" href="/faq">{text.guides}</Link>
         </nav>
 
         <div className="header-actions">
@@ -270,7 +274,6 @@ export function Header() {
               ))}
             </div>
           </div>
-          <Link className="header-cta" href="/ferramentas/editar-pdf"><UploadCloud size={17} /> {text.selectFile}</Link>
           <button className="mobile-menu" type="button" aria-label="Abrir menu" aria-expanded={mobileOpen} onClick={() => setMobileOpen((value) => !value)}>{mobileOpen ? <X size={22} /> : <Menu size={22} />}</button>
         </div>
       </div>
@@ -279,6 +282,7 @@ export function Header() {
           <div className="container mobile-nav-content">
             <Link href="/ferramentas" onClick={() => setMobileOpen(false)}>{text.allTools}</Link>
             {localizedMenus.slice(1).map((menu) => <Link key={menu.id} href={menu.href} onClick={() => setMobileOpen(false)}>{menu.label}</Link>)}
+            <Link href="/faq" onClick={() => setMobileOpen(false)}>{text.guides}</Link>
             <div className="mobile-language-list">
               <strong>{text.languages}</strong>
               {supportedLanguages.map((language) => (
@@ -288,7 +292,6 @@ export function Header() {
                 </button>
               ))}
             </div>
-            <Link className="mobile-upload-button" href="/ferramentas/editar-pdf" onClick={() => setMobileOpen(false)}><UploadCloud size={17} /> {text.selectFile}</Link>
           </div>
         </div>
       ) : null}

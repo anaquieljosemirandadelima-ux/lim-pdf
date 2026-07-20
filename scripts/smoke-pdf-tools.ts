@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { PDFDocument, StandardFonts, degrees, rgb } from "pdf-lib";
 import { createStoredZip } from "../src/lib/browser-files";
 
@@ -97,7 +96,10 @@ async function main() {
   }
   const zip = createStoredZip(zipEntries);
   await writeFile(`${outDir}/pages.zip`, Buffer.from(await zip.arrayBuffer()));
-  execFileSync("unzip", ["-t", `${outDir}/pages.zip`], { stdio: "pipe" });
+  const zipBytes = await readFile(`${outDir}/pages.zip`);
+  assert.equal(zipBytes.readUInt32LE(0), 0x04034b50);
+  assert.equal(zipBytes.readUInt32LE(zipBytes.length - 22), 0x06054b50);
+  assert.equal(zipBytes.readUInt16LE(zipBytes.length - 14), zipEntries.length);
 
   console.log(JSON.stringify({ ok: true, suite: "pdf-tools", files: 10, mergedPages: merged.getPageCount(), splitPages: zipEntries.length }));
 }

@@ -963,7 +963,7 @@ function ResizeOptions({
       <label><span>Orientacao</span><select value={orientation} onChange={(event) => onOrientationChange(event.target.value as PageOrientation)}><option value="portrait">Retrato</option><option value="landscape">Paisagem</option></select></label>
       <label><span>Ajuste do conteudo</span><select value={mode} onChange={(event) => onModeChange(event.target.value as ResizeMode)}><option value="fit">Ajustar dentro</option><option value="fill">Preencher e cortar excesso</option><option value="stretch">Esticar para preencher</option><option value="none">Nao redimensionar conteudo</option></select></label>
       <label><span>Margem em mm</span><input type="number" min="0" step="0.5" value={margin} onChange={(event) => onMarginChange(event.target.value)} /></label>
-      <label className="option-full"><span>Paginas</span><input value={pages} onChange={(event) => onPagesChange(event.target.value)} placeholder="Vazio = todas. Ex.: 1,3-5" /><small>Apenas as paginas informadas serao redimensionadas.</small></label>
+      <label className="option-full"><span>Páginas</span><input value={pages} onChange={(event) => onPagesChange(event.target.value)} placeholder="Vazio = todas. Ex.: 1,3-5" /><small>Apenas as páginas informadas serão redimensionadas.</small></label>
       <div className="option-full resize-preview"><strong>Tamanho final</strong><span>{oriented ? `${oriented.width.toFixed(1)} x ${oriented.height.toFixed(1)} pt` : "Informe medidas validas"}</span></div>
     </>
   );

@@ -26,14 +26,14 @@ export const workflows: WorkflowDefinition[] = [
   {
     slug: "organizar-documento",
     title: "Organizar documento completo",
-    description: "Junte arquivos, reorganize paginas, numere e exporte uma versao limpa.",
+    description: "Junte arquivos, reorganize páginas, numere e exporte uma versão limpa.",
     accent: "green",
     tools: ["juntar-pdf", "organizar-paginas", "numerar-paginas", "excluir-paginas"],
   },
   {
     slug: "converter-imagens",
     title: "Converter PDF e imagens",
-    description: "Transforme paginas em imagens ou monte um PDF a partir de fotos.",
+    description: "Transforme páginas em imagens ou monte um PDF a partir de fotos.",
     accent: "teal",
     tools: ["pdf-para-jpg", "pdf-para-png", "imagens-para-pdf", "extrair-texto-pdf"],
   },

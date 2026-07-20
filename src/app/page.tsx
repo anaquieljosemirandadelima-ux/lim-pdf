@@ -39,7 +39,7 @@ const popularSlugs: ToolSlug[] = [
 ];
 
 export default function Home() {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://lim-pdf-preview.vercel.app";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://limpdf.com.br";
   const popular = popularSlugs.map((slug) => toolBySlug.get(slug)).filter((tool) => tool !== undefined);
   const structuredData = {
     "@context": "https://schema.org",
@@ -128,7 +128,7 @@ export default function Home() {
 
       <section className="home-section workflow-section">
         <div className="container">
-          <div className="compact-section-heading"><div><span>Fluxos inteligentes</span><h2>Combine ferramentas para terminar a tarefa inteira</h2></div><Link href="/ferramentas">Abrir catalogo <ArrowRight size={16} /></Link></div>
+          <div className="compact-section-heading"><div><span>Sequências sugeridas</span><h2>Atalhos para continuar o trabalho em ferramentas relacionadas</h2></div><Link href="/ferramentas">Abrir catálogo <ArrowRight size={16} /></Link></div>
           <div className="workflow-grid">
             {workflows.slice(0, 4).map((workflow) => {
               const firstTool = toolBySlug.get(workflow.tools[0]);
@@ -136,7 +136,7 @@ export default function Home() {
                 <Link className={`workflow-card accent-${workflow.accent}`} href={firstTool ? `/ferramentas/${firstTool.slug}` : "/ferramentas"} key={workflow.slug}>
                   <strong>{workflow.title}</strong>
                   <p>{workflow.description}</p>
-                  <span>{workflow.tools.length} ferramentas conectadas</span>
+                  <span>{workflow.tools.length} etapas sugeridas</span>
                 </Link>
               );
             })}

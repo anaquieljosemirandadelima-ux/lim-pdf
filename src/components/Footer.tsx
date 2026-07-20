@@ -19,7 +19,7 @@ const columns = [
     links: [
       ["Guias e tutoriais", "/guias"],
       ["Segurança dos arquivos", "/seguranca"],
-      ["Perguntas frequentes", "/guias"],
+      ["Perguntas frequentes", "/faq"],
       ["Acessibilidade", "/acessibilidade"],
       ["Contato", "/contato"],
     ],

@@ -43,7 +43,7 @@ export default async function ToolPage({ params }: ToolPageProps) {
         return nextTool && nextTool.slug !== tool.slug ? [nextTool] : [];
       })
     : [];
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://lim-pdf-preview.vercel.app";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://limpdf.com.br";
   const softwareSchema = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
@@ -65,7 +65,7 @@ export default async function ToolPage({ params }: ToolPageProps) {
           <div className="container">
             <div className="editor-heading-copy">
               <Link className="breadcrumb" href="/categorias/editar">Início <span>/</span> Ferramentas <span>/</span> Editar PDF</Link>
-              <div className="editor-heading-title"><span className="tool-icon large-icon accent-blue"><ToolIcon icon={tool.icon} /></span><div><h1>Editar PDF</h1><p>Edite textos detectados, adicione textos e imagens e baixe o resultado diretamente no navegador.</p></div></div>
+              <div className="editor-heading-title"><span className="tool-icon large-icon accent-blue"><ToolIcon icon={tool.icon} /></span><div><h1>Editar PDF</h1><p>Substitua textos visualmente, adicione textos e imagens e baixe o resultado diretamente no navegador.</p></div></div>
             </div>
             <div className="editor-heading-actions">
               <Link className="secondary-button" href="/ferramentas/adicionar-texto-pdf"><Type size={17} /> Adicionar texto</Link>

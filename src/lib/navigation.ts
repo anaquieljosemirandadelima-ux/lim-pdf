@@ -35,7 +35,7 @@ export const navigationGroups: NavigationGroup[] = [
     slug: "editar",
     label: "Editar",
     title: "Editar PDF",
-    description: "Edite textos existentes e adicione textos, imagens, fundos e marcas.",
+    description: "Substitua texto visualmente e adicione textos, imagens, fundos e marcas.",
     icon: "edit",
     accent: "green",
     tools: [

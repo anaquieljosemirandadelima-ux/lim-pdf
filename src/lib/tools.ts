@@ -98,10 +98,10 @@ const privacyFaq = {
 
 export const tools: ToolDefinition[] = [
   {
-    slug: "editar-pdf", name: "Editar PDF", shortDescription: "Edite textos existentes e adicione novos elementos.",
-    description: "Edite textos detectados, adicione textos e imagens e baixe uma nova versão do PDF diretamente no navegador.", category: "Editar PDF", icon: "SquarePen", accent: "blue", accept: "application/pdf", multiple: false,
+    slug: "editar-pdf", name: "Editar PDF", shortDescription: "Substitua texto visualmente e adicione novos elementos.",
+    description: "Cubra textos selecionados visualmente, adicione textos e imagens e baixe uma nova versão do PDF diretamente no navegador.", category: "Editar PDF", icon: "SquarePen", accent: "blue", accept: "application/pdf", multiple: false,
     keywords: ["editar pdf", "editar texto pdf", "corrigir pdf", "alterar texto pdf", "editor de pdf"],
-    intro: "Abra o PDF em um editor visual, selecione blocos de texto detectados e substitua o conteúdo. Também é possível inserir novos textos e imagens antes de exportar.",
+    intro: "Abra o PDF em um editor visual, selecione áreas da página e substitua visualmente o conteúdo. Também é possível inserir novos textos e imagens antes de exportar.",
     useCases: ["Corrigir dados de um documento", "Atualizar títulos e pequenas informações", "Adicionar observações", "Inserir logotipo ou imagem"],
     limitations: ["A edição de texto cobre o conteúdo original e escreve o novo texto por cima", "Fontes complexas e textos longos podem exigir ajuste manual", "Revise sempre o resultado antes de usar"],
     faq: [{ question: "A ferramenta altera o texto original internamente?", answer: "Ela cobre o bloco visual selecionado e adiciona o novo conteúdo no mesmo local, preservando as demais páginas." }, privacyFaq],
@@ -392,7 +392,7 @@ export const toolBySlug = new Map(tools.map((tool) => [tool.slug, tool]));
 export const categories = [
   { name: "Organizar PDF", description: "Separe, reordene, duplique, gire e ajuste páginas.", href: "/ferramentas#organizar-pdf" },
   { name: "Combinar PDF", description: "Junte, alterne ou sobreponha documentos.", href: "/ferramentas#combinar-pdf" },
-  { name: "Editar PDF", description: "Adicione textos, imagens, assinatura, fundo e marca-d’água.", href: "/ferramentas#editar-pdf" },
+  { name: "Editar PDF", description: "Substitua texto visualmente e adicione textos, imagens, assinatura, fundo e marca-d’água.", href: "/ferramentas#editar-pdf" },
   { name: "Converter de PDF", description: "Transforme páginas em JPG, PNG ou texto.", href: "/ferramentas#converter-de-pdf" },
   { name: "Converter para PDF", description: "Transforme imagens JPG e PNG em PDF.", href: "/ferramentas#converter-para-pdf" },
   { name: "Formulários", description: "Preencha e achate formulários PDF interativos.", href: "/ferramentas#formularios" },

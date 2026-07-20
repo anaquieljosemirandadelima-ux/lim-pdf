@@ -33,6 +33,8 @@ const MAX_FILE_SIZE = 60 * 1024 * 1024;
 const PREVIEW_SCALE = 1.2;
 const MIN_OBJECT_SIZE = 12;
 const HISTORY_LIMIT = 60;
+const EDITOR_DRAFT_PREFIX = "limpdf-editor-draft:";
+const EDITOR_RECENTS_KEY = "limpdf-editor-recents-v1";
 
 type PagePreview = {
   pageIndex: number;
@@ -97,6 +99,7 @@ type SignatureObject = EditorObjectBase & {
 };
 
 type EditorObject = TextReplacementObject | TextObject | ImageObject | RedactionObject | HighlightObject | CommentObject | SignatureObject;
+type PersistableEditorObject = Exclude<EditorObject, ImageObject>;
 type EditorStatus = "idle" | "loading" | "ready" | "exporting" | "error";
 type DragMode = "move" | "resize";
 
@@ -197,6 +200,74 @@ async function dataUrlToArrayBuffer(dataUrl: string) {
   return response.arrayBuffer();
 }
 
+type EditorDraft = {
+  fileKey: string;
+  fileName: string;
+  fileSize: number;
+  updatedAt: string;
+  pageSequence: number[];
+  objects: PersistableEditorObject[];
+};
+
+type EditorRecent = {
+  fileKey: string;
+  fileName: string;
+  fileSize: number;
+  updatedAt: string;
+  objectCount: number;
+};
+
+function editorFileKey(file: File) {
+  return `${file.name}:${file.size}:${file.lastModified}`;
+}
+
+function safeReadJson<T>(key: string, fallback: T): T {
+  try {
+    const value = window.localStorage.getItem(key);
+    return value ? JSON.parse(value) as T : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function loadEditorDraft(file: File): EditorDraft | null {
+  return safeReadJson<EditorDraft | null>(`${EDITOR_DRAFT_PREFIX}${editorFileKey(file)}`, null);
+}
+
+function saveEditorDraft(file: File, pageSequence: number[], objects: EditorObject[]) {
+  const now = new Date().toISOString();
+  const fileKey = editorFileKey(file);
+  const persistableObjects = objects.filter((object): object is PersistableEditorObject => object.kind !== "image");
+  const draft: EditorDraft = {
+    fileKey,
+    fileName: file.name,
+    fileSize: file.size,
+    updatedAt: now,
+    pageSequence,
+    objects: persistableObjects,
+  };
+  window.localStorage.setItem(`${EDITOR_DRAFT_PREFIX}${fileKey}`, JSON.stringify(draft));
+  const recents = safeReadJson<EditorRecent[]>(EDITOR_RECENTS_KEY, []).filter((item) => item.fileKey !== fileKey);
+  window.localStorage.setItem(EDITOR_RECENTS_KEY, JSON.stringify([
+    { fileKey, fileName: file.name, fileSize: file.size, updatedAt: now, objectCount: persistableObjects.length },
+    ...recents,
+  ].slice(0, 6)));
+  return now;
+}
+
+function formatDraftDate(value: string) {
+  try {
+    return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+  } catch {
+    return "recente";
+  }
+}
+
+function formatBytes(size: number) {
+  if (size < 1024 * 1024) return `${Math.ceil(size / 1024)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 function objectToCss(object: EditorObject, zoom: number) {
   const scale = PREVIEW_SCALE * zoom;
   return {
@@ -229,6 +300,12 @@ export function PdfEditorWorkspace() {
   const [undoStack, setUndoStack] = useState<EditorObject[][]>([]);
   const [redoStack, setRedoStack] = useState<EditorObject[][]>([]);
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
+  const [draftRestored, setDraftRestored] = useState(false);
+  const [recentDrafts, setRecentDrafts] = useState<EditorRecent[]>(() => {
+    if (typeof window === "undefined") return [];
+    return safeReadJson<EditorRecent[]>(EDITOR_RECENTS_KEY, []);
+  });
 
   const currentPageId = pageSequence[currentPage];
   const page = pages.find((item) => item.pageIndex === currentPageId) || pages[0];
@@ -355,15 +432,20 @@ export function PdfEditorWorkspace() {
           await document.cleanup();
         }
         if (!cancelled) {
+          const draft = loadEditorDraft(file);
+          const validDraftSequence = draft?.pageSequence.every((pageId) => nextPages.some((item) => item.pageIndex === pageId));
+          const draftedObjects = draft?.objects.filter((object) => nextPages[object.pageIndex]) || [];
           setPages(nextPages);
-          setPageSequence(nextPages.map((item) => item.pageIndex));
-          setObjects(nextObjects.map((object) => clampObject(object, nextPages[object.pageIndex])));
+          setPageSequence(validDraftSequence && draft ? draft.pageSequence : nextPages.map((item) => item.pageIndex));
+          setObjects((validDraftSequence && draftedObjects.length ? draftedObjects : nextObjects).map((object) => clampObject(object, nextPages[object.pageIndex])));
           setCurrentPage(0);
           clearSelection();
           setUndoStack([]);
           setRedoStack([]);
+          setDraftSavedAt(draft?.updatedAt || null);
+          setDraftRestored(Boolean(validDraftSequence && draftedObjects.length));
           setStatus("ready");
-          setMessage(restored ? "Sessão recuperada do cache temporário." : "PDF pronto para edição com objetos selecionáveis.");
+          setMessage(validDraftSequence && draftedObjects.length ? "Rascunho local recuperado com camadas e alterações salvas." : restored ? "Sessão recuperada do cache temporário." : "PDF pronto para edição com objetos selecionáveis.");
         }
       } catch {
         if (!cancelled) {
@@ -374,6 +456,16 @@ export function PdfEditorWorkspace() {
     })();
     return () => { cancelled = true; };
   }, [clearSelection, file, restored]);
+
+  useEffect(() => {
+    if (!file || status !== "ready" || !pages.length) return;
+    const timeout = window.setTimeout(() => {
+      const savedAt = saveEditorDraft(file, pageSequence, objects);
+      setDraftSavedAt(savedAt);
+      setRecentDrafts(safeReadJson<EditorRecent[]>(EDITOR_RECENTS_KEY, []));
+    }, 700);
+    return () => window.clearTimeout(timeout);
+  }, [file, objects, pageSequence, pages.length, status]);
 
   const applyObjects = useCallback((updater: (current: EditorObject[]) => EditorObject[], selectId?: string | string[] | null) => {
     setObjects((current) => {
@@ -953,6 +1045,17 @@ export function PdfEditorWorkspace() {
         <p>O arquivo ficará armazenado temporariamente no navegador para evitar perda durante o trabalho.</p>
         <button className="primary-button large-button" type="button" onClick={() => fileInputRef.current?.click()}><FileText size={18} /> Selecionar PDF</button>
         <input ref={fileInputRef} type="file" accept="application/pdf" hidden onChange={(event) => event.target.files?.[0] && openFile(event.target.files[0])} />
+        {recentDrafts.length ? (
+          <div className="editor-recent-drafts">
+            <strong>Rascunhos recentes</strong>
+            {recentDrafts.map((draft) => (
+              <div key={draft.fileKey}>
+                <span>{draft.fileName}</span>
+                <small>{formatBytes(draft.fileSize)} · {draft.objectCount} camadas · {formatDraftDate(draft.updatedAt)}</small>
+              </div>
+            ))}
+          </div>
+        ) : null}
         <div className="editor-upload-security"><ShieldCheck size={17} /> Sem upload para o LIM PDF</div>
       </section>
     );
@@ -961,7 +1064,7 @@ export function PdfEditorWorkspace() {
   return (
     <section className="pdf-editor-shell">
       <div className="editor-topbar">
-        <div className="editor-file-name"><FileText size={19} /><span><strong>{file.name}</strong><small>{cached ? "Salvo temporariamente no navegador" : "Cache local indisponível para este tamanho"}</small></span></div>
+        <div className="editor-file-name"><FileText size={19} /><span><strong>{file.name}</strong><small>{draftSavedAt ? `Rascunho salvo ${formatDraftDate(draftSavedAt)}` : cached ? "Salvo temporariamente no navegador" : "Cache local indisponível para este tamanho"}{draftRestored ? " · restaurado" : ""}</small></span></div>
         <div className="editor-history"><button type="button" onClick={undo} disabled={!undoStack.length} title="Desfazer (Ctrl+Z)"><Undo2 size={17} /></button><button type="button" onClick={redo} disabled={!redoStack.length} title="Refazer (Ctrl+Y)"><Redo2 size={17} /></button></div>
         <div className="editor-top-actions"><div className="editor-zoom-controls"><button type="button" onClick={() => setZoom((value) => Math.max(.5, Number((value - .1).toFixed(2))))}>-</button><span>{Math.round(zoom * 100)}%</span><button type="button" onClick={() => setZoom((value) => Math.min(2, Number((value + .1).toFixed(2))))}>+</button></div><button className="secondary-button" type="button" onClick={closeDocument}><Trash2 size={16} /> Fechar</button><button className="primary-button" type="button" onClick={exportPdf} disabled={status === "loading" || status === "exporting"}><Download size={17} /> Baixar PDF</button></div>
       </div>

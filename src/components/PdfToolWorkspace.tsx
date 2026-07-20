@@ -91,6 +91,12 @@ type Status =
   | { type: "success"; message: string }
   | { type: "error"; message: string };
 
+type ProcessingSummary = {
+  title: string;
+  details: string[];
+  warnings?: string[];
+};
+
 type Position =
   | "top-left"
   | "top-center"
@@ -181,6 +187,23 @@ function bookletOrder(totalPages: number) {
   return { paddedTotal, blankPages: paddedTotal - totalPages, sheets };
 }
 
+function workflowStepsFor(tool: ToolDefinition, files: File[]) {
+  const input = files.length > 1 ? `${files.length} arquivos` : files[0]?.name || "arquivo";
+  const shared = [`Entrada: ${input}`, "Processamento local no navegador"];
+  const output = tool.slug === "pdf-para-jpg" || tool.slug === "pdf-para-png" || tool.slug === "extrair-texto-pdf"
+    ? "Saída: pacote ZIP organizado"
+    : "Saída: PDF pronto para download";
+  const byTool: Partial<Record<ToolSlug, string[]>> = {
+    "compactar-pdf": ["Renderiza páginas", "Recria PDF com imagens otimizadas", output],
+    "criar-livreto-pdf": ["Calcula imposição de caderno", "Reordena páginas para impressão frente e verso", output],
+    "paginas-por-folha": ["Agrupa páginas em grade", "Centraliza cada página na folha A4", output],
+    "extrair-texto-pdf": ["Lê a camada de texto", "Marca páginas sem texto detectável", output],
+    "preencher-formulario-pdf": ["Lê campos interativos", "Aplica valores preenchidos", output],
+    "redimensionar-pdf": ["Calcula novo formato", "Reposiciona conteúdo por página", output],
+  };
+  return [...shared, ...(byTool[tool.slug] || ["Aplica as configurações escolhidas", output])].slice(0, 5);
+}
+
 export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -188,6 +211,7 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
   const [overlayImage, setOverlayImage] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [status, setStatus] = useState<Status>({ type: "idle" });
+  const [summary, setSummary] = useState<ProcessingSummary | null>(null);
   const [pageSpecification, setPageSpecification] = useState("1");
   const [pageOrder, setPageOrder] = useState("1");
   const [rotation, setRotation] = useState("90");
@@ -285,6 +309,7 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
     }
     setFiles((current) => (tool.multiple ? [...current, ...next] : next.slice(0, 1)));
     setStatus({ type: "idle" });
+    setSummary(null);
   }, [acceptsImages, tool.multiple]);
 
   function removeFile(index: number) {
@@ -294,6 +319,7 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
       return next;
     });
     setStatus({ type: "idle" });
+    setSummary(null);
   }
 
   function moveFile(index: number, direction: -1 | 1) {
@@ -684,8 +710,28 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
     const file = files[0];
     if (!file) throw new Error("Selecione um PDF.");
     const pages = await extractTextByPage(await file.arrayBuffer());
+    const textPages = pages.filter((page) => page.trim()).length;
+    const emptyPages = pages.length - textPages;
     const text = pages.map((page, index) => `--- Página ${index + 1} ---\n${page || "[Nenhum texto detectado]"}`).join("\n\n");
-    downloadBlob(new Blob([text], { type: "text/plain;charset=utf-8" }), `${file.name.replace(/\.pdf$/i, "")}-texto.txt`);
+    const report = {
+      file: file.name,
+      generatedAt: new Date().toISOString(),
+      pages: pages.map((text, index) => ({
+        page: index + 1,
+        hasTextLayer: Boolean(text.trim()),
+        characters: text.trim().length,
+      })),
+      note: "Esta extração usa a camada de texto já presente no PDF. Páginas escaneadas sem OCR retornam sem texto.",
+    };
+    downloadBlob(createStoredZip([
+      { name: `${file.name.replace(/\.pdf$/i, "")}-texto.txt`, data: new TextEncoder().encode(text) },
+      { name: `${file.name.replace(/\.pdf$/i, "")}-relatorio.json`, data: new TextEncoder().encode(JSON.stringify(report, null, 2)) },
+    ]), `${file.name.replace(/\.pdf$/i, "")}-extracao-texto-lim-pdf.zip`);
+    setSummary({
+      title: "Extração concluída",
+      details: [`${textPages} de ${pages.length} página(s) tinham camada de texto.`, "O download inclui TXT por página e relatório JSON."],
+      warnings: emptyPages ? [`${emptyPages} página(s) parecem escaneadas ou sem camada de texto. OCR real exige motor dedicado/API.`] : undefined,
+    });
   }
 
   async function processFillForm() {
@@ -767,6 +813,7 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
     if (!files.length) return;
     setStatus({ type: "processing", message: "Processando no seu navegador. Não feche esta página." });
     try {
+      setSummary(null);
       const operations: Record<Exclude<ToolSlug, "editar-pdf">, () => Promise<void>> = {
         "juntar-pdf": processMerge,
         "dividir-pdf": processSplit,
@@ -802,6 +849,10 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
       };
       await operations[tool.slug as Exclude<ToolSlug, "editar-pdf">]();
       setStatus({ type: "success", message: "Arquivo criado com sucesso. O download foi iniciado." });
+      setSummary((current) => current || {
+        title: "Processamento concluído",
+        details: [`${files.length} arquivo(s) processado(s).`, "Resultado gerado localmente no navegador."],
+      });
     } catch (error) {
       setStatus({ type: "error", message: error instanceof Error ? error.message : "Não foi possível processar o arquivo." });
     }
@@ -854,6 +905,15 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
       ) : null}
 
       {files.length ? (
+        <div className="workflow-preview">
+          <strong>Fluxo desta tarefa</strong>
+          <ol>
+            {workflowStepsFor(tool, files).map((step) => <li key={step}>{step}</li>)}
+          </ol>
+        </div>
+      ) : null}
+
+      {files.length ? (
         <div className="tool-options options-grid">
           {usesPageSelection && <label><span>Páginas {tool.slug === "extrair-paginas" || tool.slug === "excluir-paginas" || tool.slug === "duplicar-paginas" ? "" : "(vazio = todas)"}</span><input value={pageSpecification} onChange={(event) => setPageSpecification(event.target.value)} placeholder="Ex.: 1,3-5,8" /><small>Use vírgulas e intervalos, como 1,3-5.</small></label>}
           {tool.slug === "organizar-paginas" && <label className="option-full"><span>Nova ordem das páginas</span><input value={pageOrder} onChange={(event) => setPageOrder(event.target.value)} placeholder="Ex.: 3,1,2,4-6 ou 6-1" /><small>É possível repetir páginas e usar intervalos em ordem inversa.</small></label>}
@@ -875,10 +935,19 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
           {tool.slug === "cabecalho-rodape-pdf" && <><label className="option-full"><span>Cabeçalho</span><input maxLength={100} value={headerText} onChange={(event) => setHeaderText(event.target.value)} placeholder="Ex.: Nome da empresa" /></label><label className="option-full"><span>Rodapé</span><input maxLength={100} value={footerText} onChange={(event) => setFooterText(event.target.value)} placeholder="Ex.: Documento confidencial" /></label><label><span>Alinhamento</span><select value={alignment} onChange={(event) => setAlignment(event.target.value as typeof alignment)}><option value="left">Esquerda</option><option value="center">Centro</option><option value="right">Direita</option></select></label><FontSize value={fontSize} onChange={setFontSize} /></>}
           {tool.slug === "espelhar-pdf" && <label><span>Direção</span><select value={mirrorDirection} onChange={(event) => setMirrorDirection(event.target.value as typeof mirrorDirection)}><option value="horizontal">Horizontal</option><option value="vertical">Vertical</option></select></label>}
           {tool.slug === "adicionar-fundo-pdf" && <label><span>Cor do fundo</span><input type="color" value={backgroundColor} onChange={(event) => setBackgroundColor(event.target.value)} /></label>}
+          {tool.slug === "extrair-texto-pdf" && <div className="option-full extraction-note"><strong>Extração inteligente</strong><span>Gera TXT e relatório JSON. PDFs escaneados sem camada de texto serão identificados no relatório; OCR real fica reservado para uma etapa com motor dedicado.</span></div>}
         </div>
       ) : null}
 
       {status.type !== "idle" ? <div className={`status-message status-${status.type}`} role="status">{status.type === "processing" ? <LoaderCircle className="spin" size={19} /> : null}{status.type === "success" ? <CheckCircle2 size={19} /> : null}{status.type === "error" ? <AlertCircle size={19} /> : null}<span>{status.message}</span></div> : null}
+
+      {summary ? (
+        <div className="processing-summary">
+          <strong>{summary.title}</strong>
+          {summary.details.map((item) => <span key={item}>{item}</span>)}
+          {summary.warnings?.map((item) => <small key={item}>{item}</small>)}
+        </div>
+      ) : null}
 
       {files.length ? <button type="button" className="process-button" onClick={processFiles} disabled={!canProcess}>{status.type === "processing" ? <LoaderCircle className="spin" size={20} /> : <Download size={20} />}{status.type === "processing" ? "Processando..." : `${tool.name} agora`}</button> : null}
 

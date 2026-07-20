@@ -11,6 +11,23 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://limpdf.com.br";
 const adsenseClient = ADSENSE_CLIENT;
 const googleVerification = process.env.GOOGLE_SITE_VERIFICATION;
 const toolCount = tools.length;
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  name: "LIM PDF",
+  url: siteUrl,
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web",
+  inLanguage: "pt-BR",
+  offers: { "@type": "Offer", price: "0", priceCurrency: "BRL" },
+  featureList: tools.slice(0, 24).map((tool) => tool.name),
+  publisher: {
+    "@type": "Organization",
+    name: "LIM PDF",
+    url: siteUrl,
+    logo: `${siteUrl}/brand/lim-pdf-icon-192.png`,
+  },
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -53,6 +70,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="pt-BR">
       <body className="app-body">
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
         <a className="skip-link" href="#conteudo">Pular para o conteúdo</a>
         <AdSenseLoader client={adsenseClient} />
         <Header />

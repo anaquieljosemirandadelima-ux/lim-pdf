@@ -9,12 +9,10 @@ import {
   ImagePlus,
   LoaderCircle,
   MousePointer2,
-  Redo2,
   Save,
   ShieldCheck,
   Trash2,
   Type,
-  Undo2,
   UploadCloud,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -308,7 +306,6 @@ export function PdfEditorWorkspace() {
     <section className="pdf-editor-shell">
       <div className="editor-topbar">
         <div className="editor-file-name"><FileText size={19} /><span><strong>{file.name}</strong><small>{cached ? "Salvo temporariamente no navegador" : "Cache local indisponível para este tamanho"}</small></span></div>
-        <div className="editor-history"><button type="button" disabled title="Desfazer"><Undo2 size={17} /></button><button type="button" disabled title="Refazer"><Redo2 size={17} /></button></div>
         <div className="editor-top-actions"><button className="secondary-button" type="button" onClick={closeDocument}><Trash2 size={16} /> Fechar</button><button className="primary-button" type="button" onClick={exportPdf} disabled={status === "loading" || status === "exporting"}><Download size={17} /> Baixar PDF</button></div>
       </div>
       <div className="editor-body">

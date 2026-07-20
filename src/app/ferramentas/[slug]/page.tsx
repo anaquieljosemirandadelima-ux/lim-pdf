@@ -98,7 +98,7 @@ export default async function ToolPage({ params }: ToolPageProps) {
             <div className="tool-guide-note"><ShieldCheck size={18} /><p>O arquivo permanece no dispositivo e pode ser recuperado temporariamente pelo cache local.</p></div>
             {suggestedWorkflow ? (
               <div className={`tool-next-flow accent-${suggestedWorkflow.accent}`}>
-                <span>Fluxo sugerido</span>
+                <span>Sequência sugerida</span>
                 <h3>{suggestedWorkflow.title}</h3>
                 <p>{suggestedWorkflow.description}</p>
                 {workflowTools.slice(0, 3).map((item) => <Link href={`/ferramentas/${item.slug}`} key={item.slug}>{item.name} <ArrowRight size={14} /></Link>)}

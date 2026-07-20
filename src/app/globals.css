@@ -669,3 +669,61 @@ body.modal-open{overflow:hidden}
 .consent-card{background:#251116;border-color:#5a2930}.consent-icon,.consent-details>div{background:#3a171e}
 .consent-settings,.privacy-settings-button,.footer-privacy-column .privacy-settings-button{color:#ff9da3}
 @media(max-width:700px){.logo{width:128px;min-width:128px;height:42px}.site-footer .logo{width:170px}}
+
+/* Tool center redesign */
+.catalog-page{padding:0 0 36px;background:linear-gradient(180deg,#fff,#fffafa 55%,#fff)}
+.catalog-layout{display:block;width:min(1456px,calc(100% - 64px));margin-inline:auto}
+.catalog-layout>.catalog-ad,.catalog-page>.ad-shell{display:none}
+.tool-center{position:relative;padding:38px 0 0}
+.tool-center:before{content:"";position:absolute;right:-70px;top:0;width:640px;height:260px;border-radius:999px;background:radial-gradient(circle at 65% 44%,#fff0f1 0,#fff8f8 45%,transparent 72%);pointer-events:none}
+.tool-center-hero{position:relative;display:flex;align-items:end;justify-content:space-between;gap:24px;margin-bottom:24px}
+.tool-center-copy span{display:block;color:var(--blue);font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px}
+.tool-center-copy h1{font-size:48px;line-height:1;letter-spacing:-2px;margin:0 0 12px;color:#191b24}
+.tool-center-copy p{margin:0;color:#6e6670;font-size:14px;max-width:760px}
+.tool-center-search{width:min(380px,100%);height:48px;border:1px solid var(--line);border-radius:13px;background:#fff;display:flex;align-items:center;gap:10px;padding:0 14px;box-shadow:0 10px 26px rgba(88,8,15,.06);color:#697485}
+.tool-center-search input{min-width:0;width:100%;border:0;outline:0;background:transparent;font-size:12px;color:var(--ink)}
+.quick-actions{position:relative;display:grid;grid-template-columns:1.25fr repeat(4,1fr);gap:14px;margin-bottom:22px}
+.quick-action{min-height:86px;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:0 10px 28px rgba(88,8,15,.06);display:grid;grid-template-columns:48px minmax(0,1fr) 20px;grid-template-rows:auto auto;align-items:center;gap:0 14px;padding:14px 16px;text-align:left;color:#1f2330;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease,background .18s ease}
+.quick-action>span{grid-row:1/3;width:48px;height:48px;border-radius:13px;background:#fff1f2;color:var(--blue);display:grid;place-items:center}
+.quick-action b{font-size:13px;line-height:1.2}
+.quick-action small{font-size:10px;color:var(--muted);line-height:1.25}
+.quick-action>svg{grid-row:1/3;grid-column:3;color:var(--blue)}
+.quick-action:hover,.quick-action.dragging{border-color:#ff9ba1;box-shadow:0 18px 38px rgba(207,0,13,.12);transform:translateY(-2px)}
+.quick-action.primary{background:linear-gradient(135deg,#ff242d,#d40010);border-color:#d40010;color:#fff;box-shadow:0 18px 36px rgba(207,0,13,.22)}
+.quick-action.primary>span{background:rgba(255,255,255,.14);color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.45)}
+.quick-action.primary small,.quick-action.primary>svg{color:#fff}
+.personal-tool-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:0 0 20px}
+.personal-tool-row>div{border:1px solid var(--line);border-radius:14px;background:#fff;padding:14px;box-shadow:0 8px 22px rgba(88,8,15,.045)}
+.personal-tool-row h2,.catalog-search-results h2{display:flex;align-items:center;gap:8px;font-size:13px;margin:0 0 10px;color:#242832}
+.tool-center-tabs{position:relative;margin-bottom:18px}
+.tool-center-tabs button{height:38px;border-radius:999px;padding-inline:15px;font-size:10.5px}
+.tool-center-tabs button.active{background:#fff1f2;border-color:#ffb9bd;color:var(--blue);box-shadow:inset 0 -2px 0 var(--blue)}
+.tool-center-groups{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;position:relative}
+.tool-center-group{min-height:300px;border:1px solid var(--line);border-radius:18px;background:#fff;padding:18px;box-shadow:0 10px 30px rgba(88,8,15,.055)}
+.tool-center-group header{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:13px;padding-bottom:0;border:0}
+.tool-center-group header>div{display:flex;align-items:center;gap:11px}
+.tool-center-group header span{width:42px;height:42px;border-radius:12px;background:#fff1f2;color:var(--blue);display:grid;place-items:center;flex:none}
+.tool-center-group h2{font-size:13px;line-height:1.2;margin:0;text-transform:uppercase;letter-spacing:.02em;color:var(--blue)}
+.tool-center-group header a{display:flex;align-items:center;gap:5px;font-size:9px;font-weight:850;color:var(--blue);white-space:nowrap}
+.catalog-tool-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px 12px}
+.tool-center-group:nth-child(n+5){grid-column:span 2}
+.tool-center-group:nth-child(n+5) .catalog-tool-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.catalog-tool-item{position:relative;min-width:0}
+.catalog-tool-item>a{min-height:58px;display:grid;grid-template-columns:38px minmax(0,1fr);align-items:center;gap:9px;border-radius:11px;padding:8px 30px 8px 7px;transition:background .16s ease,transform .16s ease}
+.catalog-tool-item>a:hover{background:#fff7f7;transform:translateY(-1px)}
+.catalog-tool-item .mini-tool-icon{width:36px;height:36px;border-radius:10px;background:#fff1f2;color:var(--blue)}
+.catalog-tool-item strong{display:block;font-size:10.5px;line-height:1.22;color:#242832}
+.catalog-tool-item small{display:block;font-size:8.7px;line-height:1.35;color:#7c7580;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.favorite-toggle{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:26px;height:26px;border:0;border-radius:8px;background:transparent;color:#a5a0aa;display:grid;place-items:center;opacity:.65;transition:.16s ease}
+.catalog-tool-item:hover .favorite-toggle,.favorite-toggle.active{opacity:1}
+.favorite-toggle:hover,.favorite-toggle.active{background:#fff1f2;color:var(--blue)}
+.catalog-search-results{position:relative;border:1px solid var(--line);border-radius:18px;background:#fff;padding:18px;box-shadow:0 10px 30px rgba(88,8,15,.055)}
+.catalog-search-results>.catalog-tool-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+.catalog-search-results p{font-size:12px;color:var(--muted);margin:0}
+.tool-center-safety{min-height:48px;margin-top:20px;border:1px solid var(--line);border-radius:999px;background:#fff;display:grid;grid-template-columns:32px 1fr auto;align-items:center;gap:12px;padding:8px 16px;color:#68616b;font-size:11px}
+.tool-center-safety>svg{color:var(--blue)}
+.tool-center-safety a{display:flex;align-items:center;gap:7px;font-weight:800;color:#242832}
+.catalog-hidden-source{display:none}
+@media(max-width:1320px){.quick-actions{grid-template-columns:repeat(3,1fr)}.quick-action.primary{grid-column:span 2}.tool-center-groups{grid-template-columns:repeat(3,minmax(0,1fr))}.tool-center-group:nth-child(n+5){grid-column:span 1}.tool-center-group:nth-child(n+5) .catalog-tool-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.catalog-search-results>.catalog-tool-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:960px){.catalog-layout{width:min(100% - 36px,1456px)}.tool-center-hero{display:grid}.tool-center-search{width:100%}.quick-actions{grid-template-columns:repeat(2,1fr)}.quick-action.primary{grid-column:span 1}.tool-center-groups{grid-template-columns:repeat(2,minmax(0,1fr))}.personal-tool-row{grid-template-columns:1fr}.catalog-search-results>.catalog-tool-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tool-center-copy h1{font-size:42px}}
+@media(max-width:620px){.catalog-layout{width:min(100% - 24px,1456px)}.tool-center{padding-top:24px}.tool-center:before{display:none}.tool-center-copy h1{font-size:34px;letter-spacing:-1px}.tool-center-copy p{font-size:12px}.quick-actions,.tool-center-groups,.catalog-tool-grid,.tool-center-group:nth-child(n+5) .catalog-tool-grid,.catalog-search-results>.catalog-tool-grid{grid-template-columns:1fr}.quick-action{min-height:76px}.tool-center-group{min-height:0;padding:14px}.tool-center-safety{border-radius:16px;grid-template-columns:28px 1fr}.tool-center-safety a{grid-column:2}.tool-center-tabs{padding-bottom:6px}}

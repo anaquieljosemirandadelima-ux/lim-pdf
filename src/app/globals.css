@@ -358,6 +358,15 @@ img,svg{display:block}
 .text-detection-box.changed{border-color:var(--green)}
 .added-text-preview{position:absolute;color:#0a1830;line-height:1;white-space:nowrap;pointer-events:none}
 .added-image-preview{position:absolute;height:auto;pointer-events:none}
+.editor-object{position:absolute;border:1px solid transparent;background:rgba(239,21,28,.025);padding:0;text-align:left;color:#0a1830;cursor:grab;touch-action:none;overflow:visible}
+.editor-object:active{cursor:grabbing}
+.editor-object:hover{border-color:#5d96ee;background:rgba(239,21,28,.055)}
+.editor-object.selected{border:2px solid var(--blue);background:rgba(239,21,28,.08);box-shadow:0 0 0 2px #fff}
+.editor-object.changed{border-color:var(--green)}
+.editor-object span:not(.editor-resize-handle){display:block;line-height:1;white-space:nowrap;pointer-events:none}
+.editor-object-image{background:transparent}
+.editor-object-image img{width:100%;height:100%;object-fit:fill;display:block;pointer-events:none}
+.editor-resize-handle{position:absolute;right:-7px;bottom:-7px;width:14px;height:14px;border:2px solid #fff;border-radius:4px;background:var(--blue);box-shadow:0 2px 8px #0003;cursor:nwse-resize}
 .editor-page-navigation{position:sticky;bottom:6px;left:50%;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:5px 7px;box-shadow:var(--shadow-soft);margin:14px auto 0;width:max-content}
 .editor-page-navigation button{width:30px;height:30px;border:0;border-radius:7px;background:#f1f5f9;display:grid;place-items:center}
 .editor-page-navigation span{font-size:9px;font-weight:800}
@@ -367,6 +376,12 @@ img,svg{display:block}
 .editor-properties{border-left:1px solid var(--line);background:#fff;padding:15px;overflow-y:auto}
 .editor-properties h2{font-size:13px;margin:0 0 13px}
 .properties-panel{display:grid;gap:10px}
+.properties-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.object-layer-row{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:10px;background:#fbfcfe;padding:9px}
+.object-layer-row strong{font-size:11px}
+.object-layer-row button{border:0;background:#fff0ef;color:var(--danger);border-radius:9px;height:32px;padding:0 9px;display:flex;align-items:center;gap:5px;font-size:9px;font-weight:850}
+.layer-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.layer-controls button{min-height:34px;border:1px solid var(--line);border-radius:9px;background:#fff;display:flex;align-items:center;justify-content:center;gap:5px;font-size:9px;font-weight:800;color:#43536a}
 .properties-panel textarea{min-height:110px;resize:vertical}
 .properties-panel p{font-size:9px;color:var(--muted);margin:0}
 .empty-properties{min-height:180px;border:1px dashed var(--line-strong);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:15px;color:#7a899b}
@@ -800,10 +815,14 @@ body.modal-open{overflow:hidden}
 .editor-heading-title p{font-size:12px;line-height:1.45}
 .editor-upload-card{min-height:470px;border-color:#f0d7da;border-radius:18px;background:linear-gradient(135deg,#fff5f6,#fff 44%,#f8fbff);box-shadow:0 18px 48px rgba(88,8,15,.08)}
 .pdf-editor-shell{border-color:#f0d7da;border-radius:18px;box-shadow:0 20px 54px rgba(88,8,15,.1)}
-.editor-topbar{height:72px;grid-template-columns:minmax(0,1fr) auto;gap:16px;padding:0 18px;border-bottom-color:#f1e1e3}
+.editor-topbar{height:72px;grid-template-columns:minmax(0,1fr) auto auto;gap:16px;padding:0 18px;border-bottom-color:#f1e1e3}
 .editor-file-name strong{font-size:13px;max-width:520px;color:#202634}
 .editor-file-name small{font-size:10px}
 .editor-top-actions{gap:9px}
+.editor-history{display:flex;gap:7px}
+.editor-history button{width:38px;height:38px;border:1px solid #f0d7da;border-radius:10px;background:#fff;color:#3d485b;display:grid;place-items:center}
+.editor-history button:not(:disabled):hover{background:#fff1f2;color:#ef151c}
+.editor-history button:disabled{opacity:.38;cursor:not-allowed}
 .editor-body{grid-template-columns:78px 142px minmax(0,1fr) 322px;min-height:720px;background:#f6f8fb}
 .editor-tools{padding:12px 8px;gap:8px;border-right-color:#f1e1e3}
 .editor-tools button{min-height:64px;border-radius:12px;font-size:9.5px;color:#4b5568}
@@ -820,7 +839,10 @@ body.modal-open{overflow:hidden}
 .editor-properties{padding:18px;border-left-color:#f1e1e3;background:#fff}
 .editor-properties h2{font-size:16px;letter-spacing:-.25px}
 .properties-panel label{font-size:10.5px}
-.properties-panel textarea{border-radius:12px;border-color:#dfe5ee;font-size:12px}
+.properties-panel input,.properties-panel textarea{border-radius:12px;border-color:#dfe5ee;font-size:12px}
+.properties-grid{gap:9px}
+.object-layer-row,.layer-controls button{border-color:#f0d7da}
+.layer-controls button:hover{background:#fff1f2;color:#ef151c}
 .empty-properties{border-color:#f0d7da;background:#fffafa;border-radius:14px}
 .editor-status-card{border:1px solid #d5efdf;border-radius:13px;background:#effaf5;font-size:10px}
 .editor-cache-bar{height:44px;border-top-color:#f1e1e3;background:#fff;color:#5d6574;font-size:10px}

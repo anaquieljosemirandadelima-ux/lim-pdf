@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CONSENT_KEY } from "@/components/ConsentBanner";
+import { ADSENSE_CLIENT } from "@/lib/adsense";
 
 export type AdPlacement =
   | "home-top"
@@ -21,7 +22,7 @@ interface AdSlotProps {
 declare global { interface Window { adsbygoogle?: unknown[] } }
 
 export function AdSlot({ placement, format = "auto", className = "" }: AdSlotProps) {
-  const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
+  const client = ADSENSE_CLIENT;
   const slots = useMemo(() => ({
     "home-top": process.env.NEXT_PUBLIC_ADSENSE_SLOT_HOME_TOP,
     "home-bottom": process.env.NEXT_PUBLIC_ADSENSE_SLOT_HOME_BOTTOM,

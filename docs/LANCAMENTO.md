@@ -17,7 +17,7 @@
 
 1. **Domínio oficial**: apontar para a Vercel e preencher `NEXT_PUBLIC_SITE_URL`.
 2. **Google Search Console**: obter o código e preencher `GOOGLE_SITE_VERIFICATION`; depois enviar `/sitemap.xml`.
-3. **Google AdSense**: preencher `NEXT_PUBLIC_ADSENSE_CLIENT` e `ADSENSE_PUBLISHER_ID`; solicitar revisão no painel do Google.
+3. **Google AdSense**: conta conectada com `ca-pub-2957538365374258`; solicitar revisão no painel do Google e cadastrar slots manuais quando forem liberados.
 4. **Contato**: configurar `CONTACT_WEBHOOK_URL` e `SECURITY_CONTACT_EMAIL`.
 
 Esses passos dependem das contas e credenciais do titular. Não devem ser simulados no código.

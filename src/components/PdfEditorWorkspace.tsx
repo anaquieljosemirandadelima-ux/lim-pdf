@@ -6,9 +6,11 @@ import {
   ArrowRight,
   ArrowUp,
   CheckCircle2,
+  CircleOff,
   Download,
   FileText,
   ImagePlus,
+  LockKeyhole,
   LoaderCircle,
   MousePointer2,
   PencilLine,
@@ -52,6 +54,8 @@ type EditorObjectBase = {
   width: number;
   height: number;
   zIndex: number;
+  locked?: boolean;
+  hidden?: boolean;
 };
 
 type TextReplacementObject = EditorObjectBase & {
@@ -244,7 +248,11 @@ export function PdfEditorWorkspace() {
     [activeSelectionIds, objects],
   );
   const currentPageObjects = useMemo(
-    () => page ? objects.filter((item) => item.pageIndex === page.pageIndex).sort((a, b) => a.zIndex - b.zIndex) : [],
+    () => page ? objects.filter((item) => item.pageIndex === page.pageIndex && !item.hidden).sort((a, b) => a.zIndex - b.zIndex) : [],
+    [objects, page],
+  );
+  const currentPageLayers = useMemo(
+    () => page ? objects.filter((item) => item.pageIndex === page.pageIndex).sort((a, b) => b.zIndex - a.zIndex) : [],
     [objects, page],
   );
 
@@ -532,6 +540,8 @@ export function PdfEditorWorkspace() {
       id: crypto.randomUUID(),
       x: object.x + 14,
       y: object.y - 14,
+      locked: false,
+      hidden: false,
       zIndex: maxZ + index + 1,
     })) as EditorObject[];
     applyObjects((current) => [...current, ...copies], copies.map((item) => item.id));
@@ -546,6 +556,8 @@ export function PdfEditorWorkspace() {
       pageIndex: page.pageIndex,
       x: object.x + 18,
       y: object.y - 18,
+      locked: false,
+      hidden: false,
       zIndex: maxZ + index + 1,
     })) as EditorObject[];
     applyObjects((current) => [...current, ...copies], copies.map((item) => item.id));
@@ -612,14 +624,16 @@ export function PdfEditorWorkspace() {
   function alignSelected(mode: "left" | "center" | "right" | "top" | "middle" | "bottom") {
     if (selectedObjects.length < 2) return;
     const selectedSet = new Set(activeSelectionIds);
-    const left = Math.min(...selectedObjects.map((item) => item.x));
-    const right = Math.max(...selectedObjects.map((item) => item.x + item.width));
-    const bottom = Math.min(...selectedObjects.map((item) => item.y));
-    const top = Math.max(...selectedObjects.map((item) => item.y + item.height));
+    const movableObjects = selectedObjects.filter((item) => !item.locked);
+    if (movableObjects.length < 2) return;
+    const left = Math.min(...movableObjects.map((item) => item.x));
+    const right = Math.max(...movableObjects.map((item) => item.x + item.width));
+    const bottom = Math.min(...movableObjects.map((item) => item.y));
+    const top = Math.max(...movableObjects.map((item) => item.y + item.height));
     const centerX = (left + right) / 2;
     const centerY = (bottom + top) / 2;
     applyObjects((current) => current.map((object) => {
-      if (!selectedSet.has(object.id)) return object;
+      if (!selectedSet.has(object.id) || object.locked) return object;
       if (mode === "left") return { ...object, x: left };
       if (mode === "right") return { ...object, x: right - object.width };
       if (mode === "center") return { ...object, x: centerX - object.width / 2 };
@@ -631,7 +645,8 @@ export function PdfEditorWorkspace() {
 
   function distributeSelected(axis: "horizontal" | "vertical") {
     if (selectedObjects.length < 3) return;
-    const ordered = [...selectedObjects].sort((a, b) => axis === "horizontal" ? a.x - b.x : a.y - b.y);
+    const ordered = selectedObjects.filter((item) => !item.locked).sort((a, b) => axis === "horizontal" ? a.x - b.x : a.y - b.y);
+    if (ordered.length < 3) return;
     const first = ordered[0];
     const last = ordered[ordered.length - 1];
     const firstCenter = axis === "horizontal" ? first.x + first.width / 2 : first.y + first.height / 2;
@@ -649,14 +664,20 @@ export function PdfEditorWorkspace() {
   const deleteSelected = useCallback(() => {
     if (!activeSelectionIds.length) return;
     const selectedSet = new Set(activeSelectionIds);
+    const lockedCount = objects.filter((item) => selectedSet.has(item.id) && item.locked).length;
     objects.forEach((item) => {
-      if (selectedSet.has(item.id) && item.kind === "image") URL.revokeObjectURL(item.previewUrl);
+      if (selectedSet.has(item.id) && !item.locked && item.kind === "image") URL.revokeObjectURL(item.previewUrl);
     });
-    applyObjects((current) => current.filter((item) => !selectedSet.has(item.id)), null);
+    applyObjects((current) => current.filter((item) => !selectedSet.has(item.id) || item.locked), null);
+    if (lockedCount) setMessage(`${lockedCount} objeto(s) bloqueado(s) foram preservados.`);
   }, [activeSelectionIds, applyObjects, objects]);
 
   function moveLayer(direction: "front" | "back" | "up" | "down") {
     if (!selectedObject) return;
+    if (selectedObject.locked) {
+      setMessage("Desbloqueie a camada antes de alterar a ordem.");
+      return;
+    }
     const samePage = objects.filter((item) => item.pageIndex === selectedObject.pageIndex).sort((a, b) => a.zIndex - b.zIndex);
     const zIndexes = samePage.map((item) => item.zIndex);
     const currentIndex = samePage.findIndex((item) => item.id === selectedObject.id);
@@ -675,6 +696,11 @@ export function PdfEditorWorkspace() {
     const additive = event.shiftKey || event.ctrlKey || event.metaKey;
     if (additive && mode === "move") {
       selectObject(object.id, true);
+      return;
+    }
+    if (object.locked) {
+      selectObjects([object.id]);
+      setMessage("Camada bloqueada. Desbloqueie para mover ou redimensionar.");
       return;
     }
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -708,8 +734,9 @@ export function PdfEditorWorkspace() {
           y: drag.startObject.y - dy,
         };
     setObjects((current) => current.map((object) => {
-      if (drag.mode === "resize") return object.id === drag.objectId ? clampObject(nextObject as EditorObject, pages[object.pageIndex]) : object;
+      if (drag.mode === "resize") return object.id === drag.objectId && !object.locked ? clampObject(nextObject as EditorObject, pages[object.pageIndex]) : object;
       if (!drag.objectIds.includes(object.id)) return object;
+      if (object.locked) return object;
       const start = drag.startObjects.find((item) => item.id === object.id) || object;
       return clampObject({ ...object, x: start.x + dx, y: start.y - dy }, pages[object.pageIndex]);
     }));
@@ -729,7 +756,7 @@ export function PdfEditorWorkspace() {
   const nudgeSelected = useCallback((deltaX: number, deltaY: number) => {
     if (!activeSelectionIds.length) return;
     const selectedSet = new Set(activeSelectionIds);
-    applyObjects((current) => current.map((object) => selectedSet.has(object.id) ? { ...object, x: object.x + deltaX, y: object.y + deltaY } : object));
+    applyObjects((current) => current.map((object) => selectedSet.has(object.id) && !object.locked ? { ...object, x: object.x + deltaX, y: object.y + deltaY } : object));
   }, [activeSelectionIds, applyObjects]);
 
   useEffect(() => {
@@ -796,7 +823,7 @@ export function PdfEditorWorkspace() {
       for (const pageId of pageSequence) {
         const preview = pages.find((item) => item.pageIndex === pageId);
         if (!preview) continue;
-        const pageObjects = sortedObjects.filter((object) => object.pageIndex === preview.pageIndex);
+        const pageObjects = sortedObjects.filter((object) => object.pageIndex === preview.pageIndex && !object.hidden);
         const hasRedaction = pageObjects.some((object) => object.kind === "redaction");
         let pdfPage;
         if (preview.sourcePageIndex === null || preview.isBlank) {
@@ -977,7 +1004,7 @@ export function PdfEditorWorkspace() {
               <img src={page.dataUrl} alt={`Página ${currentPage + 1} do PDF`} />
               {currentPageObjects.map((object) => (
                 <button
-                  className={`editor-object editor-object-${object.kind} ${activeSelectionIds.includes(object.id) ? "selected" : ""} ${object.kind === "text-replacement" && object.text !== object.originalText ? "changed" : ""}`}
+                  className={`editor-object editor-object-${object.kind} ${activeSelectionIds.includes(object.id) ? "selected" : ""} ${object.locked ? "locked" : ""} ${object.kind === "text-replacement" && object.text !== object.originalText ? "changed" : ""}`}
                   type="button"
                   aria-label={`Selecionar ${getObjectLabel(object)}`}
                   title={getObjectLabel(object)}
@@ -995,7 +1022,7 @@ export function PdfEditorWorkspace() {
                   {object.kind === "redaction" ? <span>REDACTED</span> : null}
                   {object.kind === "highlight" ? <span>Destaque</span> : null}
                   {object.kind === "comment" ? <span>{object.text}</span> : null}
-                  {selectedObjectId === object.id ? (
+                  {selectedObjectId === object.id && !object.locked ? (
                     <span
                       className="editor-resize-handle"
                       role="presentation"
@@ -1021,14 +1048,14 @@ export function PdfEditorWorkspace() {
                 <button type="button" onClick={duplicateSelected}>Duplicar</button>
                 <button type="button" onClick={pasteObjects} disabled={!clipboard.length}>Colar</button>
               </div>
-              {selectedObjects.length === 1 && hasEditableText(selectedObject) ? <label><span>Conteúdo</span><textarea value={selectedObject.text} onChange={(event) => updateObject(selectedObject.id, { text: event.target.value } as Partial<EditorObject>)} /></label> : null}
-              {selectedObjects.length === 1 && hasFontSize(selectedObject) ? <label><span>Tamanho da fonte</span><input type="number" min="6" max="120" value={selectedObject.fontSize} onChange={(event) => updateObject(selectedObject.id, { fontSize: Number(event.target.value) || 12, height: Math.max(MIN_OBJECT_SIZE, (Number(event.target.value) || 12) * 1.35) } as Partial<EditorObject>)} /></label> : null}
+              {selectedObjects.length === 1 && hasEditableText(selectedObject) ? <label><span>Conteúdo</span><textarea value={selectedObject.text} disabled={selectedObject.locked} onChange={(event) => updateObject(selectedObject.id, { text: event.target.value } as Partial<EditorObject>)} /></label> : null}
+              {selectedObjects.length === 1 && hasFontSize(selectedObject) ? <label><span>Tamanho da fonte</span><input type="number" min="6" max="120" value={selectedObject.fontSize} disabled={selectedObject.locked} onChange={(event) => updateObject(selectedObject.id, { fontSize: Number(event.target.value) || 12, height: Math.max(MIN_OBJECT_SIZE, (Number(event.target.value) || 12) * 1.35) } as Partial<EditorObject>)} /></label> : null}
               {selectedObjects.length === 1 ? (
                 <div className="properties-grid">
-                  <label><span>X</span><input type="number" value={Math.round(selectedObject.x)} onChange={(event) => updateObject(selectedObject.id, { x: Number(event.target.value) || 0 } as Partial<EditorObject>)} /></label>
-                  <label><span>Y</span><input type="number" value={Math.round(selectedObject.y)} onChange={(event) => updateObject(selectedObject.id, { y: Number(event.target.value) || 0 } as Partial<EditorObject>)} /></label>
-                  <label><span>Largura</span><input type="number" min={MIN_OBJECT_SIZE} value={Math.round(selectedObject.width)} onChange={(event) => updateObject(selectedObject.id, { width: Number(event.target.value) || MIN_OBJECT_SIZE } as Partial<EditorObject>)} /></label>
-                  <label><span>Altura</span><input type="number" min={MIN_OBJECT_SIZE} value={Math.round(selectedObject.height)} onChange={(event) => updateObject(selectedObject.id, { height: Number(event.target.value) || MIN_OBJECT_SIZE } as Partial<EditorObject>)} /></label>
+                  <label><span>X</span><input type="number" value={Math.round(selectedObject.x)} disabled={selectedObject.locked} onChange={(event) => updateObject(selectedObject.id, { x: Number(event.target.value) || 0 } as Partial<EditorObject>)} /></label>
+                  <label><span>Y</span><input type="number" value={Math.round(selectedObject.y)} disabled={selectedObject.locked} onChange={(event) => updateObject(selectedObject.id, { y: Number(event.target.value) || 0 } as Partial<EditorObject>)} /></label>
+                  <label><span>Largura</span><input type="number" min={MIN_OBJECT_SIZE} value={Math.round(selectedObject.width)} disabled={selectedObject.locked} onChange={(event) => updateObject(selectedObject.id, { width: Number(event.target.value) || MIN_OBJECT_SIZE } as Partial<EditorObject>)} /></label>
+                  <label><span>Altura</span><input type="number" min={MIN_OBJECT_SIZE} value={Math.round(selectedObject.height)} disabled={selectedObject.locked} onChange={(event) => updateObject(selectedObject.id, { height: Number(event.target.value) || MIN_OBJECT_SIZE } as Partial<EditorObject>)} /></label>
                 </div>
               ) : null}
               {selectedObjects.length > 1 ? (
@@ -1044,6 +1071,8 @@ export function PdfEditorWorkspace() {
                 </div>
               ) : null}
               <div className="layer-controls">
+                <button type="button" onClick={() => updateObject(selectedObject.id, { hidden: !selectedObject.hidden } as Partial<EditorObject>)}><CircleOff size={15} /> {selectedObject.hidden ? "Mostrar" : "Ocultar"}</button>
+                <button type="button" onClick={() => updateObject(selectedObject.id, { locked: !selectedObject.locked } as Partial<EditorObject>)}><LockKeyhole size={15} /> {selectedObject.locked ? "Desbloquear" : "Bloquear"}</button>
                 <button type="button" onClick={() => moveLayer("front")}><ArrowUp size={15} /> Frente</button>
                 <button type="button" onClick={() => moveLayer("back")}><ArrowDown size={15} /> Fundo</button>
                 <button type="button" onClick={() => moveLayer("up")}>Subir camada</button>
@@ -1055,6 +1084,28 @@ export function PdfEditorWorkspace() {
           ) : (
             <div className="empty-properties"><MousePointer2 size={26} /><strong>Selecione um objeto</strong><p>Clique em textos, imagens, destaques, tarjas, comentarios ou assinaturas para editar, mover, redimensionar ou excluir.</p></div>
           )}
+          <div className="editor-layers-panel">
+            <div className="layers-panel-heading">
+              <strong>Camadas da página</strong>
+              <span>{currentPageLayers.length}</span>
+            </div>
+            {currentPageLayers.length ? (
+              <div className="layers-list">
+                {currentPageLayers.map((object) => (
+                  <div className={`layer-item ${activeSelectionIds.includes(object.id) ? "active" : ""} ${object.hidden ? "hidden-layer" : ""}`} key={object.id}>
+                    <button type="button" className="layer-select-button" onClick={() => selectObjects([object.id])}>
+                      <span>{getObjectKindLabel(object)}</span>
+                      <small>{getObjectLabel(object)}</small>
+                    </button>
+                    <button type="button" title={object.hidden ? "Mostrar camada" : "Ocultar camada"} onClick={() => updateObject(object.id, { hidden: !object.hidden } as Partial<EditorObject>)}><CircleOff size={14} /></button>
+                    <button type="button" title={object.locked ? "Desbloquear camada" : "Bloquear camada"} onClick={() => updateObject(object.id, { locked: !object.locked } as Partial<EditorObject>)}><LockKeyhole size={14} /></button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="layers-empty">Nenhuma camada adicionada nesta página.</p>
+            )}
+          </div>
           <div className="editor-signature-panel">
             <strong>Assinatura</strong>
             <SignaturePad onChange={setSignatureDataUrl} />

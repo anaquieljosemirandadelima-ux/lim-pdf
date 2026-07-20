@@ -364,6 +364,7 @@ img,svg{display:block}
 .editor-object:hover{border-color:#5d96ee;background:rgba(239,21,28,.055)}
 .editor-object.selected{border:2px solid var(--blue);background:rgba(239,21,28,.08);box-shadow:0 0 0 2px #fff}
 .editor-object.changed{border-color:var(--green)}
+.editor-object.locked{cursor:not-allowed;box-shadow:inset 0 0 0 1px rgba(15,23,42,.18)}
 .editor-object span:not(.editor-resize-handle){display:block;line-height:1;white-space:nowrap;pointer-events:none}
 .editor-object-image,.editor-object-signature{background:transparent}
 .editor-object-image img,.editor-object-signature img{width:100%;height:100%;object-fit:fill;display:block;pointer-events:none}
@@ -380,6 +381,21 @@ img,svg{display:block}
 .editor-signature-panel .signature-label span{font-size:9px}
 .editor-signature-panel .signature-canvas{height:92px}
 .editor-signature-panel small{font-size:8px}
+.editor-layers-panel{display:grid;gap:8px;margin-top:14px;border:1px solid var(--line);border-radius:12px;background:#fff;padding:10px}
+.layers-panel-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.layers-panel-heading strong{font-size:11px;color:#17233a}
+.layers-panel-heading span{min-width:22px;height:22px;border-radius:7px;background:#f1f5f9;color:#526178;display:grid;place-items:center;font-size:8px;font-weight:900}
+.layers-list{display:grid;gap:6px;max-height:220px;overflow:auto;padding-right:2px}
+.layer-item{display:grid;grid-template-columns:minmax(0,1fr) 28px 28px;align-items:center;gap:5px;border:1px solid var(--line);border-radius:9px;background:#fbfcfe;padding:5px}
+.layer-item.active{border-color:var(--blue);background:#fff1f2}
+.layer-item.hidden-layer{opacity:.55}
+.layer-select-button{border:0;background:transparent;text-align:left;min-width:0;padding:2px}
+.layer-select-button span,.layer-select-button small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.layer-select-button span{font-size:9px;font-weight:900;color:#18243a}
+.layer-select-button small{font-size:8px;color:#718198;margin-top:2px}
+.layer-item>button:not(.layer-select-button){width:28px;height:28px;border:1px solid var(--line);border-radius:8px;background:#fff;color:#637085;display:grid;place-items:center}
+.layer-item>button:not(.layer-select-button):hover{background:#fff1f2;color:var(--blue)}
+.layers-empty{font-size:8.7px;color:var(--muted);margin:0;border:1px dashed var(--line-strong);border-radius:9px;padding:10px;text-align:center}
 .editor-resize-handle{position:absolute;right:-7px;bottom:-7px;width:14px;height:14px;border:2px solid #fff;border-radius:4px;background:var(--blue);box-shadow:0 2px 8px #0003;cursor:nwse-resize}
 .editor-page-navigation{position:sticky;bottom:6px;left:50%;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:5px 7px;box-shadow:var(--shadow-soft);margin:14px auto 0;width:max-content}
 .editor-page-navigation button{width:30px;height:30px;border:0;border-radius:7px;background:#f1f5f9;display:grid;place-items:center}

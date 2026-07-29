@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 import { CONSENT_KEY } from "@/components/ConsentBanner";
-import { ADSENSE_SCRIPT_SRC } from "@/lib/adsense";
 
 declare global {
   interface Window {
@@ -28,19 +27,6 @@ export function AdSenseLoader({ client }: { client?: string }) {
     const sync = () => {
       const accepted = window.localStorage.getItem(CONSENT_KEY) === "accepted";
       applyConsentMode(accepted);
-      const existing = document.getElementById("limpdf-adsense");
-      if (!accepted) {
-        existing?.remove();
-        return;
-      }
-      if (existing) return;
-
-      const script = document.createElement("script");
-      script.id = "limpdf-adsense";
-      script.async = true;
-      script.src = ADSENSE_SCRIPT_SRC;
-      script.crossOrigin = "anonymous";
-      document.head.appendChild(script);
     };
 
     sync();

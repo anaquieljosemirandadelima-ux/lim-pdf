@@ -1,0 +1,134 @@
+name: Final review fixes
+
+on:
+  push:
+    branches:
+      - agent/final-review-fixes
+    paths:
+      - .github/workflows/final-review-fixes.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout hotfix branch
+        uses: actions/checkout@v6
+        with:
+          ref: agent/final-review-fixes
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Apply editor safety fixes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("src/components/PdfEditorWorkspaceHardened.tsx")
+          text = path.read_text()
+
+          old_scale = '''function safeScale(width: number, height: number, requested: number, maxPixels: number, minimum: number) {
+            if (width * height * requested * requested <= maxPixels) return requested;
+            return Math.max(minimum, Math.sqrt(maxPixels / Math.max(1, width * height)));
+          }'''
+          new_scale = '''function safeScale(width: number, height: number, requested: number, maxPixels: number) {
+            if (width * height * requested * requested <= maxPixels) return requested;
+            return Math.min(requested, Math.sqrt(maxPixels / Math.max(1, width * height)));
+          }'''
+          if old_scale not in text:
+              raise SystemExit("safeScale block not found")
+          text = text.replace(old_scale, new_scale, 1)
+          text = text.replace(
+              "safeScale(base.width, base.height, SANITIZE_SCALE, MAX_SANITIZE_PIXELS, 1.4)",
+              "safeScale(base.width, base.height, SANITIZE_SCALE, MAX_SANITIZE_PIXELS)",
+              1,
+          )
+          text = text.replace(
+              "safeScale(base.width, base.height, PREVIEW_SCALE, MAX_PREVIEW_PIXELS, 0.45)",
+              "safeScale(base.width, base.height, PREVIEW_SCALE, MAX_PREVIEW_PIXELS)",
+              1,
+          )
+
+          old_autosave = '''  useEffect(() => {
+            if (!file || status !== "ready" || !pages.length) return;
+            const timeout = window.setTimeout(() => {
+              const savedAt = saveDraft(file, pageSequence, pages, objects);
+              if (savedAt) {
+                setDraftSavedAt(savedAt);
+                setRecentDrafts(safeReadJson<EditorRecent[]>(EDITOR_RECENTS_KEY, []));
+              }
+              const assets: { objectId: string; file: File }[] = [];
+              for (const object of objects) {
+                if (object.kind === "image") assets.push({ objectId: object.id, file: object.file });
+              }
+              void saveEditorImageAssets(editorFileKey(file), assets).catch(() => false);
+            }, 700);
+            return () => window.clearTimeout(timeout);
+          }, [file, objects, pageSequence, pages, status]);'''
+          new_autosave = '''  useEffect(() => {
+            if (!file || status !== "ready" || !pages.length) return;
+            let cancelled = false;
+            const timeout = window.setTimeout(() => {
+              void (async () => {
+                const assets: { objectId: string; file: File }[] = [];
+                for (const object of objects) {
+                  if (object.kind === "image") assets.push({ objectId: object.id, file: object.file });
+                }
+                try {
+                  const assetsSaved = await saveEditorImageAssets(editorFileKey(file), assets);
+                  if (cancelled) return;
+                  if (!assetsSaved) {
+                    setDraftSavedAt(null);
+                    setMessage("Rascunho não salvo: as imagens excedem o limite temporário de 40 MB. Remova ou reduza imagens para salvar com segurança.");
+                    return;
+                  }
+                  const savedAt = saveDraft(file, pageSequence, pages, objects);
+                  if (savedAt) {
+                    setDraftSavedAt(savedAt);
+                    setRecentDrafts(safeReadJson<EditorRecent[]>(EDITOR_RECENTS_KEY, []));
+                  } else {
+                    setDraftSavedAt(null);
+                    setMessage("Não foi possível salvar o rascunho local neste dispositivo.");
+                  }
+                } catch {
+                  if (!cancelled) {
+                    setDraftSavedAt(null);
+                    setMessage("Não foi possível persistir as imagens do rascunho. O rascunho não foi marcado como salvo.");
+                  }
+                }
+              })();
+            }, 700);
+            return () => {
+              cancelled = true;
+              window.clearTimeout(timeout);
+            };
+          }, [file, objects, pageSequence, pages, status]);'''
+          if old_autosave not in text:
+              raise SystemExit("autosave block not found")
+          text = text.replace(old_autosave, new_autosave, 1)
+          path.write_text(text)
+          PY
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
+
+      - name: Full project check
+        run: npm run check
+
+      - name: Commit validated editor fixes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/PdfEditorWorkspaceHardened.tsx
+          git commit -m "fix: address final PDF editor review findings"
+          git push origin HEAD:agent/final-review-fixes

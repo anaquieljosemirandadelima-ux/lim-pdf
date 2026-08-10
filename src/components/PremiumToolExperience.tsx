@@ -3,21 +3,20 @@
 import {
   Check,
   Command,
-  Expand,
-  FileDown,
-  Focus,
-  Highlighter,
+  Download,
+  FilePlus2,
+  FileText,
+  Grid2X2,
   ImagePlus,
-  Keyboard,
   Layers3,
   LockKeyhole,
-  MessageSquareText,
   MousePointer2,
-  Plus,
+  PencilLine,
   Redo2,
   Search,
   ShieldCheck,
   Signature,
+  SlidersHorizontal,
   Sparkles,
   Type,
   Undo2,
@@ -130,21 +129,21 @@ export function PremiumToolExperience({ toolName, accent, editor = false }: Prem
   const commands = useMemo<EditorCommand[]>(() => editor ? [
     { id: "select", label: "Selecionar objetos", hint: "Ferramenta de seleção", icon: MousePointer2, run: () => clickButton(".editor-tools button", 0) },
     { id: "text", label: "Adicionar texto", hint: "Insere uma nova caixa de texto", icon: Type, run: () => clickButton(".editor-tools button", 1) },
-    { id: "highlight", label: "Destacar", hint: "Adiciona destaque ajustável", icon: Highlighter, run: () => clickButton(".editor-tools button", 2) },
+    { id: "highlight", label: "Destacar", hint: "Adiciona destaque ajustável", icon: PencilLine, run: () => clickButton(".editor-tools button", 2) },
     { id: "redact", label: "Redação segura", hint: "Remove visualmente e sanitiza a área", icon: ShieldCheck, run: () => clickButton(".editor-tools button", 3) },
-    { id: "comment", label: "Adicionar comentário", hint: "Cria anotação na página", icon: MessageSquareText, run: () => clickButton(".editor-tools button", 4) },
+    { id: "comment", label: "Adicionar comentário", hint: "Cria anotação na página", icon: FileText, run: () => clickButton(".editor-tools button", 4) },
     { id: "signature", label: "Inserir assinatura", hint: "Usa a assinatura desenhada", icon: Signature, run: () => clickButton(".editor-tools button", 5) },
     { id: "image", label: "Adicionar imagem", hint: "Logo, selo, foto ou carimbo", icon: ImagePlus, run: () => clickButton(".editor-tools button", 6) },
     { id: "find", label: "Localizar texto na página", hint: "Encontra uma camada de texto detectado", icon: Search, run: findOnPage },
     { id: "undo", label: "Desfazer", hint: "Ctrl + Z", icon: Undo2, run: () => clickButton(".editor-history button", 0) },
     { id: "redo", label: "Refazer", hint: "Ctrl + Y", icon: Redo2, run: () => clickButton(".editor-history button", 1) },
     { id: "duplicate-page", label: "Duplicar página", hint: "Cria uma cópia após a página atual", icon: Layers3, run: () => clickButtonByText(".page-production-controls button", "Duplicar") },
-    { id: "blank-page", label: "Inserir página em branco", hint: "Insere após a página atual", icon: Plus, run: () => clickButtonByText(".page-production-controls button", "Em branco") },
-    { id: "fit", label: "Ajustar página à área", hint: "Reduz o zoom para leitura confortável", icon: Focus, run: fitPage },
-    { id: "zoom-100", label: "Zoom 100%", hint: "Volta à escala padrão", icon: Expand, run: resetZoom },
-    { id: "fullscreen", label: "Tela cheia", hint: "Expande somente o editor", icon: Expand, run: requestFullscreen },
-    { id: "focus", label: focusMode ? "Sair do modo foco" : "Modo foco", hint: "Oculta elementos externos ao editor", icon: Focus, run: toggleFocus },
-    { id: "export", label: "Baixar PDF editado", hint: "Exporta a versão final", icon: FileDown, run: () => clickButton(".editor-top-actions .primary-button", 0) },
+    { id: "blank-page", label: "Inserir página em branco", hint: "Insere após a página atual", icon: FilePlus2, run: () => clickButtonByText(".page-production-controls button", "Em branco") },
+    { id: "fit", label: "Ajustar página à área", hint: "Reduz o zoom para leitura confortável", icon: SlidersHorizontal, run: fitPage },
+    { id: "zoom-100", label: "Zoom 100%", hint: "Volta à escala padrão", icon: Grid2X2, run: resetZoom },
+    { id: "fullscreen", label: "Tela cheia", hint: "Expande somente o editor", icon: Grid2X2, run: requestFullscreen },
+    { id: "focus", label: focusMode ? "Sair do modo foco" : "Modo foco", hint: "Oculta elementos externos ao editor", icon: SlidersHorizontal, run: toggleFocus },
+    { id: "export", label: "Baixar PDF editado", hint: "Exporta a versão final", icon: Download, run: () => clickButton(".editor-top-actions .primary-button", 0) },
     { id: "watermark", label: "Abrir Marca-d’água", hint: "Fluxo avançado em nova aba", icon: Sparkles, run: () => openCompanion("marca-dagua-pdf") },
     { id: "number", label: "Abrir Numeração de páginas", hint: "Fluxo avançado em nova aba", icon: Layers3, run: () => openCompanion("numerar-paginas") },
     { id: "header", label: "Abrir Cabeçalho e rodapé", hint: "Fluxo avançado em nova aba", icon: Type, run: () => openCompanion("cabecalho-rodape-pdf") },
@@ -205,8 +204,8 @@ export function PremiumToolExperience({ toolName, accent, editor = false }: Prem
           <span className={phase >= 3 ? "active" : ""}><i>3</i> Resultado</span>
         </div>
         {editor ? <div className="premium-editor-actions">
-          <button type="button" onClick={toggleFocus} className={focusMode ? "active" : ""}><Focus size={15} /><span>Foco</span></button>
-          <button type="button" onClick={requestFullscreen}><Expand size={15} /><span>Tela cheia</span></button>
+          <button type="button" onClick={toggleFocus} className={focusMode ? "active" : ""}><SlidersHorizontal size={15} /><span>Foco</span></button>
+          <button type="button" onClick={requestFullscreen}><Grid2X2 size={15} /><span>Tela cheia</span></button>
           <button type="button" className="premium-command-button" onClick={() => setPaletteOpen(true)}><Command size={15} /><span>Comandos</span><kbd>Ctrl K</kbd></button>
         </div> : <span className="premium-easy-chip"><Sparkles size={13} /> Fluxo guiado</span>}
       </div>
@@ -222,7 +221,7 @@ export function PremiumToolExperience({ toolName, accent, editor = false }: Prem
             })}
             {!visibleCommands.length ? <div className="premium-command-empty">Nenhum comando encontrado.</div> : null}
           </div>
-          <footer><span><Keyboard size={14} /> Setas para mover objetos · Shift = 10 px</span><span>Ctrl Z desfaz · Ctrl D duplica</span></footer>
+          <footer><span><Type size={14} /> Setas para mover objetos · Shift = 10 px</span><span>Ctrl Z desfaz · Ctrl D duplica</span></footer>
         </section>
       </div> : null}
       {toast ? <div className="premium-toast">{toast}</div> : null}

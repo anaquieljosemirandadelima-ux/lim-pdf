@@ -5,6 +5,14 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  {
+    files: ["src/components/PdfEditorWorkspaceHardened.tsx"],
+    rules: {
+      // This editor intentionally keeps explicit callback memoization around a high-frequency canvas/object workspace.
+      // React Compiler may choose to skip optimizing those callbacks, but the memoization is semantically stable.
+      "react-hooks/preserve-manual-memoization": "warn",
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

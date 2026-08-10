@@ -1,10 +1,10 @@
-import { Cloud, Infinity, ShieldCheck, Zap } from "lucide-react";
+import { Globe2, Repeat2, ShieldCheck, Sparkles } from "lucide-react";
 
 const items = [
   { icon: ShieldCheck, accent: "red", title: "100% Seguro", text: "Seus arquivos são protegidos durante o processamento." },
-  { icon: Zap, accent: "purple", title: "Rápido", text: "Processamento otimizado direto no navegador." },
-  { icon: Cloud, accent: "blue", title: "Sem instalação", text: "Use de qualquer dispositivo, onde estiver." },
-  { icon: Infinity, accent: "green", title: "Sem limites", text: "Ferramentas gratuitas e sem cadastro." },
+  { icon: Sparkles, accent: "purple", title: "Rápido", text: "Processamento otimizado direto no navegador." },
+  { icon: Globe2, accent: "blue", title: "Sem instalação", text: "Use de qualquer dispositivo, onde estiver." },
+  { icon: Repeat2, accent: "green", title: "Sem limites", text: "Ferramentas gratuitas e sem cadastro." },
 ];
 
 export function TrustStrip() {

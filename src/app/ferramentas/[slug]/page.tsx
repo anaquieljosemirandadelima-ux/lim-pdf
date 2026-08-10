@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { LucideClientIcon } from "@/components/LucideClientIcon";
 import { AdSlot } from "@/components/AdSlot";
 import { MemorySafePdfWorkspace } from "@/components/MemorySafePdfWorkspace";
-import { PdfEditorWorkspace } from "@/components/PdfEditorWorkspace";
+import { PdfEditorWorkspaceHardened } from "@/components/PdfEditorWorkspaceHardened";
 import { PdfToolWorkspace } from "@/components/PdfToolWorkspace";
 import { ToolCard } from "@/components/ToolCard";
 import { ToolIcon } from "@/components/ToolIcon";
@@ -73,7 +73,7 @@ export default async function ToolPage({ params }: ToolPageProps) {
           <div className="container">
             <div className="editor-heading-copy">
               <Link className="breadcrumb" href="/categorias/editar">Início <span>/</span> Ferramentas <span>/</span> Editar PDF</Link>
-              <div className="editor-heading-title"><span className="tool-icon large-icon accent-blue"><ToolIcon icon={tool.icon} /></span><div><h1>Editar PDF</h1><p>Substitua textos visualmente, adicione textos e imagens e baixe o resultado diretamente no navegador.</p></div></div>
+              <div className="editor-heading-title"><span className="tool-icon large-icon accent-blue"><ToolIcon icon={tool.icon} /></span><div><h1>Editar PDF</h1><p>Substitua texto com sanitização da página, adicione elementos e faça redação segura diretamente no navegador.</p></div></div>
             </div>
             <div className="editor-heading-actions">
               <Link className="secondary-button" href="/ferramentas/adicionar-texto-pdf"><LucideClientIcon name="Type" size={17} /> Adicionar texto</Link>
@@ -83,7 +83,7 @@ export default async function ToolPage({ params }: ToolPageProps) {
           </div>
         </section>
         <div className="container"><AdSlot placement="tool-inline" format="horizontal" /></div>
-        <div className="container editor-page-container" id="editor-workspace"><PdfEditorWorkspace /></div>
+        <div className="container editor-page-container" id="editor-workspace"><PdfEditorWorkspaceHardened /></div>
         <section className="tool-seo-summary"><div className="container tool-seo-summary-grid"><article><span className="eyebrow">Editor visual</span><h2>Como o editor de PDF funciona</h2><p>{tool.intro}</p><ul>{tool.useCases.map((item) => <li key={item}><LucideClientIcon name="CheckCircle2" size={16} /> {item}</li>)}</ul></article><aside><LucideClientIcon name="Info" size={22} /><h2>Limitações importantes</h2>{tool.limitations.map((item) => <p key={item}>{item}</p>)}</aside></div></section>
       </>
     );

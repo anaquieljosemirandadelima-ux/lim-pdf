@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { AlertCircle, CheckCircle2, Download, FileText, LoaderCircle, Trash2, UploadCloud } from "lucide-react";
-import { createStoredZip, downloadBlob, downloadBytes, humanSize, outputName } from "@/lib/browser-files";
+import { createStoredZipFromBlobs, downloadBlob, downloadBytes, humanSize, outputName, type BlobZipEntry } from "@/lib/browser-files";
 import { canvasToBlob, renderPdfPagesSequentially } from "@/lib/pdf-render";
 import type { ToolDefinition } from "@/lib/tools";
 import { useTemporaryFiles } from "@/lib/use-temporary-files";
@@ -25,6 +25,7 @@ export function MemorySafePdfWorkspace({ tool }: { tool: ToolDefinition }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [status, setStatus] = useState<Status>({ type: "idle" });
+  const [dragActive, setDragActive] = useState(false);
   const [renderResolution, setRenderResolution] = useState("1.5");
   const [compression, setCompression] = useState("equilibrada");
   const { restored, cached, clearCache } = useTemporaryFiles(`tool:${tool.slug}`, files, setFiles);
@@ -53,7 +54,7 @@ export function MemorySafePdfWorkspace({ tool }: { tool: ToolDefinition }) {
     if (!file) return;
     const requestedScale = Number(renderResolution);
     const extension = type === "image/jpeg" ? "jpg" : "png";
-    const entries: { name: string; data: Uint8Array }[] = [];
+    const entries: BlobZipEntry[] = [];
     const sourceBytes = await file.arrayBuffer();
 
     await renderPdfPagesSequentially(sourceBytes, requestedScale, async (rendered, progress) => {
@@ -61,11 +62,13 @@ export function MemorySafePdfWorkspace({ tool }: { tool: ToolDefinition }) {
       const blob = await canvasToBlob(rendered.canvas, type, type === "image/jpeg" ? 0.9 : 1);
       entries.push({
         name: `${file.name.replace(/\.pdf$/i, "")}-pagina-${rendered.pageNumber}.${extension}`,
-        data: new Uint8Array(await blob.arrayBuffer()),
+        data: blob,
       });
     });
 
-    downloadBlob(createStoredZip(entries), `${file.name.replace(/\.pdf$/i, "")}-${extension}.zip`);
+    setStatus({ type: "processing", message: "Montando arquivo ZIP sem duplicar as imagens na memória..." });
+    const zip = await createStoredZipFromBlobs(entries);
+    downloadBlob(zip, `${file.name.replace(/\.pdf$/i, "")}-${extension}.zip`);
   }
 
   async function processRasterPdf(grayscale: boolean) {
@@ -117,7 +120,18 @@ export function MemorySafePdfWorkspace({ tool }: { tool: ToolDefinition }) {
       <div className="workspace-heading"><div><h2 id="workspace-title">Selecione o arquivo</h2><p>O processamento acontece localmente e uma página é liberada da memória antes da próxima ser renderizada.</p></div></div>
 
       {!file ? (
-        <div className="drop-zone">
+        <div
+          className={`drop-zone ${dragActive ? "is-dragging" : ""}`}
+          onDragEnter={(event) => { event.preventDefault(); setDragActive(true); }}
+          onDragOver={(event) => event.preventDefault()}
+          onDragLeave={(event) => { event.preventDefault(); if (event.currentTarget === event.target) setDragActive(false); }}
+          onDrop={(event) => {
+            event.preventDefault();
+            setDragActive(false);
+            const dropped = event.dataTransfer.files?.[0];
+            if (dropped) addFile(dropped);
+          }}
+        >
           <span className="drop-icon"><UploadCloud size={31} strokeWidth={1.7} aria-hidden="true" /></span>
           <strong>Arraste um PDF ou escolha no dispositivo</strong>
           <span>PDF · até 60 MB</span>

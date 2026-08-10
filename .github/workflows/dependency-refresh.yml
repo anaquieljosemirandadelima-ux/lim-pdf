@@ -11,7 +11,7 @@ on:
       - .github/workflows/dependency-refresh.yml
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   refresh-lockfile:
@@ -20,6 +20,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'push' && github.ref_name || github.event.pull_request.head.ref }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -41,6 +43,17 @@ jobs:
 
       - name: Verify production dependencies
         run: npm audit --omit=dev --audit-level=high
+
+      - name: Commit refreshed manifests
+        if: github.event_name == 'push'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          if ! git diff --cached --quiet; then
+            git commit -m "fix: upgrade vulnerable runtime dependencies"
+            git push origin HEAD:agent/hardening-completo-lim-pdf
+          fi
 
       - name: Upload refreshed manifests
         if: always()

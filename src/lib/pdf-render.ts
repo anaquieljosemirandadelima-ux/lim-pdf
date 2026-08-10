@@ -5,7 +5,15 @@ export type RenderedPage = {
   canvas: HTMLCanvasElement;
   width: number;
   height: number;
+  scale: number;
 };
+
+export type RenderPageProgress = {
+  pageNumber: number;
+  totalPages: number;
+};
+
+const MAX_RENDER_PIXELS_PER_PAGE = 18_000_000;
 
 async function getPdfJs() {
   if (!pdfJsPromise) {
@@ -22,24 +30,66 @@ export async function loadPdfJsDocument(bytes: ArrayBuffer) {
   return pdfjs.getDocument({ data: new Uint8Array(bytes) }).promise;
 }
 
-export async function renderPdfPages(bytes: ArrayBuffer, scale: number, grayscale = false) {
+function safeRenderScale(widthAtOne: number, heightAtOne: number, requestedScale: number) {
+  if (!Number.isFinite(requestedScale) || requestedScale <= 0) throw new Error("Resolução de renderização inválida.");
+  const requestedPixels = widthAtOne * heightAtOne * requestedScale * requestedScale;
+  if (requestedPixels <= MAX_RENDER_PIXELS_PER_PAGE) return requestedScale;
+  const capped = Math.sqrt(MAX_RENDER_PIXELS_PER_PAGE / Math.max(1, widthAtOne * heightAtOne));
+  return Math.max(0.35, Math.min(requestedScale, capped));
+}
+
+export async function renderPdfPagesSequentially(
+  bytes: ArrayBuffer,
+  requestedScale: number,
+  onPage: (page: RenderedPage, progress: RenderPageProgress) => Promise<void> | void,
+  grayscale = false,
+) {
   const document = await loadPdfJsDocument(bytes);
-  const pages: RenderedPage[] = [];
   try {
     for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
       const page = await document.getPage(pageNumber);
-      const viewport = page.getViewport({ scale });
-      const canvas = documentOwnerCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
-      const context = canvas.getContext("2d", { alpha: false });
-      if (!context) throw new Error("O navegador não conseguiu criar a área de renderização.");
-      await page.render({ canvasContext: context, viewport, canvas }).promise;
-      if (grayscale) applyGrayscale(context, canvas.width, canvas.height);
-      pages.push({ pageNumber, canvas, width: canvas.width, height: canvas.height });
-      page.cleanup();
+      try {
+        const baseViewport = page.getViewport({ scale: 1 });
+        const scale = safeRenderScale(baseViewport.width, baseViewport.height, requestedScale);
+        const viewport = page.getViewport({ scale });
+        const canvas = documentOwnerCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
+        const context = canvas.getContext("2d", { alpha: false, willReadFrequently: grayscale });
+        if (!context) throw new Error("O navegador não conseguiu criar a área de renderização.");
+        await page.render({ canvasContext: context, viewport, canvas }).promise;
+        if (grayscale) applyGrayscale(context, canvas.width, canvas.height);
+        try {
+          await onPage(
+            { pageNumber, canvas, width: canvas.width, height: canvas.height, scale },
+            { pageNumber, totalPages: document.numPages },
+          );
+        } finally {
+          canvas.width = 1;
+          canvas.height = 1;
+        }
+      } finally {
+        page.cleanup();
+      }
     }
   } finally {
     await document.cleanup();
+    await document.destroy();
   }
+}
+
+export async function renderPdfPages(bytes: ArrayBuffer, scale: number, grayscale = false) {
+  const pages: RenderedPage[] = [];
+  await renderPdfPagesSequentially(
+    bytes,
+    scale,
+    ({ pageNumber, canvas, width, height, scale: effectiveScale }) => {
+      const copy = documentOwnerCanvas(width, height);
+      const context = copy.getContext("2d", { alpha: false });
+      if (!context) throw new Error("O navegador não conseguiu copiar a página renderizada.");
+      context.drawImage(canvas, 0, 0);
+      pages.push({ pageNumber, canvas: copy, width, height, scale: effectiveScale });
+    },
+    grayscale,
+  );
   return pages;
 }
 
@@ -49,18 +99,22 @@ export async function extractTextByPage(bytes: ArrayBuffer) {
   try {
     for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
       const page = await document.getPage(pageNumber);
-      const text = await page.getTextContent();
-      const line = text.items
-        .map((item) => ("str" in item ? item.str : ""))
-        .filter(Boolean)
-        .join(" ")
-        .replace(/\s+/g, " ")
-        .trim();
-      result.push(line);
-      page.cleanup();
+      try {
+        const text = await page.getTextContent();
+        const line = text.items
+          .map((item) => ("str" in item ? item.str : ""))
+          .filter(Boolean)
+          .join(" ")
+          .replace(/\s+/g, " ")
+          .trim();
+        result.push(line);
+      } finally {
+        page.cleanup();
+      }
     }
   } finally {
     await document.cleanup();
+    await document.destroy();
   }
   return result;
 }

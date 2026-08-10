@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { ToolIcon } from "@/components/ToolIcon";
-import type { ToolDefinition } from "@/lib/tools";
+import type { AnyToolDefinition } from "@/lib/all-tools";
 
 interface ToolCardProps {
-  tool: ToolDefinition;
+  tool: AnyToolDefinition;
 }
 
 export function ToolCard({ tool }: ToolCardProps) {

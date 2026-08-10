@@ -1,4 +1,4 @@
-import { toolBySlug, type ToolSlug } from "@/lib/tools";
+import { allToolBySlug, type AllToolSlug } from "@/lib/all-tools";
 
 export type NavigationGroup = {
   slug: string;
@@ -7,7 +7,7 @@ export type NavigationGroup = {
   description: string;
   icon: "organize" | "edit" | "convert" | "forms" | "sign" | "security" | "optimize";
   accent: "blue" | "green" | "teal" | "purple" | "rose" | "orange";
-  tools: ToolSlug[];
+  tools: AllToolSlug[];
 };
 
 export const navigationGroups: NavigationGroup[] = [
@@ -35,14 +35,16 @@ export const navigationGroups: NavigationGroup[] = [
     slug: "editar",
     label: "Editar",
     title: "Editar PDF",
-    description: "Substitua texto visualmente e adicione textos, imagens, fundos e marcas.",
+    description: "Edite, destaque e adicione textos, imagens, fundos e marcas.",
     icon: "edit",
     accent: "green",
     tools: [
       "editar-pdf",
       "adicionar-texto-pdf",
       "adicionar-imagem-pdf",
+      "destacar-texto",
       "marca-dagua-pdf",
+      "marcar-confidencial",
       "cabecalho-rodape-pdf",
       "numerar-paginas",
       "adicionar-fundo-pdf",
@@ -53,13 +55,17 @@ export const navigationGroups: NavigationGroup[] = [
     slug: "converter",
     label: "Converter",
     title: "Converter PDF",
-    description: "Transforme PDF em imagens ou texto e converta imagens para PDF.",
+    description: "Converta PDF para Word, Excel, imagens e texto, ou arquivos Office para PDF.",
     icon: "convert",
     accent: "teal",
     tools: [
+      "pdf-para-word",
+      "pdf-para-excel",
       "pdf-para-jpg",
       "pdf-para-png",
       "extrair-texto-pdf",
+      "word-para-pdf",
+      "excel-para-pdf",
       "imagens-para-pdf",
     ],
   },
@@ -85,10 +91,10 @@ export const navigationGroups: NavigationGroup[] = [
     slug: "seguranca",
     label: "Segurança",
     title: "Segurança PDF",
-    description: "Remova metadados e prepare documentos antes de compartilhar.",
+    description: "Proteja por senha, remova proteção e controle permissões do documento.",
     icon: "security",
     accent: "blue",
-    tools: ["remover-metadados"],
+    tools: ["proteger-pdf", "desbloquear-pdf", "permissoes-pdf", "marcar-confidencial", "remover-metadados"],
   },
   {
     slug: "otimizar",
@@ -114,6 +120,6 @@ export const navigationGroupBySlug = new Map(
 
 export function getGroupTools(group: NavigationGroup) {
   return group.tools
-    .map((slug) => toolBySlug.get(slug))
+    .map((slug) => allToolBySlug.get(slug))
     .filter((tool) => tool !== undefined);
 }

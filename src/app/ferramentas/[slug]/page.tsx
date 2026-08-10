@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { AdvancedToolWorkspace } from "@/components/AdvancedToolWorkspace";
 import { MemorySafePdfWorkspace } from "@/components/MemorySafePdfWorkspace";
 import { PdfEditorWorkspaceHardened } from "@/components/PdfEditorWorkspaceHardened";
 import { PdfToolWorkspace } from "@/components/PdfToolWorkspace";
 import { ToolIcon } from "@/components/ToolIcon";
-import { toolBySlug, tools, type ToolSlug } from "@/lib/tools";
+import { allToolBySlug, allTools, isAdvancedToolSlug, type AllToolSlug } from "@/lib/all-tools";
+import type { ToolDefinition, ToolSlug } from "@/lib/tools";
 
 interface ToolPageProps { params: Promise<{ slug: string }> }
 
@@ -15,7 +17,7 @@ const memorySafeToolSlugs = new Set<ToolSlug>([
   "pdf-em-escala-de-cinza",
 ]);
 
-const pageDescriptions: Partial<Record<ToolSlug, string>> = {
+const pageDescriptions: Partial<Record<AllToolSlug, string>> = {
   "editar-pdf": "Edite textos, imagens, páginas e anotações do seu PDF com rapidez e precisão.",
   "juntar-pdf": "Combine vários arquivos PDF em um só de forma rápida e organizada.",
   "dividir-pdf": "Separe páginas ou intervalos do seu PDF com rapidez e controle.",
@@ -24,13 +26,22 @@ const pageDescriptions: Partial<Record<ToolSlug, string>> = {
   "pdf-para-png": "Converta páginas do seu PDF em imagens PNG de alta qualidade.",
   "imagens-para-pdf": "Transforme imagens em um arquivo PDF organizado.",
   "assinar-pdf": "Adicione sua assinatura visual ao PDF diretamente no navegador.",
+  "pdf-para-word": "Converta o texto do seu PDF em um documento Word editável.",
+  "pdf-para-excel": "Extraia linhas, tabelas e dados do seu PDF para uma planilha Excel.",
+  "word-para-pdf": "Converta documentos DOCX em PDF diretamente no navegador.",
+  "excel-para-pdf": "Converta planilhas XLSX em PDF diretamente no navegador.",
+  "destacar-texto": "Localize termos e destaque as ocorrências no seu PDF.",
+  "proteger-pdf": "Adicione senha e criptografia AES-256 ao seu PDF.",
+  "desbloquear-pdf": "Remova a senha do PDF quando você possui a credencial correta.",
+  "permissoes-pdf": "Controle impressão, cópia e modificação do documento.",
+  "marcar-confidencial": "Aplique uma marca visual de confidencialidade ao documento.",
 };
 
-export function generateStaticParams() { return tools.map((tool) => ({ slug: tool.slug })); }
+export function generateStaticParams() { return allTools.map((tool) => ({ slug: tool.slug })); }
 
 export async function generateMetadata({ params }: ToolPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const tool = toolBySlug.get(slug as ToolSlug);
+  const tool = allToolBySlug.get(slug as AllToolSlug);
   if (!tool) return {};
   return {
     title: `${tool.name} grátis e online`,
@@ -42,7 +53,7 @@ export async function generateMetadata({ params }: ToolPageProps): Promise<Metad
 
 export default async function ToolPage({ params }: ToolPageProps) {
   const { slug } = await params;
-  const tool = toolBySlug.get(slug as ToolSlug);
+  const tool = allToolBySlug.get(slug as AllToolSlug);
   if (!tool) notFound();
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://limpdf.com.br";
@@ -59,12 +70,27 @@ export default async function ToolPage({ params }: ToolPageProps) {
     featureList: ["Gratuito", "Sem cadastro", "Processamento local"],
   };
 
-  if (tool.slug === "editar-pdf") {
+  if (isAdvancedToolSlug(tool.slug)) {
+    return (
+      <section className="reference-tool-page">
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }} />
+        <div className="reference-tool-heading">
+          <div><h1>{tool.name}</h1><p>{description}</p></div>
+          <span className={`reference-heading-icon accent-${tool.accent}`} aria-hidden="true"><ToolIcon icon={tool.icon} /></span>
+        </div>
+        <div className="reference-workspace-wrap"><AdvancedToolWorkspace tool={tool} /></div>
+      </section>
+    );
+  }
+
+  const baseTool = tool as ToolDefinition;
+
+  if (baseTool.slug === "editar-pdf") {
     return (
       <section className="reference-tool-page reference-editor-page">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }} />
         <div className="reference-tool-heading">
-          <div><h1>{tool.name}</h1><p>{description}</p></div>
+          <div><h1>{baseTool.name}</h1><p>{description}</p></div>
         </div>
         <div className="reference-editor-wrap"><PdfEditorWorkspaceHardened /></div>
       </section>
@@ -75,11 +101,11 @@ export default async function ToolPage({ params }: ToolPageProps) {
     <section className="reference-tool-page">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }} />
       <div className="reference-tool-heading">
-        <div><h1>{tool.name}</h1><p>{description}</p></div>
-        <span className={`reference-heading-icon accent-${tool.accent}`} aria-hidden="true"><ToolIcon icon={tool.icon} /></span>
+        <div><h1>{baseTool.name}</h1><p>{description}</p></div>
+        <span className={`reference-heading-icon accent-${baseTool.accent}`} aria-hidden="true"><ToolIcon icon={baseTool.icon} /></span>
       </div>
       <div className="reference-workspace-wrap">
-        {memorySafeToolSlugs.has(tool.slug) ? <MemorySafePdfWorkspace tool={tool} /> : <PdfToolWorkspace tool={tool} />}
+        {memorySafeToolSlugs.has(baseTool.slug) ? <MemorySafePdfWorkspace tool={baseTool} /> : <PdfToolWorkspace tool={baseTool} />}
       </div>
     </section>
   );

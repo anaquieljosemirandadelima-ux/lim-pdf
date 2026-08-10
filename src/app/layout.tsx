@@ -8,14 +8,14 @@ import { LocalPrivacyGuard } from "@/components/LocalPrivacyGuard";
 import { NativeTranslator } from "@/components/NativeTranslator";
 import { TrustStrip } from "@/components/TrustStrip";
 import { ADSENSE_CLIENT } from "@/lib/adsense";
-import { tools } from "@/lib/tools";
+import { allTools } from "@/lib/all-tools";
 import "./globals.css";
 import "./reference-ui-v2.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://limpdf.com.br";
 const adsenseClient = ADSENSE_CLIENT;
 const googleVerification = process.env.GOOGLE_SITE_VERIFICATION;
-const toolCount = tools.length;
+const toolCount = allTools.length;
 const structuredData = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
@@ -25,7 +25,7 @@ const structuredData = {
   operatingSystem: "Web",
   inLanguage: ["pt-BR", "en", "es"],
   offers: { "@type": "Offer", price: "0", priceCurrency: "BRL" },
-  featureList: tools.map((tool) => tool.name),
+  featureList: allTools.map((tool) => tool.name),
   publisher: {
     "@type": "Organization",
     name: "LIM PDF",
@@ -37,9 +37,9 @@ const structuredData = {
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: { default: "LIM PDF — Ferramentas PDF gratuitas e online", template: "%s | LIM PDF" },
-  description: "Edite visualmente, organize páginas, converta, assine e compacte arquivos PDF gratuitamente, sem cadastro e com cache temporário no navegador.",
+  description: "Edite visualmente, organize páginas, converta, assine, proteja e compacte arquivos PDF gratuitamente, sem cadastro e com processamento no navegador.",
   applicationName: "LIM PDF",
-  keywords: ["PDF grátis", "ferramentas PDF", "juntar PDF", "editar PDF", "converter PDF", "compactar PDF", "PDF online"],
+  keywords: ["PDF grátis", "ferramentas PDF", "juntar PDF", "editar PDF", "converter PDF", "PDF para Word", "PDF para Excel", "proteger PDF", "compactar PDF", "PDF online"],
   authors: [{ name: "LIM PDF" }],
   creator: "LIM PDF",
   publisher: "LIM PDF",
@@ -57,7 +57,7 @@ export const metadata: Metadata = {
     url: siteUrl,
     siteName: "LIM PDF",
     title: "LIM PDF — Ferramentas PDF gratuitas e online",
-    description: `${toolCount} ferramentas reais para organizar, editar visualmente, converter e otimizar PDFs no navegador.`,
+    description: `${toolCount} ferramentas reais para organizar, editar, converter, proteger e otimizar PDFs no navegador.`,
     images: [{ url: "/brand/lim-pdf-og.png", width: 1200, height: 630, alt: "LIM PDF" }],
   },
   twitter: {

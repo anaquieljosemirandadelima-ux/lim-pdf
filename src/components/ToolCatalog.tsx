@@ -4,28 +4,38 @@ import Link from "next/link";
 import { ArrowRight, Grid2X2, PencilLine, Repeat2, Search, ShieldCheck, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ToolIcon } from "@/components/ToolIcon";
-import { toolBySlug, type ToolDefinition, type ToolSlug } from "@/lib/tools";
+import { allToolBySlug, type AllToolSlug, type AnyToolDefinition } from "@/lib/all-tools";
 
 const sections: Array<{
   id: "converter" | "editar" | "organizar" | "proteger" | "outros";
   title: string;
   accent: string;
   icon: typeof Repeat2;
-  tools: ToolSlug[];
+  tools: AllToolSlug[];
 }> = [
   {
     id: "converter",
     title: "Converter",
     accent: "blue",
     icon: Repeat2,
-    tools: ["pdf-para-jpg", "pdf-para-png", "imagens-para-pdf", "extrair-texto-pdf", "pdf-em-escala-de-cinza"],
+    tools: [
+      "pdf-para-word",
+      "pdf-para-excel",
+      "pdf-para-jpg",
+      "pdf-para-png",
+      "word-para-pdf",
+      "excel-para-pdf",
+      "imagens-para-pdf",
+      "extrair-texto-pdf",
+      "pdf-em-escala-de-cinza",
+    ],
   },
   {
     id: "editar",
     title: "Editar",
     accent: "purple",
     icon: PencilLine,
-    tools: ["editar-pdf", "assinar-pdf", "adicionar-texto-pdf", "adicionar-imagem-pdf", "marca-dagua-pdf", "cabecalho-rodape-pdf"],
+    tools: ["editar-pdf", "assinar-pdf", "adicionar-texto-pdf", "adicionar-imagem-pdf", "destacar-texto", "marca-dagua-pdf", "marcar-confidencial", "cabecalho-rodape-pdf"],
   },
   {
     id: "organizar",
@@ -39,7 +49,7 @@ const sections: Array<{
     title: "Proteger e otimizar",
     accent: "green",
     icon: ShieldCheck,
-    tools: ["compactar-pdf", "remover-metadados", "achatar-formulario-pdf", "recortar-pdf", "redimensionar-pdf", "preencher-formulario-pdf"],
+    tools: ["proteger-pdf", "desbloquear-pdf", "permissoes-pdf", "compactar-pdf", "remover-metadados", "achatar-formulario-pdf", "recortar-pdf", "redimensionar-pdf", "preencher-formulario-pdf"],
   },
   {
     id: "outros",
@@ -54,14 +64,14 @@ function normalize(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
-function resolveTools(slugs: ToolSlug[]) {
+function resolveTools(slugs: AllToolSlug[]) {
   return slugs.flatMap((slug) => {
-    const tool = toolBySlug.get(slug);
+    const tool = allToolBySlug.get(slug);
     return tool ? [tool] : [];
   });
 }
 
-function ToolItem({ tool }: { tool: ToolDefinition }) {
+function ToolItem({ tool }: { tool: AnyToolDefinition }) {
   return (
     <Link href={`/ferramentas/${tool.slug}`} className="reference-catalog-tool">
       <span className={`reference-catalog-icon accent-${tool.accent}`}><ToolIcon icon={tool.icon} /></span>

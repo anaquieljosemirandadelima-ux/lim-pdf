@@ -1,8 +1,8 @@
 import type { MetadataRoute } from "next";
+import { allTools } from "@/lib/all-tools";
 import { navigationGroups } from "@/lib/navigation";
-import { tools } from "@/lib/tools";
 
-const CONTENT_UPDATED_AT = new Date("2026-07-20T00:00:00-03:00");
+const CONTENT_UPDATED_AT = new Date("2026-08-10T00:00:00-03:00");
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = process.env.NEXT_PUBLIC_SITE_URL || "https://limpdf.com.br";
@@ -32,7 +32,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly" as const,
       priority: .82,
     })),
-    ...tools.map((tool) => ({
+    ...allTools.map((tool) => ({
       url: `${base}/ferramentas/${tool.slug}`,
       lastModified: CONTENT_UPDATED_AT,
       changeFrequency: "monthly" as const,

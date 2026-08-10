@@ -1,3 +1,4 @@
+# Temporary hotfix validator; remove before merge.
 name: Final review fixes
 
 on:

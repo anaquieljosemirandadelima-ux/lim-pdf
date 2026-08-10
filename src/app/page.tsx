@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LucideClientIcon } from "@/components/LucideClientIcon";
 import { ToolIcon } from "@/components/ToolIcon";
-import { toolBySlug, type ToolSlug } from "@/lib/tools";
+import { allToolBySlug, type AllToolSlug } from "@/lib/all-tools";
 
 export const metadata: Metadata = {
   title: "Ferramentas PDF grátis para editar, converter e organizar",
@@ -10,19 +10,19 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
-const featuredSlugs: ToolSlug[] = [
+const featuredSlugs: AllToolSlug[] = [
   "compactar-pdf",
-  "editar-pdf",
+  "pdf-para-word",
+  "pdf-para-excel",
   "juntar-pdf",
   "dividir-pdf",
-  "pdf-para-jpg",
-  "assinar-pdf",
+  "proteger-pdf",
 ];
 
 export default function Home() {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://limpdf.com.br";
   const featured = featuredSlugs.flatMap((slug) => {
-    const tool = toolBySlug.get(slug);
+    const tool = allToolBySlug.get(slug);
     return tool ? [tool] : [];
   });
   const structuredData = {

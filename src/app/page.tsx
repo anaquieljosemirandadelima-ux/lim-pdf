@@ -1,32 +1,30 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LucideClientIcon } from "@/components/LucideClientIcon";
-import { AdSlot } from "@/components/AdSlot";
-import { CategoryIcon } from "@/components/CategoryIcon";
 import { ToolIcon } from "@/components/ToolIcon";
-import { navigationGroups } from "@/lib/navigation";
 import { toolBySlug, type ToolSlug } from "@/lib/tools";
-import { workflows } from "@/lib/workflows";
 
 export const metadata: Metadata = {
   title: "Ferramentas PDF grátis para editar, converter e organizar",
-  description: "Tudo o que você precisa para trabalhar com PDF: editar, juntar, converter, assinar, preencher e compactar sem cadastro.",
+  description: "Ferramentas online gratuitas para converter, editar, organizar, assinar e otimizar arquivos PDF diretamente no navegador.",
   alternates: { canonical: "/" },
 };
 
-const popularSlugs: ToolSlug[] = [
-  "juntar-pdf",
-  "editar-pdf",
+const featuredSlugs: ToolSlug[] = [
   "compactar-pdf",
+  "editar-pdf",
+  "juntar-pdf",
+  "dividir-pdf",
   "pdf-para-jpg",
   "assinar-pdf",
-  "dividir-pdf",
-  "marca-dagua-pdf",
 ];
 
 export default function Home() {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://limpdf.com.br";
-  const popular = popularSlugs.map((slug) => toolBySlug.get(slug)).filter((tool) => tool !== undefined);
+  const featured = featuredSlugs.flatMap((slug) => {
+    const tool = toolBySlug.get(slug);
+    return tool ? [tool] : [];
+  });
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
@@ -38,107 +36,48 @@ export default function Home() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
-      <section className="home-hero home-hero-v3">
-        <div className="container home-hero-grid">
-          <div className="home-hero-copy">
-            <span className="hero-badge"><LucideClientIcon name="ShieldCheck" size={15} /> Grátis, privado e sem cadastro</span>
-            <h1>Tudo o que você precisa para <span>trabalhar com PDF.</span></h1>
-            <p>Edite, converta, organize, assine e otimize seus documentos gratuitamente. O processamento acontece no seu navegador.</p>
-            <div className="hero-actions">
-              <Link className="primary-button large-button hero-primary" href="/ferramentas/editar-pdf"><LucideClientIcon name="UploadCloud" size={19} /> Selecionar arquivo</Link>
-              <Link className="secondary-button large-button" href="/ferramentas"><LucideClientIcon name="Layers3" size={18} /> Ver ferramentas</Link>
-            </div>
-            <div className="home-trust">
-              <span><LucideClientIcon name="CheckCircle2" size={16} /> Sem conta</span>
-              <span><LucideClientIcon name="HardDrive" size={16} /> Cache temporário</span>
-              <span><LucideClientIcon name="LockKeyhole" size={16} /> Sem upload ao servidor</span>
+      <section className="reference-home">
+        <div className="reference-home-hero">
+          <div className="reference-home-copy">
+            <span className="reference-pill"><i /> 100% Gratuito · Online · Seguro</span>
+            <h1>Tudo que você precisa para <em>seus PDFs.</em></h1>
+            <p>Ferramentas online gratuitas para converter, editar, organizar e proteger seus arquivos PDF de forma simples, rápida e segura.</p>
+            <div className="reference-hero-actions">
+              <Link className="reference-primary-button" href="/ferramentas">
+                <LucideClientIcon name="Sparkles" size={18} /> Explorar ferramentas
+              </Link>
+              <Link className="reference-ghost-button" href="/ferramentas/editar-pdf">
+                <span className="play-dot"><LucideClientIcon name="ArrowRight" size={14} /></span> Ver como funciona
+              </Link>
             </div>
           </div>
 
-          <div className="hero-editor-art" aria-hidden="true">
-            <div className="editor-window">
-              <div className="editor-window-bar"><i /><i /><i /></div>
-              <div className="editor-window-body">
-                <div className="editor-text-box">Aa</div>
-                <div className="editor-lines"><i /><i /><i /></div>
-                <div className="editor-image"><LucideClientIcon name="FileImage" size={48} /></div>
-                <div className="editor-signature">LIM</div>
-              </div>
+          <div className="reference-hero-art" aria-hidden="true">
+            <div className="orbit orbit-one" />
+            <div className="orbit orbit-two" />
+            <div className="hero-document">
+              <span className="pdf-badge">PDF</span>
+              <div className="doc-line wide" /><div className="doc-line" /><div className="doc-line medium" /><div className="doc-line small" />
+              <span className="doc-brand">L</span>
             </div>
-            <span className="art-chip chip-edit"><LucideClientIcon name="FileText" size={18} /> Editar</span>
-            <span className="art-chip chip-convert"><LucideClientIcon name="Sparkles" size={18} /> Converter</span>
-            <span className="art-chip chip-protect"><LucideClientIcon name="ShieldCheck" size={18} /> Proteger</span>
-            <span className="art-chip chip-compress"><LucideClientIcon name="Layers3" size={18} /> Compactar</span>
+            <span className="floating-card convert"><LucideClientIcon name="Repeat2" size={25} /><b>Converter</b></span>
+            <span className="floating-card edit"><LucideClientIcon name="PencilLine" size={25} /><b>Editar</b></span>
+            <span className="floating-card sign"><LucideClientIcon name="Signature" size={25} /><b>Assinar</b></span>
+            <span className="floating-card protect"><LucideClientIcon name="ShieldCheck" size={25} /><b>Proteger</b></span>
           </div>
         </div>
-      </section>
 
-      <AdSlot placement="home-top" format="horizontal" />
-
-      <section className="home-section home-categories-v3">
-        <div className="container">
-          <div className="compact-section-heading">
-            <div><span>Ferramentas por categoria</span><h2>Encontre a função certa sem rolagem infinita</h2></div>
-            <Link href="/ferramentas">Ver todas as ferramentas <LucideClientIcon name="ArrowRight" size={16} /></Link>
-          </div>
-          <div className="category-summary-grid">
-            {navigationGroups.map((group) => (
-              <Link className={`category-summary-card accent-${group.accent}`} href={`/categorias/${group.slug}`} key={group.slug}>
-                <span><CategoryIcon icon={group.icon} size={25} /></span>
-                <h3>{group.title}</h3>
-                <p>{group.description}</p>
-                <small>Abrir categoria <LucideClientIcon name="ArrowRight" size={13} /></small>
-              </Link>
-            ))}
-            <Link className="category-summary-card accent-teal" href="/ferramentas/imagens-para-pdf">
-              <span><LucideClientIcon name="Images" size={25} /></span><h3>Imagens e PDF</h3><p>Converta imagens em PDF ou extraia páginas como JPG e PNG.</p><small>Abrir ferramentas <LucideClientIcon name="ArrowRight" size={13} /></small>
+        <div className="reference-featured-tools">
+          {featured.map((tool) => (
+            <Link href={`/ferramentas/${tool.slug}`} className={`reference-tool-card accent-${tool.accent}`} key={tool.slug}>
+              <span className="reference-tool-icon"><ToolIcon icon={tool.icon} /></span>
+              <strong>{tool.name}</strong>
+              <small>{tool.shortDescription}</small>
+              <LucideClientIcon name="ArrowRight" size={18} />
             </Link>
-          </div>
+          ))}
         </div>
       </section>
-
-      <section className="home-section popular-tools-section home-popular-v3">
-        <div className="container">
-          <div className="compact-section-heading"><div><span>Mais usadas</span><h2>Acesso rápido às funções mais procuradas</h2></div><Link href="/ferramentas">Ver todas <LucideClientIcon name="ArrowRight" size={16} /></Link></div>
-          <div className="popular-tool-row">
-            {popular.map((tool) => (
-              <Link className="popular-tool-card" href={`/ferramentas/${tool.slug}`} key={tool.slug}>
-                <span className={`tool-icon accent-${tool.accent}`}><ToolIcon icon={tool.icon} /></span>
-                <div><strong>{tool.name}</strong><small>{tool.shortDescription}</small></div>
-                <LucideClientIcon name="ArrowRight" size={16} />
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="home-section workflow-section">
-        <div className="container">
-          <div className="compact-section-heading"><div><span>Sequências sugeridas</span><h2>Atalhos para continuar o trabalho em ferramentas relacionadas</h2></div><Link href="/ferramentas">Abrir catálogo <LucideClientIcon name="ArrowRight" size={16} /></Link></div>
-          <div className="workflow-grid">
-            {workflows.slice(0, 4).map((workflow) => {
-              const firstTool = toolBySlug.get(workflow.tools[0]);
-              return (
-                <Link className={`workflow-card accent-${workflow.accent}`} href={firstTool ? `/ferramentas/${firstTool.slug}` : "/ferramentas"} key={workflow.slug}>
-                  <strong>{workflow.title}</strong>
-                  <p>{workflow.description}</p>
-                  <span>{workflow.tools.length} etapas sugeridas</span>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      <section className="home-security-v3">
-        <div className="container security-panel-v3">
-          <div className="security-main"><span><LucideClientIcon name="ShieldCheck" size={29} /></span><div><h2>Seus arquivos ficam seguros.</h2><p>O processamento acontece localmente. O cache temporário ajuda a recuperar uma tarefa interrompida e expira automaticamente.</p></div></div>
-          <div className="security-facts"><div><LucideClientIcon name="HardDrive" size={20} /><span><strong>100% local</strong><small>Processamento no navegador</small></span></div><div><LucideClientIcon name="FileText" size={20} /><span><strong>Não armazenamos</strong><small>Arquivos não são enviados</small></span></div><div><LucideClientIcon name="ShieldCheck" size={20} /><span><strong>Privacidade</strong><small>Dados permanecem no dispositivo</small></span></div></div>
-        </div>
-      </section>
-
-      <AdSlot placement="home-bottom" format="horizontal" />
     </>
   );
 }
-

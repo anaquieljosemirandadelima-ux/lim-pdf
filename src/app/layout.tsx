@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
 import { AdSenseLoader } from "@/components/AdSenseLoader";
+import { AppSidebar } from "@/components/AppSidebar";
 import { ConsentBanner } from "@/components/ConsentBanner";
-import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { LanguageDocumentSync } from "@/components/LanguageDocumentSync";
 import { LocalPrivacyGuard } from "@/components/LocalPrivacyGuard";
 import { NativeTranslator } from "@/components/NativeTranslator";
+import { TrustStrip } from "@/components/TrustStrip";
 import { ADSENSE_CLIENT } from "@/lib/adsense";
 import { tools } from "@/lib/tools";
 import "./globals.css";
+import "./reference-ui-v2.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://limpdf.com.br";
 const adsenseClient = ADSENSE_CLIENT;
@@ -72,7 +74,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="pt-BR">
-      <body className="app-body">
+      <body className="app-body reference-app-body">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
         <a className="skip-link" href="#conteudo">Pular para o conteúdo</a>
         <LocalPrivacyGuard />
@@ -80,8 +82,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <NativeTranslator />
         <AdSenseLoader client={adsenseClient} />
         <Header />
-        <main id="conteudo">{children}</main>
-        <Footer />
+        <AppSidebar />
+        <main id="conteudo" className="reference-main">{children}</main>
+        <TrustStrip />
         <ConsentBanner />
       </body>
     </html>

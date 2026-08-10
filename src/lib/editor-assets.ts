@@ -29,8 +29,19 @@ export type EditorImageAsset = {
   file: File;
 };
 
+export type EditorImageAssetStatus = {
+  sessionCount: number;
+  assetCount: number;
+  totalBytes: number;
+  expiresAt: number | null;
+};
+
 function available() {
   return typeof window !== "undefined" && "indexedDB" in window;
+}
+
+function sessionBytes(session: StoredAssetSession) {
+  return session.assets.reduce((sum, asset) => sum + asset.data.size, 0);
 }
 
 function openDatabase(): Promise<IDBDatabase> {
@@ -44,6 +55,7 @@ function openDatabase(): Promise<IDBDatabase> {
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error || new Error("Falha ao abrir os recursos temporários do editor."));
+    request.onblocked = () => reject(new Error("Os recursos temporários do editor estão bloqueados por outra aba."));
   });
 }
 
@@ -94,6 +106,7 @@ export async function saveEditorImageAssets(fileKey: string, assets: EditorImage
 export async function loadEditorImageAssets(fileKey: string): Promise<EditorImageAsset[]> {
   if (!available()) return [];
   const database = await openDatabase();
+  let expired = false;
   try {
     const transaction = database.transaction(STORE_NAME, "readonly");
     const request = transaction.objectStore(STORE_NAME).get(fileKey);
@@ -102,17 +115,15 @@ export async function loadEditorImageAssets(fileKey: string): Promise<EditorImag
       request.onerror = () => reject(request.error || new Error("Falha ao recuperar os recursos do editor."));
     });
     if (!session) return [];
-    if (Date.now() - session.savedAt > TEMPORARY_CACHE_TTL) {
-      database.close();
-      await clearEditorImageAssets(fileKey);
-      return [];
-    }
+    expired = Date.now() - session.savedAt > TEMPORARY_CACHE_TTL;
+    if (expired) return [];
     return session.assets.map((asset) => ({
       objectId: asset.objectId,
       file: new File([asset.data], asset.name, { type: asset.type, lastModified: asset.lastModified }),
     }));
   } finally {
-    try { database.close(); } catch { /* already closed */ }
+    database.close();
+    if (expired) await clearEditorImageAssets(fileKey);
   }
 }
 
@@ -132,21 +143,41 @@ export async function clearEditorImageAssets(fileKey: string) {
 export async function cleanupExpiredEditorImageAssets(now = Date.now()) {
   if (!available()) return;
   const database = await openDatabase();
-  const sessions = await readAll(database);
-  const expired = sessions.filter((session) => now - session.savedAt > TEMPORARY_CACHE_TTL).map((session) => session.fileKey);
-  if (!expired.length) {
+  try {
+    const sessions = await readAll(database);
+    const expired = sessions.filter((session) => now - session.savedAt > TEMPORARY_CACHE_TTL).map((session) => session.fileKey);
+    if (!expired.length) return;
+    const transaction = database.transaction(STORE_NAME, "readwrite");
+    const store = transaction.objectStore(STORE_NAME);
+    expired.forEach((fileKey) => store.delete(fileKey));
+    await new Promise<void>((resolve) => {
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => resolve();
+      transaction.onabort = () => resolve();
+    });
+  } finally {
     database.close();
-    return;
   }
-  const transaction = database.transaction(STORE_NAME, "readwrite");
-  const store = transaction.objectStore(STORE_NAME);
-  expired.forEach((fileKey) => store.delete(fileKey));
-  await new Promise<void>((resolve) => {
-    transaction.oncomplete = () => resolve();
-    transaction.onerror = () => resolve();
-    transaction.onabort = () => resolve();
-  });
-  database.close();
+}
+
+export async function getEditorImageAssetStatus(now = Date.now()): Promise<EditorImageAssetStatus> {
+  if (!available()) return { sessionCount: 0, assetCount: 0, totalBytes: 0, expiresAt: null };
+  await cleanupExpiredEditorImageAssets(now);
+  const database = await openDatabase();
+  try {
+    const sessions = await readAll(database);
+    return sessions.reduce<EditorImageAssetStatus>((status, session) => {
+      const expiresAt = session.savedAt + TEMPORARY_CACHE_TTL;
+      return {
+        sessionCount: status.sessionCount + 1,
+        assetCount: status.assetCount + session.assets.length,
+        totalBytes: status.totalBytes + sessionBytes(session),
+        expiresAt: status.expiresAt === null ? expiresAt : Math.min(status.expiresAt, expiresAt),
+      };
+    }, { sessionCount: 0, assetCount: 0, totalBytes: 0, expiresAt: null });
+  } finally {
+    database.close();
+  }
 }
 
 export async function clearAllEditorImageAssets() {

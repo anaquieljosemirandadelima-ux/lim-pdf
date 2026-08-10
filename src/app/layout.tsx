@@ -10,7 +10,7 @@ import { TrustStrip } from "@/components/TrustStrip";
 import { ADSENSE_CLIENT } from "@/lib/adsense";
 import { tools } from "@/lib/tools";
 import "./globals.css";
-import "./reference-ui.css";
+import "./reference-ui-v2.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://limpdf.com.br";
 const adsenseClient = ADSENSE_CLIENT;

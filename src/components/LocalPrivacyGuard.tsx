@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { cleanupExpiredEditorImageAssets } from "@/lib/editor-assets";
 import { cleanupExpiredEditorDrafts } from "@/lib/editor-drafts";
 import { getTemporaryCacheStatus } from "@/lib/temporary-cache";
 
@@ -10,6 +11,7 @@ export function LocalPrivacyGuard() {
   useEffect(() => {
     const cleanup = () => {
       cleanupExpiredEditorDrafts();
+      void cleanupExpiredEditorImageAssets().catch(() => undefined);
       void getTemporaryCacheStatus().catch(() => undefined);
     };
 

@@ -42,7 +42,14 @@ export function TemporaryCachePanel() {
   }
 
   useEffect(() => {
-    void refresh();
+    let cancelled = false;
+    void Promise.all([getTemporaryCacheStatus(), getEditorImageAssetStatus()]).then(([nextStatus, nextAssetStatus]) => {
+      if (cancelled) return;
+      setStatus(nextStatus);
+      setAssetStatus(nextAssetStatus);
+      setDraftStatus(getEditorDraftStorageStatus());
+    });
+    return () => { cancelled = true; };
   }, []);
 
   async function clearNow() {

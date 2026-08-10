@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 const MAX_BODY_LENGTH = 5000;
+const MAX_REQUEST_BYTES = MAX_BODY_LENGTH * 2;
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 5;
 const ALLOWED_SUBJECTS = new Set([
@@ -13,6 +14,9 @@ const ALLOWED_SUBJECTS = new Set([
 ]);
 
 type RateEntry = { count: number; resetAt: number };
+type BodyReadResult =
+  | { ok: true; value: unknown }
+  | { ok: false; error: "invalid_json" | "too_large" };
 
 declare global {
   var limPdfContactRateLimit: Map<string, RateEntry> | undefined;
@@ -56,6 +60,33 @@ function sameOriginRequest(request: Request) {
   }
 }
 
+async function readJsonBodyWithLimit(request: Request): Promise<BodyReadResult> {
+  const reader = request.body?.getReader();
+  if (!reader) return { ok: false, error: "invalid_json" };
+  const decoder = new TextDecoder();
+  let text = "";
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_REQUEST_BYTES) {
+        await reader.cancel();
+        return { ok: false, error: "too_large" };
+      }
+      text += decoder.decode(value, { stream: true });
+    }
+    text += decoder.decode();
+    return { ok: true, value: JSON.parse(text) as unknown };
+  } catch {
+    return { ok: false, error: "invalid_json" };
+  } finally {
+    try { reader.releaseLock(); } catch { /* already released */ }
+  }
+}
+
 export async function POST(request: Request) {
   if (!sameOriginRequest(request)) {
     return NextResponse.json({ ok: false, error: "invalid_origin" }, { status: 403 });
@@ -64,9 +95,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "unsupported_media_type" }, { status: 415 });
   }
 
-  const declaredLength = Number(request.headers.get("content-length") || "0");
-  if (Number.isFinite(declaredLength) && declaredLength > MAX_BODY_LENGTH * 2) {
-    return NextResponse.json({ ok: false, error: "too_large" }, { status: 413 });
+  const rawLength = request.headers.get("content-length");
+  if (rawLength) {
+    const declaredLength = Number(rawLength);
+    if (!Number.isFinite(declaredLength) || declaredLength < 0) {
+      return NextResponse.json({ ok: false, error: "invalid_length" }, { status: 400 });
+    }
+    if (declaredLength > MAX_REQUEST_BYTES) {
+      return NextResponse.json({ ok: false, error: "too_large" }, { status: 413 });
+    }
   }
 
   const limit = consumeRateLimit(clientKey(request));
@@ -78,12 +115,14 @@ export async function POST(request: Request) {
   }
 
   const webhook = process.env.CONTACT_WEBHOOK_URL;
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ ok: false, error: "invalid_json" }, { status: 400 });
+  const bodyResult = await readJsonBodyWithLimit(request);
+  if (!bodyResult.ok) {
+    return NextResponse.json(
+      { ok: false, error: bodyResult.error },
+      { status: bodyResult.error === "too_large" ? 413 : 400 },
+    );
   }
+  const body = bodyResult.value;
   if (!body || typeof body !== "object") {
     return NextResponse.json({ ok: false, error: "invalid_body" }, { status: 400 });
   }

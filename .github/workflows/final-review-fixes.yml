@@ -2,17 +2,16 @@
 name: Final review fixes
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/final-review-fixes
-    paths:
-      - .github/workflows/final-review-fixes.yml
+      - main
 
 permissions:
   contents: write
 
 jobs:
   patch-and-validate:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { Trash2 } from "lucide-react";
-import { clearAllEditorImageAssets } from "@/lib/editor-assets";
+import {
+  clearAllEditorImageAssets,
+  getEditorImageAssetStatus,
+  type EditorImageAssetStatus,
+} from "@/lib/editor-assets";
 import {
   clearAllEditorDrafts,
   getEditorDraftStorageStatus,
@@ -24,11 +28,16 @@ function formatExpiry(value: number | null) {
 export function TemporaryCachePanel() {
   const [status, setStatus] = useState<TemporaryCacheStatus | null>(null);
   const [draftStatus, setDraftStatus] = useState<EditorDraftStorageStatus | null>(null);
+  const [assetStatus, setAssetStatus] = useState<EditorImageAssetStatus | null>(null);
   const [clearing, setClearing] = useState(false);
 
   async function refresh() {
-    const nextStatus = await getTemporaryCacheStatus();
+    const [nextStatus, nextAssetStatus] = await Promise.all([
+      getTemporaryCacheStatus(),
+      getEditorImageAssetStatus(),
+    ]);
     setStatus(nextStatus);
+    setAssetStatus(nextAssetStatus);
     setDraftStatus(getEditorDraftStorageStatus());
   }
 
@@ -44,11 +53,12 @@ export function TemporaryCachePanel() {
     setClearing(false);
   }
 
-  const totalBytes = (status?.totalBytes || 0) + (draftStatus?.totalBytes || 0);
-  const nextExpiry = [status?.expiresAt, draftStatus?.expiresAt]
+  const totalBytes = (status?.totalBytes || 0) + (draftStatus?.totalBytes || 0) + (assetStatus?.totalBytes || 0);
+  const nextExpiry = [status?.expiresAt, draftStatus?.expiresAt, assetStatus?.expiresAt]
     .filter((value): value is number => typeof value === "number")
     .sort((a, b) => a - b)[0] ?? null;
-  const hasLocalData = Boolean(status?.sessionCount || draftStatus?.draftCount);
+  const hasLocalData = Boolean(status?.sessionCount || draftStatus?.draftCount || assetStatus?.sessionCount);
+  const ready = Boolean(status && draftStatus && assetStatus);
 
   return (
     <section className="local-cache-panel" aria-labelledby="local-cache-title">
@@ -59,9 +69,9 @@ export function TemporaryCachePanel() {
       </div>
       <dl>
         <div><dt>Tarefas armazenadas</dt><dd>{status?.sessionCount ?? "..."}</dd></div>
-        <div><dt>Rascunhos do editor</dt><dd>{draftStatus?.draftCount ?? "..."}</dd></div>
-        <div><dt>Espaço contabilizado</dt><dd>{status && draftStatus ? formatBytes(totalBytes) : "..."}</dd></div>
-        <div><dt>Próxima expiração</dt><dd>{status && draftStatus ? formatExpiry(nextExpiry) : "..."}</dd></div>
+        <div><dt>Rascunhos / imagens</dt><dd>{draftStatus && assetStatus ? `${draftStatus.draftCount} / ${assetStatus.assetCount}` : "..."}</dd></div>
+        <div><dt>Espaço usado</dt><dd>{ready ? formatBytes(totalBytes) : "..."}</dd></div>
+        <div><dt>Próxima expiração</dt><dd>{ready ? formatExpiry(nextExpiry) : "..."}</dd></div>
       </dl>
       <button className="secondary-button" type="button" onClick={clearNow} disabled={clearing || !hasLocalData}>
         <Trash2 size={16} /> {clearing ? "Apagando..." : "Apagar todos os dados temporários agora"}

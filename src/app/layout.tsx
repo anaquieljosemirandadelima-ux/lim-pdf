@@ -11,6 +11,7 @@ import { ADSENSE_CLIENT } from "@/lib/adsense";
 import { allTools } from "@/lib/all-tools";
 import "./globals.css";
 import "./reference-ui-v2.css";
+import "./premium-ui.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://limpdf.com.br";
 const adsenseClient = ADSENSE_CLIENT;

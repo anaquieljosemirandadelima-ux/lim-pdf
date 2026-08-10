@@ -1,84 +1,52 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import React from "react";
-import {
-  ArrowRight,
-  Clock3,
-  Grid2X2,
-  Search,
-  ShieldCheck,
-  Sparkles,
-  Star,
-  UploadCloud,
-} from "lucide-react";
-import { CategoryIcon } from "@/components/CategoryIcon";
+import { ArrowRight, Grid2X2, PencilLine, Repeat2, Search, ShieldCheck, Sparkles } from "lucide-react";
+import { useMemo, useState } from "react";
 import { ToolIcon } from "@/components/ToolIcon";
-import { sectionTranslations, toolText, uiText } from "@/lib/i18n-content";
-import { navigationGroups, type NavigationGroup } from "@/lib/navigation";
-import { saveTemporaryFiles } from "@/lib/temporary-cache";
-import { toolBySlug, tools, type ToolDefinition, type ToolSlug } from "@/lib/tools";
-import { useLanguage } from "@/lib/use-language";
+import { toolBySlug, type ToolDefinition, type ToolSlug } from "@/lib/tools";
 
-const FAVORITES_KEY = "limpdf-tool-favorites-v1";
-const RECENTS_KEY = "limpdf-tool-recents-v1";
-
-const catalogSections: Array<{
+const sections: Array<{
+  id: "converter" | "editar" | "organizar" | "proteger" | "outros";
   title: string;
-  label: string;
-  href: string;
-  group?: NavigationGroup;
+  accent: string;
+  icon: typeof Repeat2;
   tools: ToolSlug[];
 }> = [
   {
-    title: "Editar e assinar",
-    label: "Editar",
-    href: "/categorias/editar",
-    group: navigationGroups.find((group) => group.slug === "editar"),
+    id: "converter",
+    title: "Converter",
+    accent: "blue",
+    icon: Repeat2,
+    tools: ["pdf-para-jpg", "pdf-para-png", "imagens-para-pdf", "extrair-texto-pdf", "pdf-em-escala-de-cinza"],
+  },
+  {
+    id: "editar",
+    title: "Editar",
+    accent: "purple",
+    icon: PencilLine,
     tools: ["editar-pdf", "assinar-pdf", "adicionar-texto-pdf", "adicionar-imagem-pdf", "marca-dagua-pdf", "cabecalho-rodape-pdf"],
   },
   {
-    title: "Organizar e juntar",
-    label: "Organizar",
-    href: "/categorias/organizar",
-    group: navigationGroups.find((group) => group.slug === "organizar"),
-    tools: ["juntar-pdf", "dividir-pdf", "organizar-paginas", "girar-pdf", "excluir-paginas", "extrair-paginas"],
+    id: "organizar",
+    title: "Organizar",
+    accent: "orange",
+    icon: Grid2X2,
+    tools: ["juntar-pdf", "dividir-pdf", "extrair-paginas", "organizar-paginas", "excluir-paginas", "girar-pdf", "duplicar-paginas", "inserir-pagina-em-branco", "alternar-pdfs", "sobrepor-pdfs"],
   },
   {
-    title: "Converter",
-    label: "Conversão",
-    href: "/categorias/converter",
-    group: navigationGroups.find((group) => group.slug === "converter"),
-    tools: ["pdf-para-jpg", "pdf-para-png", "extrair-texto-pdf", "imagens-para-pdf"],
+    id: "proteger",
+    title: "Proteger e otimizar",
+    accent: "green",
+    icon: ShieldCheck,
+    tools: ["compactar-pdf", "remover-metadados", "achatar-formulario-pdf", "recortar-pdf", "redimensionar-pdf", "preencher-formulario-pdf"],
   },
   {
-    title: "Otimizar e proteger",
-    label: "Otimização",
-    href: "/categorias/otimizar",
-    group: navigationGroups.find((group) => group.slug === "otimizar"),
-    tools: ["compactar-pdf", "redimensionar-pdf", "criar-livreto-pdf", "recortar-pdf", "paginas-por-folha", "remover-metadados"],
-  },
-  {
-    title: "Revisão e anotações",
-    label: "Finalização",
-    href: "/categorias/editar",
-    group: navigationGroups.find((group) => group.slug === "editar"),
-    tools: ["numerar-paginas", "adicionar-fundo-pdf", "espelhar-pdf", "marca-dagua-pdf"],
-  },
-  {
-    title: "Formulários e texto",
-    label: "Dados",
-    href: "/categorias/formularios",
-    group: navigationGroups.find((group) => group.slug === "formularios"),
-    tools: ["preencher-formulario-pdf", "achatar-formulario-pdf", "extrair-texto-pdf"],
-  },
-  {
-    title: "Impressão e produção",
-    label: "Produção",
-    href: "/categorias/otimizar",
-    group: navigationGroups.find((group) => group.slug === "otimizar"),
-    tools: ["redimensionar-pdf", "criar-livreto-pdf", "paginas-por-folha", "pdf-em-escala-de-cinza"],
+    id: "outros",
+    title: "Outros",
+    accent: "teal",
+    icon: Sparkles,
+    tools: ["numerar-paginas", "adicionar-fundo-pdf", "espelhar-pdf", "criar-livreto-pdf", "paginas-por-folha"],
   },
 ];
 
@@ -86,213 +54,77 @@ function normalize(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
-function readStoredSlugs(key: string): ToolSlug[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const value = JSON.parse(window.localStorage.getItem(key) || "[]");
-    if (!Array.isArray(value)) return [];
-    return value.filter((slug): slug is ToolSlug => typeof slug === "string" && toolBySlug.has(slug as ToolSlug));
-  } catch {
-    return [];
-  }
-}
-
-function uniqueTools(slugs: ToolSlug[]) {
+function resolveTools(slugs: ToolSlug[]) {
   return slugs.flatMap((slug) => {
     const tool = toolBySlug.get(slug);
     return tool ? [tool] : [];
   });
 }
 
+function ToolItem({ tool }: { tool: ToolDefinition }) {
+  return (
+    <Link href={`/ferramentas/${tool.slug}`} className="reference-catalog-tool">
+      <span className={`reference-catalog-icon accent-${tool.accent}`}><ToolIcon icon={tool.icon} /></span>
+      <span className="reference-catalog-copy"><strong>{tool.name}</strong><small>{tool.shortDescription}</small></span>
+      <ArrowRight size={17} />
+    </Link>
+  );
+}
+
 export function ToolCatalog() {
-  const language = useLanguage();
-  const text = uiText[language];
-  const router = useRouter();
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [active, setActive] = React.useState("todas");
-  const [query, setQuery] = React.useState("");
-  const [dragging, setDragging] = React.useState(false);
-  const [favorites, setFavorites] = React.useState<ToolSlug[]>(() => readStoredSlugs(FAVORITES_KEY));
-  const [recents, setRecents] = React.useState<ToolSlug[]>(() => readStoredSlugs(RECENTS_KEY));
+  const [active, setActive] = useState<"todas" | "converter" | "editar" | "organizar" | "proteger" | "outros">("todas");
+  const [query, setQuery] = useState("");
+  const normalizedQuery = normalize(query.trim());
 
-  const normalized = normalize(query.trim());
-  const localizedSections = catalogSections.map((section) => {
-    const translated = language === "pt-BR" ? undefined : sectionTranslations[language]?.[section.title as keyof typeof sectionTranslations.en];
-    return { ...section, title: translated?.[0] ?? section.title, label: translated?.[1] ?? section.label, sourceLabel: section.label };
-  });
-  const visibleSections = localizedSections.filter((section) => active === "todas" || section.sourceLabel === active);
-  const favoriteTools = uniqueTools(favorites);
-  const recentTools = uniqueTools(recents);
-  const searchResults = React.useMemo(() => {
-    if (!normalized) return [];
-    return tools
-      .filter((tool) => {
-        const localized = toolText(language, tool.slug, tool);
-        return normalize([localized.name, tool.category, localized.shortDescription, tool.description, ...tool.keywords].join(" ")).includes(normalized);
-      })
-      .slice(0, 12);
-  }, [language, normalized]);
+  const filteredSections = useMemo(() => {
+    return sections
+      .filter((section) => active === "todas" || section.id === active)
+      .map((section) => ({
+        ...section,
+        resolved: resolveTools(section.tools).filter((tool) => {
+          if (!normalizedQuery) return true;
+          return normalize(`${tool.name} ${tool.shortDescription} ${tool.description} ${tool.keywords.join(" ")}`).includes(normalizedQuery);
+        }),
+      }))
+      .filter((section) => section.resolved.length > 0);
+  }, [active, normalizedQuery]);
 
-  function storeFavorites(next: ToolSlug[]) {
-    setFavorites(next);
-    window.localStorage.setItem(FAVORITES_KEY, JSON.stringify(next));
-  }
-
-  function toggleFavorite(slug: ToolSlug) {
-    storeFavorites(favorites.includes(slug) ? favorites.filter((item) => item !== slug) : [slug, ...favorites].slice(0, 12));
-  }
-
-  function rememberTool(slug: ToolSlug) {
-    const next = [slug, ...recents.filter((item) => item !== slug)].slice(0, 6);
-    setRecents(next);
-    window.localStorage.setItem(RECENTS_KEY, JSON.stringify(next));
-  }
-
-  async function openFilesInEditor(fileList: FileList | File[]) {
-    const files = Array.from(fileList).filter((file) => file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf"));
-    if (!files.length) return;
-    await saveTemporaryFiles("tool:editar-pdf", files.slice(0, 1));
-    router.push("/ferramentas/editar-pdf");
-  }
-
-  function renderTool(tool: ToolDefinition) {
-    const favorite = favorites.includes(tool.slug);
-    const localized = toolText(language, tool.slug, tool);
-    return (
-      <article className="catalog-tool-item" key={tool.slug}>
-        <Link href={`/ferramentas/${tool.slug}`} onClick={() => rememberTool(tool.slug)}>
-          <span className={`mini-tool-icon accent-${tool.accent}`}><ToolIcon icon={tool.icon} /></span>
-          <span><strong>{localized.name}</strong><small>{localized.shortDescription}</small></span>
-        </Link>
-        <button
-          type="button"
-          className={favorite ? "favorite-toggle active" : "favorite-toggle"}
-          aria-label={favorite ? `Remover ${localized.name} dos favoritos` : `Adicionar ${localized.name} aos favoritos`}
-          onClick={() => toggleFavorite(tool.slug)}
-        >
-          <Star size={15} fill={favorite ? "currentColor" : "none"} />
-        </button>
-      </article>
-    );
-  }
+  const tabs = [
+    ["todas", "Todas", Grid2X2],
+    ["converter", "Converter", Repeat2],
+    ["editar", "Editar", PencilLine],
+    ["organizar", "Organizar", Grid2X2],
+    ["proteger", "Proteger", ShieldCheck],
+    ["outros", "Outros", Sparkles],
+  ] as const;
 
   return (
-    <div className="tool-center">
-      <section className="tool-center-hero">
-        <div className="tool-center-copy">
-          <span>{text.toolCenter}</span>
-          <h1>{text.toolCenter}</h1>
-          <p>{text.toolCenterDescription}</p>
-        </div>
-        <label className="tool-center-search">
-          <Search size={20} />
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={text.searchPlaceholder} />
-        </label>
-      </section>
+    <div className="reference-catalog">
+      <div className="reference-catalog-head">
+        <div><h1>Todas as ferramentas</h1><p>Escolha a ferramenta ideal para trabalhar com seus PDFs.</p></div>
+        <label className="reference-search"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar ferramenta..." /></label>
+      </div>
 
-      <section className="quick-actions" aria-label="Ações rápidas">
-        {[
-          { copy: text.quickActions.select, href: "/ferramentas/editar-pdf", icon: UploadCloud, primary: true },
-          { copy: text.quickActions.drop, href: "/ferramentas/editar-pdf", icon: UploadCloud, drop: true },
-          { copy: text.quickActions.editor, href: "/ferramentas/editar-pdf", icon: Sparkles },
-          { copy: text.quickActions.convert, href: "/categorias/converter", icon: ArrowRight },
-          { copy: text.quickActions.organize, href: "/categorias/organizar", icon: Grid2X2 },
-        ].map((action) => {
-          const Icon = action.icon;
-          if (action.drop) {
-            return (
-              <button
-                type="button"
-                key={action.copy[0]}
-                className={`quick-action ${dragging ? "dragging" : ""}`}
-                onClick={() => fileInputRef.current?.click()}
-                onDragEnter={(event) => { event.preventDefault(); setDragging(true); }}
-                onDragOver={(event) => event.preventDefault()}
-                onDragLeave={() => setDragging(false)}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  setDragging(false);
-                  void openFilesInEditor(event.dataTransfer.files);
-                }}
-              >
-                <span><Icon size={22} /></span>
-                <b>{action.copy[0]}</b>
-                <small>{dragging ? action.copy[2] : action.copy[1]}</small>
-                <ArrowRight size={18} />
-              </button>
-            );
-          }
-          return (
-            <Link className={`quick-action ${action.primary ? "primary" : ""}`} href={action.href} key={action.copy[0]}>
-              <span><Icon size={22} /></span>
-              <b>{action.copy[0]}</b>
-              <small>{action.copy[1]}</small>
-              <ArrowRight size={18} />
-            </Link>
-          );
-        })}
-        <input ref={fileInputRef} className="sr-only" type="file" accept="application/pdf" onChange={(event) => event.target.files && void openFilesInEditor(event.target.files)} />
-      </section>
-
-      {(favoriteTools.length || recentTools.length) && !normalized ? (
-        <section className="personal-tool-row" aria-label={text.savedTools}>
-          {favoriteTools.length ? (
-            <div>
-              <h2><Star size={16} /> {text.favorites}</h2>
-              <div>{favoriteTools.slice(0, 5).map(renderTool)}</div>
-            </div>
-          ) : null}
-          {recentTools.length ? (
-            <div>
-              <h2><Clock3 size={16} /> {text.recents}</h2>
-              <div>{recentTools.slice(0, 5).map(renderTool)}</div>
-            </div>
-          ) : null}
-        </section>
-      ) : null}
-
-      <div className="catalog-tabs tool-center-tabs" role="tablist" aria-label={text.filterByCategory}>
-        <button className={active === "todas" ? "active" : ""} onClick={() => setActive("todas")}>{text.all}</button>
-        {[...new Map(localizedSections.map((section) => [section.sourceLabel, section.label])).entries()].map(([sourceLabel, label]) => (
-          <button className={active === sourceLabel ? "active" : ""} onClick={() => setActive(sourceLabel)} key={sourceLabel}>{label}</button>
+      <div className="reference-catalog-tabs" role="tablist" aria-label="Filtrar ferramentas por categoria">
+        {tabs.map(([id, label, Icon]) => (
+          <button key={id} type="button" className={active === id ? "active" : ""} onClick={() => setActive(id)}>
+            <Icon size={16} /> {label}
+          </button>
         ))}
       </div>
 
-      {normalized ? (
-        <section className="catalog-search-results">
-          <h2>{searchResults.length} {text.searchResults}</h2>
-          <div className="catalog-tool-grid">{searchResults.map(renderTool)}</div>
-          {!searchResults.length ? <p>{text.noResults}</p> : null}
-        </section>
-      ) : (
-        <section className="tool-center-groups">
-          {visibleSections.map((section) => {
-            const group = section.group;
-            const sectionTools = uniqueTools(section.tools);
-            return (
-              <article className={`tool-center-group accent-${group?.accent ?? "blue"}`} key={section.title}>
-                <header>
-                  <div>
-                    <span>{group ? <CategoryIcon icon={group.icon} /> : <Grid2X2 size={22} />}</span>
-                    <h2>{section.title}</h2>
-                  </div>
-                  <Link href={section.href}>{text.viewAll} <ArrowRight size={15} /></Link>
-                </header>
-                <div className="catalog-tool-grid">
-                  {sectionTools.map(renderTool)}
-                </div>
-              </article>
-            );
-          })}
-        </section>
-      )}
-
-      <section className="tool-center-safety">
-        <ShieldCheck size={20} />
-        <span>{text.safety}</span>
-        <Link href="/seguranca">{text.learnSecurity} <ArrowRight size={15} /></Link>
-      </section>
-
+      <div className="reference-catalog-sections">
+        {filteredSections.map((section) => {
+          const Icon = section.icon;
+          return (
+            <section className={`reference-tool-section accent-${section.accent}`} key={section.id}>
+              <header><div><Icon size={21} /><h2>{section.title}</h2></div><button type="button" onClick={() => setActive(section.id)}>Ver todas <ArrowRight size={15} /></button></header>
+              <div className="reference-catalog-grid">{section.resolved.map((tool) => <ToolItem key={tool.slug} tool={tool} />)}</div>
+            </section>
+          );
+        })}
+        {!filteredSections.length ? <div className="reference-empty-search">Nenhuma ferramenta encontrada.</div> : null}
+      </div>
     </div>
   );
 }

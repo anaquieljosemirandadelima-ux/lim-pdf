@@ -3,6 +3,7 @@ import { AdSenseLoader } from "@/components/AdSenseLoader";
 import { ConsentBanner } from "@/components/ConsentBanner";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
+import { LanguageDocumentSync } from "@/components/LanguageDocumentSync";
 import { LocalPrivacyGuard } from "@/components/LocalPrivacyGuard";
 import { NativeTranslator } from "@/components/NativeTranslator";
 import { ADSENSE_CLIENT } from "@/lib/adsense";
@@ -20,7 +21,7 @@ const structuredData = {
   url: siteUrl,
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
-  inLanguage: "pt-BR",
+  inLanguage: ["pt-BR", "en", "es"],
   offers: { "@type": "Offer", price: "0", priceCurrency: "BRL" },
   featureList: tools.map((tool) => tool.name),
   publisher: {
@@ -75,6 +76,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
         <a className="skip-link" href="#conteudo">Pular para o conteúdo</a>
         <LocalPrivacyGuard />
+        <LanguageDocumentSync />
         <NativeTranslator />
         <AdSenseLoader client={adsenseClient} />
         <Header />

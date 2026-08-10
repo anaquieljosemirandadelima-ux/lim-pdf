@@ -594,7 +594,7 @@ export function PdfEditorWorkspaceHardened() {
               const previewBlob = await canvasToBlob(canvas, "image/jpeg", 0.78);
               const previewUrl = registerUrl(previewBlob);
               const content = await pdfPage.getTextContent();
-              const textItems = content.items.filter(isTextContentItem);
+              const textItems = content.items.filter(isTextContentItem) as TextContentItem[];
               textItems.filter((item) => item.str.trim()).forEach((item, index) => {
                 const fontSize = Math.max(6, Math.hypot(item.transform[0], item.transform[1]));
                 detectedObjects.push({

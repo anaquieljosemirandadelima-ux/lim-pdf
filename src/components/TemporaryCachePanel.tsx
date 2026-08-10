@@ -2,6 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { Trash2 } from "lucide-react";
+import {
+  clearAllEditorDrafts,
+  getEditorDraftStorageStatus,
+  type EditorDraftStorageStatus,
+} from "@/lib/editor-drafts";
 import { clearAllTemporaryFiles, getTemporaryCacheStatus, type TemporaryCacheStatus } from "@/lib/temporary-cache";
 
 function formatBytes(bytes: number) {
@@ -17,38 +22,48 @@ function formatExpiry(value: number | null) {
 
 export function TemporaryCachePanel() {
   const [status, setStatus] = useState<TemporaryCacheStatus | null>(null);
+  const [draftStatus, setDraftStatus] = useState<EditorDraftStorageStatus | null>(null);
   const [clearing, setClearing] = useState(false);
 
   async function refresh() {
-    setStatus(await getTemporaryCacheStatus());
+    const nextStatus = await getTemporaryCacheStatus();
+    setStatus(nextStatus);
+    setDraftStatus(getEditorDraftStorageStatus());
   }
 
   useEffect(() => {
-    void getTemporaryCacheStatus().then((nextStatus) => setStatus(nextStatus));
+    void refresh();
   }, []);
 
   async function clearNow() {
     setClearing(true);
     await clearAllTemporaryFiles();
+    clearAllEditorDrafts();
     await refresh();
     setClearing(false);
   }
+
+  const totalBytes = (status?.totalBytes || 0) + (draftStatus?.totalBytes || 0);
+  const nextExpiry = [status?.expiresAt, draftStatus?.expiresAt]
+    .filter((value): value is number => typeof value === "number")
+    .sort((a, b) => a - b)[0] ?? null;
+  const hasLocalData = Boolean(status?.sessionCount || draftStatus?.draftCount);
 
   return (
     <section className="local-cache-panel" aria-labelledby="local-cache-title">
       <div>
         <span className="eyebrow">Cache local</span>
-        <h2 id="local-cache-title">Arquivos temporários neste dispositivo</h2>
-        <p>O cache fica no IndexedDB do navegador, não no servidor do LIM PDF. Ele ajuda a recuperar tarefas interrompidas e expira automaticamente em até 4 horas.</p>
+        <h2 id="local-cache-title">Dados temporários neste dispositivo</h2>
+        <p>Arquivos de tarefas ficam no IndexedDB e rascunhos do editor ficam no armazenamento local do navegador. Nenhum desses dados é enviado ao servidor do LIM PDF e ambos expiram em até 4 horas.</p>
       </div>
       <dl>
         <div><dt>Tarefas armazenadas</dt><dd>{status?.sessionCount ?? "..."}</dd></div>
-        <div><dt>Arquivos</dt><dd>{status?.fileCount ?? "..."}</dd></div>
-        <div><dt>Espaço usado</dt><dd>{status ? formatBytes(status.totalBytes) : "..."}</dd></div>
-        <div><dt>Próxima expiração</dt><dd>{status ? formatExpiry(status.expiresAt) : "..."}</dd></div>
+        <div><dt>Rascunhos do editor</dt><dd>{draftStatus?.draftCount ?? "..."}</dd></div>
+        <div><dt>Espaço usado</dt><dd>{status && draftStatus ? formatBytes(totalBytes) : "..."}</dd></div>
+        <div><dt>Próxima expiração</dt><dd>{status && draftStatus ? formatExpiry(nextExpiry) : "..."}</dd></div>
       </dl>
-      <button className="secondary-button" type="button" onClick={clearNow} disabled={clearing || !status?.sessionCount}>
-        <Trash2 size={16} /> {clearing ? "Apagando..." : "Apagar arquivos temporários agora"}
+      <button className="secondary-button" type="button" onClick={clearNow} disabled={clearing || !hasLocalData}>
+        <Trash2 size={16} /> {clearing ? "Apagando..." : "Apagar todos os dados temporários agora"}
       </button>
     </section>
   );

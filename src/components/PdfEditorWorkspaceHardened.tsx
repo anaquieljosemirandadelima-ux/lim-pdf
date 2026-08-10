@@ -25,16 +25,8 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { downloadBytes } from "@/lib/browser-files";
-import {
-  loadEditorImageAssets,
-  saveEditorImageAssets,
-  type EditorImageAsset,
-} from "@/lib/editor-assets";
-import {
-  cleanupExpiredEditorDrafts,
-  EDITOR_DRAFT_PREFIX,
-  EDITOR_RECENTS_KEY,
-} from "@/lib/editor-drafts";
+import { loadEditorImageAssets, saveEditorImageAssets } from "@/lib/editor-assets";
+import { cleanupExpiredEditorDrafts, EDITOR_DRAFT_PREFIX, EDITOR_RECENTS_KEY } from "@/lib/editor-drafts";
 import { canvasToBlob, loadPdfJsDocument } from "@/lib/pdf-render";
 import { useTemporaryFiles } from "@/lib/use-temporary-files";
 import { useLanguage } from "@/lib/use-language";
@@ -44,12 +36,14 @@ const MAX_FILE_SIZE = 60 * 1024 * 1024;
 const MAX_IMAGE_SIZE = 20 * 1024 * 1024;
 const MAX_PREVIEW_PIXELS = 1_800_000;
 const MAX_SANITIZE_PIXELS = 20_000_000;
-const DEFAULT_PREVIEW_SCALE = 1.2;
-const DEFAULT_SANITIZE_SCALE = 2.6;
+const PREVIEW_SCALE = 1.2;
+const SANITIZE_SCALE = 2.6;
 const MIN_OBJECT_SIZE = 12;
 const HISTORY_LIMIT = 60;
 
-const editorText = {
+type Language = "pt-BR" | "en" | "es";
+
+const labels: Record<Language, Record<string, string>> = {
   "pt-BR": {
     openTitle: "Abra o PDF que deseja editar",
     openDescription: "O arquivo fica temporariamente no navegador. Rascunhos e imagens expiram automaticamente em até 4 horas.",
@@ -128,7 +122,7 @@ const editorText = {
     insertSignature: "Insertar firma",
     cache: "Procesamiento local. Las páginas con redacción o texto sustituido se aplanan y sanitizan antes de exportar.",
   },
-} as const;
+};
 
 type PagePreview = {
   pageIndex: number;
@@ -140,12 +134,16 @@ type PagePreview = {
   isBlank?: boolean;
 };
 
-type PersistedBlankPage = Pick<PagePreview, "pageIndex" | "width" | "height" | "scale" | "isBlank">;
-type EditorObjectKind = "text-replacement" | "text" | "image" | "redaction" | "highlight" | "comment" | "signature";
+type BlankPageDraft = {
+  pageIndex: number;
+  width: number;
+  height: number;
+  scale: number;
+  isBlank: true;
+};
 
-type EditorObjectBase = {
+type BaseObject = {
   id: string;
-  kind: EditorObjectKind;
   pageIndex: number;
   x: number;
   y: number;
@@ -156,53 +154,48 @@ type EditorObjectBase = {
   hidden?: boolean;
 };
 
-type TextReplacementObject = EditorObjectBase & {
+type TextReplacementObject = BaseObject & {
   kind: "text-replacement";
   originalText: string;
   text: string;
   fontSize: number;
 };
 
-type TextObject = EditorObjectBase & {
+type TextObject = BaseObject & {
   kind: "text";
   text: string;
   fontSize: number;
 };
 
-type ImageObject = EditorObjectBase & {
+type ImageObject = BaseObject & {
   kind: "image";
   file: File;
   previewUrl: string;
 };
 
-type PersistedImageObject = Omit<ImageObject, "file" | "previewUrl">;
-type RedactionObject = EditorObjectBase & { kind: "redaction" };
-type HighlightObject = EditorObjectBase & { kind: "highlight"; color: string };
-type CommentObject = EditorObjectBase & { kind: "comment"; text: string };
-type SignatureObject = EditorObjectBase & { kind: "signature"; dataUrl: string };
-type EditorObject = TextReplacementObject | TextObject | ImageObject | RedactionObject | HighlightObject | CommentObject | SignatureObject;
-type PersistableEditorObject = Exclude<EditorObject, ImageObject> | PersistedImageObject;
-type EditorStatus = "idle" | "loading" | "ready" | "exporting" | "error";
-type DragMode = "move" | "resize";
+type PersistedImageObject = BaseObject & { kind: "image" };
+type RedactionObject = BaseObject & { kind: "redaction" };
+type HighlightObject = BaseObject & { kind: "highlight"; color: string };
+type CommentObject = BaseObject & { kind: "comment"; text: string };
+type SignatureObject = BaseObject & { kind: "signature"; dataUrl: string };
 
-type TextContentItem = {
-  str: string;
-  width: number;
-  height: number;
-  transform: number[];
-};
+type EditorObject =
+  | TextReplacementObject
+  | TextObject
+  | ImageObject
+  | RedactionObject
+  | HighlightObject
+  | CommentObject
+  | SignatureObject;
 
-type DragState = {
-  mode: DragMode;
-  objectId: string;
-  objectIds: string[];
-  pointerId: number;
-  startClientX: number;
-  startClientY: number;
-  startObject: EditorObject;
-  startObjects: EditorObject[];
-  changed: boolean;
-};
+type PersistedObject =
+  | TextReplacementObject
+  | TextObject
+  | PersistedImageObject
+  | RedactionObject
+  | HighlightObject
+  | CommentObject
+  | SignatureObject;
 
 type EditorDraft = {
   fileKey: string;
@@ -210,8 +203,8 @@ type EditorDraft = {
   fileSize: number;
   updatedAt: string;
   pageSequence: number[];
-  blankPages?: PersistedBlankPage[];
-  objects: PersistableEditorObject[];
+  blankPages: BlankPageDraft[];
+  objects: PersistedObject[];
 };
 
 type EditorRecent = {
@@ -222,39 +215,53 @@ type EditorRecent = {
   objectCount: number;
 };
 
-type PdfJsDocument = Awaited<ReturnType<typeof loadPdfJsDocument>>;
+type TextContentItem = {
+  str: string;
+  width: number;
+  height: number;
+  transform: number[];
+};
 
-async function getPdfLib() {
-  return import("pdf-lib");
-}
+type DragState = {
+  mode: "move" | "resize";
+  objectId: string;
+  objectIds: string[];
+  pointerId: number;
+  startClientX: number;
+  startClientY: number;
+  startObject: EditorObject;
+  startObjects: EditorObject[];
+  changed: boolean;
+};
+
+type EditorStatus = "idle" | "loading" | "ready" | "exporting" | "error";
+type PdfJsDocument = Awaited<ReturnType<typeof loadPdfJsDocument>>;
 
 function isTextContentItem(item: unknown): item is TextContentItem {
   if (!item || typeof item !== "object") return false;
-  const value = item as Partial<TextContentItem>;
-  return typeof value.str === "string" && Array.isArray(value.transform);
+  const candidate = item as Partial<TextContentItem>;
+  return typeof candidate.str === "string" && Array.isArray(candidate.transform);
 }
 
-function cloneObjects(objects: EditorObject[]) {
-  return objects.map((object) => ({ ...object }));
-}
-
-function pushLimited<T>(items: T[], item: T) {
-  return [...items.slice(Math.max(0, items.length - HISTORY_LIMIT + 1)), item];
+function safeScale(width: number, height: number, requested: number, maxPixels: number, minimum: number) {
+  if (width * height * requested * requested <= maxPixels) return requested;
+  return Math.max(minimum, Math.sqrt(maxPixels / Math.max(1, width * height)));
 }
 
 function pagePdfSize(page: PagePreview) {
   return { width: page.width / page.scale, height: page.height / page.scale };
 }
 
-function safeScale(widthAtOne: number, heightAtOne: number, preferred: number, maxPixels: number, minimum: number) {
-  const requestedPixels = widthAtOne * heightAtOne * preferred * preferred;
-  if (requestedPixels <= maxPixels) return preferred;
-  return Math.max(minimum, Math.min(preferred, Math.sqrt(maxPixels / Math.max(1, widthAtOne * heightAtOne))));
+function cloneObjects(objects: EditorObject[]) {
+  return objects.map((object) => ({ ...object } as EditorObject));
 }
 
-function createBlankPagePreview(width: number, height: number) {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${Math.ceil(width)}" height="${Math.ceil(height)}" viewBox="0 0 ${Math.ceil(width)} ${Math.ceil(height)}"><rect width="100%" height="100%" fill="#ffffff"/><rect x="1" y="1" width="${Math.max(0, Math.ceil(width) - 2)}" height="${Math.max(0, Math.ceil(height) - 2)}" fill="none" stroke="#eef2f6" stroke-width="2"/></svg>`;
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+function objectsEqual(left: EditorObject[], right: EditorObject[]) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function pushLimited<T>(items: T[], item: T) {
+  return [...items.slice(Math.max(0, items.length - HISTORY_LIMIT + 1)), item];
 }
 
 function clampObject(object: EditorObject, page?: PagePreview): EditorObject {
@@ -268,44 +275,12 @@ function clampObject(object: EditorObject, page?: PagePreview): EditorObject {
     height,
     x: Math.max(0, Math.min(object.x, size.width - width)),
     y: Math.max(0, Math.min(object.y, size.height - height)),
-  };
+  } as EditorObject;
 }
 
-function objectsEqual(a: EditorObject[], b: EditorObject[]) {
-  return JSON.stringify(a) === JSON.stringify(b);
-}
-
-function getObjectLabel(object: EditorObject) {
-  if (object.kind === "image") return "Imagem";
-  if (object.kind === "signature") return "Assinatura";
-  if (object.kind === "redaction") return "Tarja de redação";
-  if (object.kind === "highlight") return "Destaque";
-  if (object.kind === "comment") return object.text || "Comentário";
-  if (object.kind === "text") return object.text || "Texto";
-  return object.text !== object.originalText ? object.text : object.originalText;
-}
-
-function getObjectKindLabel(object: EditorObject) {
-  if (object.kind === "image") return "Imagem";
-  if (object.kind === "signature") return "Assinatura";
-  if (object.kind === "redaction") return "Redação segura";
-  if (object.kind === "highlight") return "Destaque";
-  if (object.kind === "comment") return "Comentário";
-  if (object.kind === "text") return "Texto";
-  return "Texto detectado";
-}
-
-function hasEditableText(object: EditorObject): object is TextReplacementObject | TextObject | CommentObject {
-  return object.kind === "text-replacement" || object.kind === "text" || object.kind === "comment";
-}
-
-function hasFontSize(object: EditorObject): object is TextReplacementObject | TextObject {
-  return object.kind === "text-replacement" || object.kind === "text";
-}
-
-async function dataUrlToArrayBuffer(dataUrl: string) {
-  const response = await fetch(dataUrl);
-  return response.arrayBuffer();
+function createBlankPreview(width: number, height: number) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${Math.ceil(width)}" height="${Math.ceil(height)}"><rect width="100%" height="100%" fill="#fff"/><rect x="1" y="1" width="${Math.max(0, Math.ceil(width) - 2)}" height="${Math.max(0, Math.ceil(height) - 2)}" fill="none" stroke="#eef2f6" stroke-width="2"/></svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
 function editorFileKey(file: File) {
@@ -314,31 +289,46 @@ function editorFileKey(file: File) {
 
 function safeReadJson<T>(key: string, fallback: T): T {
   try {
-    const value = window.localStorage.getItem(key);
-    return value ? JSON.parse(value) as T : fallback;
+    const raw = window.localStorage.getItem(key);
+    return raw ? JSON.parse(raw) as T : fallback;
   } catch {
     return fallback;
   }
 }
 
-function loadEditorDraft(file: File): EditorDraft | null {
+function loadDraft(file: File) {
   cleanupExpiredEditorDrafts();
   return safeReadJson<EditorDraft | null>(`${EDITOR_DRAFT_PREFIX}${editorFileKey(file)}`, null);
 }
 
-function serializeObjects(objects: EditorObject[]): PersistableEditorObject[] {
-  return objects.flatMap((object) => {
-    if (object.kind === "text-replacement" && object.text === object.originalText && !object.locked && !object.hidden) return [];
-    if (object.kind !== "image") return [{ ...object }];
-    const { file: _file, previewUrl: _previewUrl, ...persisted } = object;
-    return [persisted];
-  });
+function serializeObjects(objects: EditorObject[]): PersistedObject[] {
+  const result: PersistedObject[] = [];
+  for (const object of objects) {
+    if (object.kind === "text-replacement" && object.text === object.originalText && !object.locked && !object.hidden) continue;
+    if (object.kind === "image") {
+      result.push({
+        kind: "image",
+        id: object.id,
+        pageIndex: object.pageIndex,
+        x: object.x,
+        y: object.y,
+        width: object.width,
+        height: object.height,
+        zIndex: object.zIndex,
+        locked: object.locked,
+        hidden: object.hidden,
+      });
+      continue;
+    }
+    result.push({ ...object });
+  }
+  return result;
 }
 
-function saveEditorDraft(file: File, pageSequence: number[], pages: PagePreview[], objects: EditorObject[]) {
+function saveDraft(file: File, pageSequence: number[], pages: PagePreview[], objects: EditorObject[]) {
   const now = new Date().toISOString();
   const fileKey = editorFileKey(file);
-  const persistableObjects = serializeObjects(objects);
+  const serialized = serializeObjects(objects);
   const draft: EditorDraft = {
     fileKey,
     fileName: file.name,
@@ -347,14 +337,14 @@ function saveEditorDraft(file: File, pageSequence: number[], pages: PagePreview[
     pageSequence,
     blankPages: pages
       .filter((page) => page.sourcePageIndex === null || page.isBlank)
-      .map(({ pageIndex, width, height, scale, isBlank }) => ({ pageIndex, width, height, scale, isBlank: Boolean(isBlank) })),
-    objects: persistableObjects,
+      .map((page) => ({ pageIndex: page.pageIndex, width: page.width, height: page.height, scale: page.scale, isBlank: true })),
+    objects: serialized,
   };
   try {
     window.localStorage.setItem(`${EDITOR_DRAFT_PREFIX}${fileKey}`, JSON.stringify(draft));
     const recents = safeReadJson<EditorRecent[]>(EDITOR_RECENTS_KEY, []).filter((item) => item.fileKey !== fileKey);
     window.localStorage.setItem(EDITOR_RECENTS_KEY, JSON.stringify([
-      { fileKey, fileName: file.name, fileSize: file.size, updatedAt: now, objectCount: persistableObjects.length },
+      { fileKey, fileName: file.name, fileSize: file.size, updatedAt: now, objectCount: serialized.length },
       ...recents,
     ].slice(0, 6)));
     return now;
@@ -372,11 +362,38 @@ function formatDraftDate(value: string) {
 }
 
 function formatBytes(size: number) {
-  if (size < 1024 * 1024) return `${Math.ceil(size / 1024)} KB`;
-  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+  return size < 1024 * 1024 ? `${Math.ceil(size / 1024)} KB` : `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function objectToCss(object: EditorObject, page: PagePreview, zoom: number) {
+function objectLabel(object: EditorObject) {
+  if (object.kind === "image") return "Imagem";
+  if (object.kind === "signature") return "Assinatura";
+  if (object.kind === "redaction") return "Redação segura";
+  if (object.kind === "highlight") return "Destaque";
+  if (object.kind === "comment") return object.text || "Comentário";
+  if (object.kind === "text") return object.text || "Texto";
+  return object.text !== object.originalText ? object.text : object.originalText;
+}
+
+function kindLabel(object: EditorObject) {
+  if (object.kind === "text-replacement") return "Texto detectado";
+  if (object.kind === "redaction") return "Redação segura";
+  if (object.kind === "highlight") return "Destaque";
+  if (object.kind === "comment") return "Comentário";
+  if (object.kind === "signature") return "Assinatura";
+  if (object.kind === "image") return "Imagem";
+  return "Texto";
+}
+
+function hasText(object: EditorObject): object is TextReplacementObject | TextObject | CommentObject {
+  return object.kind === "text-replacement" || object.kind === "text" || object.kind === "comment";
+}
+
+function hasFontSize(object: EditorObject): object is TextReplacementObject | TextObject {
+  return object.kind === "text-replacement" || object.kind === "text";
+}
+
+function objectStyle(object: EditorObject, page: PagePreview, zoom: number) {
   const scale = page.scale * zoom;
   return {
     left: object.x * scale,
@@ -387,21 +404,25 @@ function objectToCss(object: EditorObject, page: PagePreview, zoom: number) {
   };
 }
 
-function hexToRgb01(hex: string) {
-  const normalized = hex.replace("#", "");
-  if (!/^[\da-f]{6}$/i.test(normalized)) return { r: 1, g: 0.88, b: 0.28 };
+function hexColor(hex: string) {
+  const value = hex.replace("#", "");
+  if (!/^[0-9a-f]{6}$/i.test(value)) return { r: 1, g: 0.88, b: 0.28 };
   return {
-    r: Number.parseInt(normalized.slice(0, 2), 16) / 255,
-    g: Number.parseInt(normalized.slice(2, 4), 16) / 255,
-    b: Number.parseInt(normalized.slice(4, 6), 16) / 255,
+    r: Number.parseInt(value.slice(0, 2), 16) / 255,
+    g: Number.parseInt(value.slice(2, 4), 16) / 255,
+    b: Number.parseInt(value.slice(4, 6), 16) / 255,
   };
 }
 
-async function createSanitizedPageImage(pdfDocument: PdfJsDocument, sourcePageIndex: number, objects: EditorObject[]) {
-  const sourcePage = await pdfDocument.getPage(sourcePageIndex + 1);
+async function dataUrlBytes(dataUrl: string) {
+  return (await fetch(dataUrl)).arrayBuffer();
+}
+
+async function sanitizedPageImage(document: PdfJsDocument, sourcePageIndex: number, objects: EditorObject[]) {
+  const sourcePage = await document.getPage(sourcePageIndex + 1);
   try {
-    const baseViewport = sourcePage.getViewport({ scale: 1 });
-    const scale = safeScale(baseViewport.width, baseViewport.height, DEFAULT_SANITIZE_SCALE, MAX_SANITIZE_PIXELS, 1.4);
+    const base = sourcePage.getViewport({ scale: 1 });
+    const scale = safeScale(base.width, base.height, SANITIZE_SCALE, MAX_SANITIZE_PIXELS, 1.4);
     const viewport = sourcePage.getViewport({ scale });
     const canvas = window.document.createElement("canvas");
     canvas.width = Math.ceil(viewport.width);
@@ -411,14 +432,14 @@ async function createSanitizedPageImage(pdfDocument: PdfJsDocument, sourcePageIn
     await sourcePage.render({ canvas, canvasContext: context, viewport }).promise;
 
     for (const object of objects) {
-      const isReplacement = object.kind === "text-replacement" && object.text !== object.originalText;
-      if (object.kind !== "redaction" && !isReplacement) continue;
+      const changedText = object.kind === "text-replacement" && object.text !== object.originalText;
+      if (object.kind !== "redaction" && !changedText) continue;
       const padding = Math.max(2, Math.round(scale * 1.5));
       const x = Math.floor(object.x * scale) - padding;
       const y = Math.floor(canvas.height - (object.y + object.height) * scale) - padding;
       const width = Math.ceil(object.width * scale) + padding * 2;
       const height = Math.ceil(object.height * scale) + padding * 2;
-      context.fillStyle = object.kind === "redaction" ? "#000000" : "#ffffff";
+      context.fillStyle = object.kind === "redaction" ? "#000" : "#fff";
       context.fillRect(x, y, width, height);
     }
 
@@ -426,21 +447,20 @@ async function createSanitizedPageImage(pdfDocument: PdfJsDocument, sourcePageIn
     const bytes = await blob.arrayBuffer();
     canvas.width = 1;
     canvas.height = 1;
-    return { bytes, width: baseViewport.width, height: baseViewport.height };
+    return { bytes, width: base.width, height: base.height };
   } finally {
     sourcePage.cleanup();
   }
 }
 
 export function PdfEditorWorkspaceHardened() {
-  const language = useLanguage();
-  const et = editorText[language];
+  const language = useLanguage() as Language;
+  const text = labels[language] || labels["pt-BR"];
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const dragRef = useRef<DragState | null>(null);
   const objectsRef = useRef<EditorObject[]>([]);
-  const previewUrlsRef = useRef<Set<string>>(new Set());
-  const pagePreviewUrlsRef = useRef<Set<string>>(new Set());
+  const objectUrlsRef = useRef<Set<string>>(new Set());
   const [files, setFiles] = useState<File[]>([]);
   const file = files[0] || null;
   const { restored, cached, clearCache } = useTemporaryFiles("tool:editar-pdf", files, setFiles);
@@ -448,14 +468,13 @@ export function PdfEditorWorkspaceHardened() {
   const [pageSequence, setPageSequence] = useState<number[]>([]);
   const [objects, setObjects] = useState<EditorObject[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
-  const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
-  const [selectedObjectIds, setSelectedObjectIds] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [clipboard, setClipboard] = useState<EditorObject[]>([]);
+  const [undoStack, setUndoStack] = useState<EditorObject[][]>([]);
+  const [redoStack, setRedoStack] = useState<EditorObject[][]>([]);
   const [zoom, setZoom] = useState(1);
   const [status, setStatus] = useState<EditorStatus>("idle");
   const [message, setMessage] = useState("");
-  const [undoStack, setUndoStack] = useState<EditorObject[][]>([]);
-  const [redoStack, setRedoStack] = useState<EditorObject[][]>([]);
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
   const [draftRestored, setDraftRestored] = useState(false);
@@ -466,54 +485,70 @@ export function PdfEditorWorkspaceHardened() {
   });
 
   const currentPageId = pageSequence[currentPage];
-  const page = pages.find((item) => item.pageIndex === currentPageId) || pages[0];
-  const selectedObject = useMemo(() => objects.find((item) => item.id === selectedObjectId) || null, [objects, selectedObjectId]);
-  const activeSelectionIds = useMemo(() => selectedObjectIds.length ? selectedObjectIds : selectedObjectId ? [selectedObjectId] : [], [selectedObjectId, selectedObjectIds]);
-  const selectedObjects = useMemo(() => activeSelectionIds.flatMap((id) => {
-    const object = objects.find((item) => item.id === id);
-    return object ? [object] : [];
-  }), [activeSelectionIds, objects]);
-  const currentPageObjects = useMemo(() => page ? objects.filter((item) => item.pageIndex === page.pageIndex && !item.hidden).sort((a, b) => a.zIndex - b.zIndex) : [], [objects, page]);
-  const currentPageLayers = useMemo(() => page ? objects.filter((item) => item.pageIndex === page.pageIndex).sort((a, b) => b.zIndex - a.zIndex) : [], [objects, page]);
+  const page = pages.find((item) => item.pageIndex === currentPageId) || null;
+  const selectedObjects = useMemo(() => selectedIds.map((id) => objects.find((object) => object.id === id)).filter((object): object is EditorObject => Boolean(object)), [objects, selectedIds]);
+  const selectedObject = selectedObjects.at(-1) || null;
+  const pageObjects = useMemo(() => page ? objects.filter((object) => object.pageIndex === page.pageIndex && !object.hidden).sort((a, b) => a.zIndex - b.zIndex) : [], [objects, page]);
+  const layers = useMemo(() => page ? objects.filter((object) => object.pageIndex === page.pageIndex).sort((a, b) => b.zIndex - a.zIndex) : [], [objects, page]);
 
-  const registerImagePreview = useCallback((imageFile: File) => {
-    const url = URL.createObjectURL(imageFile);
-    previewUrlsRef.current.add(url);
+  const registerUrl = useCallback((blob: Blob) => {
+    const url = URL.createObjectURL(blob);
+    objectUrlsRef.current.add(url);
     return url;
   }, []);
 
   const releaseUrls = useCallback(() => {
-    previewUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
-    pagePreviewUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
-    previewUrlsRef.current.clear();
-    pagePreviewUrlsRef.current.clear();
+    objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    objectUrlsRef.current.clear();
   }, []);
 
   useEffect(() => () => releaseUrls(), [releaseUrls]);
+  useEffect(() => { objectsRef.current = objects; }, [objects]);
 
-  useEffect(() => {
-    objectsRef.current = objects;
-  }, [objects]);
+  const clearSelection = useCallback(() => setSelectedIds([]), []);
 
-  const selectObjects = useCallback((ids: string[]) => {
-    const uniqueIds = Array.from(new Set(ids));
-    setSelectedObjectIds(uniqueIds);
-    setSelectedObjectId(uniqueIds.at(-1) || null);
-  }, []);
-
-  const clearSelection = useCallback(() => selectObjects([]), [selectObjects]);
-
-  const selectObject = useCallback((id: string, additive = false) => {
-    if (!additive) {
-      selectObjects([id]);
-      return;
-    }
-    setSelectedObjectIds((current) => {
-      const next = current.includes(id) ? current.filter((item) => item !== id) : [...current, id];
-      setSelectedObjectId(next.at(-1) || null);
-      return next;
+  const applyObjects = useCallback((updater: (current: EditorObject[]) => EditorObject[], select?: string[]) => {
+    setObjects((current) => {
+      const before = cloneObjects(current);
+      const after = updater(current).map((object) => clampObject(object, pages.find((candidate) => candidate.pageIndex === object.pageIndex)));
+      if (!objectsEqual(before, after)) {
+        setUndoStack((stack) => pushLimited(stack, before));
+        setRedoStack([]);
+      }
+      return after;
     });
-  }, [selectObjects]);
+    if (select) setSelectedIds(select);
+  }, [pages]);
+
+  const undo = useCallback(() => {
+    setUndoStack((stack) => {
+      const previous = stack.at(-1);
+      if (!previous) return stack;
+      setRedoStack((redo) => pushLimited(redo, cloneObjects(objectsRef.current)));
+      setObjects(cloneObjects(previous));
+      clearSelection();
+      return stack.slice(0, -1);
+    });
+  }, [clearSelection]);
+
+  const redo = useCallback(() => {
+    setRedoStack((stack) => {
+      const next = stack.at(-1);
+      if (!next) return stack;
+      setUndoStack((undo) => pushLimited(undo, cloneObjects(objectsRef.current)));
+      setObjects(cloneObjects(next));
+      clearSelection();
+      return stack.slice(0, -1);
+    });
+  }, [clearSelection]);
+
+  function updateObject(id: string, patch: Partial<EditorObject>) {
+    applyObjects((current) => current.map((object) => object.id === id ? { ...object, ...patch } as EditorObject : object));
+  }
+
+  function nextZ() {
+    return Math.max(0, ...objects.map((object) => object.zIndex)) + 1;
+  }
 
   const openFile = useCallback((selectedFile: File) => {
     if (selectedFile.type !== "application/pdf") {
@@ -526,8 +561,9 @@ export function PdfEditorWorkspaceHardened() {
       setMessage("O arquivo ultrapassa o limite recomendado de 60 MB.");
       return;
     }
+    releaseUrls();
     setFiles([selectedFile]);
-  }, [setFiles]);
+  }, [releaseUrls, setFiles]);
 
   useEffect(() => {
     if (!file) return;
@@ -539,16 +575,16 @@ export function PdfEditorWorkspaceHardened() {
         const bytes = await file.arrayBuffer();
         const document = await loadPdfJsDocument(bytes.slice(0));
         const nextPages: PagePreview[] = [];
-        const nextDetectedObjects: TextReplacementObject[] = [];
-        let nextZIndex = 1;
+        const detectedObjects: TextReplacementObject[] = [];
+        let zIndex = 1;
         try {
           for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
             if (cancelled) return;
             const pdfPage = await document.getPage(pageNumber);
             try {
-              const baseViewport = pdfPage.getViewport({ scale: 1 });
-              const previewScale = safeScale(baseViewport.width, baseViewport.height, DEFAULT_PREVIEW_SCALE, MAX_PREVIEW_PIXELS, 0.45);
-              const viewport = pdfPage.getViewport({ scale: previewScale });
+              const base = pdfPage.getViewport({ scale: 1 });
+              const scale = safeScale(base.width, base.height, PREVIEW_SCALE, MAX_PREVIEW_PIXELS, 0.45);
+              const viewport = pdfPage.getViewport({ scale });
               const canvas = window.document.createElement("canvas");
               canvas.width = Math.ceil(viewport.width);
               canvas.height = Math.ceil(viewport.height);
@@ -556,13 +592,12 @@ export function PdfEditorWorkspaceHardened() {
               if (!context) throw new Error("O navegador não conseguiu criar a visualização.");
               await pdfPage.render({ canvas, canvasContext: context, viewport }).promise;
               const previewBlob = await canvasToBlob(canvas, "image/jpeg", 0.78);
-              const previewUrl = URL.createObjectURL(previewBlob);
-              pagePreviewUrlsRef.current.add(previewUrl);
-              const textContent = await pdfPage.getTextContent();
-              const textItems = textContent.items.filter(isTextContentItem) as TextContentItem[];
+              const previewUrl = registerUrl(previewBlob);
+              const content = await pdfPage.getTextContent();
+              const textItems = content.items.filter(isTextContentItem);
               textItems.filter((item) => item.str.trim()).forEach((item, index) => {
                 const fontSize = Math.max(6, Math.hypot(item.transform[0], item.transform[1]));
-                nextDetectedObjects.push({
+                detectedObjects.push({
                   id: `text:${pageNumber - 1}:${index}`,
                   kind: "text-replacement",
                   pageIndex: pageNumber - 1,
@@ -573,18 +608,10 @@ export function PdfEditorWorkspaceHardened() {
                   width: Math.max(item.width, fontSize * 0.65),
                   height: Math.max(fontSize * 1.25, 9),
                   fontSize,
-                  zIndex: nextZIndex,
+                  zIndex: zIndex++,
                 });
-                nextZIndex += 1;
               });
-              nextPages.push({
-                pageIndex: pageNumber - 1,
-                sourcePageIndex: pageNumber - 1,
-                width: canvas.width,
-                height: canvas.height,
-                scale: previewScale,
-                previewUrl,
-              });
+              nextPages.push({ pageIndex: pageNumber - 1, sourcePageIndex: pageNumber - 1, width: canvas.width, height: canvas.height, scale, previewUrl });
               canvas.width = 1;
               canvas.height = 1;
             } finally {
@@ -596,53 +623,51 @@ export function PdfEditorWorkspaceHardened() {
           await document.destroy();
         }
 
-        const draft = loadEditorDraft(file);
-        if (draft?.blankPages?.length) {
-          for (const blank of draft.blankPages) {
-            if (nextPages.some((item) => item.pageIndex === blank.pageIndex)) continue;
-            nextPages.push({
-              pageIndex: blank.pageIndex,
-              sourcePageIndex: null,
-              width: blank.width,
-              height: blank.height,
-              scale: blank.scale || 1,
-              previewUrl: createBlankPagePreview(blank.width, blank.height),
-              isBlank: true,
-            });
+        const draft = loadDraft(file);
+        if (draft) {
+          for (const blank of draft.blankPages || []) {
+            if (!nextPages.some((item) => item.pageIndex === blank.pageIndex)) {
+              nextPages.push({ ...blank, sourcePageIndex: null, previewUrl: createBlankPreview(blank.width, blank.height) });
+            }
           }
         }
-        const validDraftSequence = Boolean(draft?.pageSequence.length && draft.pageSequence.every((pageId) => nextPages.some((item) => item.pageIndex === pageId)));
-        let restoredObjects: EditorObject[] = nextDetectedObjects;
-        if (draft && validDraftSequence) {
-          const imageAssets = await loadEditorImageAssets(draft.fileKey).catch(() => [] as EditorImageAsset[]);
-          const assetMap = new Map(imageAssets.map((asset) => [asset.objectId, asset.file]));
-          const replacementMap = new Map(
-            draft.objects.filter((item): item is TextReplacementObject => item.kind === "text-replacement").map((item) => [item.id, item]),
-          );
-          const detected = nextDetectedObjects.map((object) => replacementMap.has(object.id) ? { ...object, ...replacementMap.get(object.id)! } : object);
-          const custom = draft.objects.flatMap<EditorObject>((object) => {
-            if (object.kind === "text-replacement") return [];
-            if (object.kind !== "image") return [object as EditorObject];
-            const imageFile = assetMap.get(object.id);
-            if (!imageFile) return [];
-            return [{ ...object, file: imageFile, previewUrl: registerImagePreview(imageFile) } as ImageObject];
-          });
-          restoredObjects = [...detected, ...custom];
+
+        const validDraft = Boolean(draft?.pageSequence.length && draft.pageSequence.every((pageId) => nextPages.some((candidate) => candidate.pageIndex === pageId)));
+        let restoredObjects: EditorObject[] = detectedObjects;
+        if (draft && validDraft) {
+          const imageAssets = await loadEditorImageAssets(draft.fileKey).catch(() => []);
+          const imageMap = new Map(imageAssets.map((asset) => [asset.objectId, asset.file]));
+          const replacementMap = new Map<string, TextReplacementObject>();
+          for (const persisted of draft.objects) {
+            if (persisted.kind === "text-replacement") replacementMap.set(persisted.id, persisted);
+          }
+          const mergedDetected = detectedObjects.map((object) => replacementMap.has(object.id) ? { ...object, ...replacementMap.get(object.id)! } : object);
+          const custom: EditorObject[] = [];
+          for (const persisted of draft.objects) {
+            if (persisted.kind === "text-replacement") continue;
+            if (persisted.kind === "image") {
+              const imageFile = imageMap.get(persisted.id);
+              if (!imageFile) continue;
+              custom.push({ ...persisted, file: imageFile, previewUrl: registerUrl(imageFile) });
+            } else {
+              custom.push({ ...persisted });
+            }
+          }
+          restoredObjects = [...mergedDetected, ...custom];
         }
 
-        if (!cancelled) {
-          setPages(nextPages);
-          setPageSequence(validDraftSequence && draft ? draft.pageSequence : nextPages.filter((item) => item.sourcePageIndex !== null).map((item) => item.pageIndex));
-          setObjects(restoredObjects.map((object) => clampObject(object, nextPages.find((item) => item.pageIndex === object.pageIndex))));
-          setCurrentPage(0);
-          clearSelection();
-          setUndoStack([]);
-          setRedoStack([]);
-          setDraftSavedAt(validDraftSequence ? draft?.updatedAt || null : null);
-          setDraftRestored(Boolean(draft && validDraftSequence));
-          setStatus("ready");
-          setMessage(draft && validDraftSequence ? "Rascunho local recuperado, incluindo imagens disponíveis." : restored ? "Sessão recuperada do cache temporário." : "PDF pronto para edição. Substituições e redações serão sanitizadas na exportação.");
-        }
+        if (cancelled) return;
+        setPages(nextPages);
+        setPageSequence(validDraft && draft ? draft.pageSequence : nextPages.filter((item) => item.sourcePageIndex !== null).map((item) => item.pageIndex));
+        setObjects(restoredObjects.map((object) => clampObject(object, nextPages.find((candidate) => candidate.pageIndex === object.pageIndex))));
+        setCurrentPage(0);
+        clearSelection();
+        setUndoStack([]);
+        setRedoStack([]);
+        setDraftSavedAt(validDraft ? draft?.updatedAt || null : null);
+        setDraftRestored(Boolean(validDraft && draft));
+        setStatus("ready");
+        setMessage(validDraft && draft ? "Rascunho local recuperado, incluindo imagens disponíveis." : restored ? "Sessão recuperada do cache temporário." : "PDF pronto. Redações e substituições serão sanitizadas ao exportar.");
       } catch {
         if (!cancelled) {
           setStatus("error");
@@ -651,161 +676,70 @@ export function PdfEditorWorkspaceHardened() {
       }
     })();
     return () => { cancelled = true; };
-  }, [clearSelection, file, registerImagePreview, restored]);
+  }, [clearSelection, file, registerUrl, restored]);
 
   useEffect(() => {
     if (!file || status !== "ready" || !pages.length) return;
     const timeout = window.setTimeout(() => {
-      const savedAt = saveEditorDraft(file, pageSequence, pages, objects);
+      const savedAt = saveDraft(file, pageSequence, pages, objects);
       if (savedAt) {
         setDraftSavedAt(savedAt);
         setRecentDrafts(safeReadJson<EditorRecent[]>(EDITOR_RECENTS_KEY, []));
       }
-      const imageAssets = objects.flatMap((object) => object.kind === "image" ? [{ objectId: object.id, file: object.file }] : []);
-      void saveEditorImageAssets(editorFileKey(file), imageAssets).catch(() => false);
+      const assets: { objectId: string; file: File }[] = [];
+      for (const object of objects) {
+        if (object.kind === "image") assets.push({ objectId: object.id, file: object.file });
+      }
+      void saveEditorImageAssets(editorFileKey(file), assets).catch(() => false);
     }, 700);
     return () => window.clearTimeout(timeout);
   }, [file, objects, pageSequence, pages, status]);
 
-  const applyObjects = useCallback((updater: (current: EditorObject[]) => EditorObject[], selectId?: string | string[] | null) => {
-    setObjects((current) => {
-      const before = cloneObjects(current);
-      const after = updater(current).map((object) => clampObject(object, pages.find((item) => item.pageIndex === object.pageIndex)));
-      if (!objectsEqual(before, after)) {
-        setUndoStack((stack) => pushLimited(stack, before));
-        setRedoStack([]);
-      }
-      return after;
-    });
-    if (selectId !== undefined) selectObjects(Array.isArray(selectId) ? selectId : selectId ? [selectId] : []);
-  }, [pages, selectObjects]);
-
-  function updateObject(objectId: string, patch: Partial<EditorObject>) {
-    applyObjects((current) => current.map((object) => object.id === objectId ? { ...object, ...patch } as EditorObject : object));
-  }
-
-  const undo = useCallback(() => {
-    setUndoStack((stack) => {
-      const previous = stack.at(-1);
-      if (!previous) return stack;
-      setRedoStack((redoItems) => pushLimited(redoItems, cloneObjects(objectsRef.current)));
-      setObjects(cloneObjects(previous));
-      clearSelection();
-      return stack.slice(0, -1);
-    });
-  }, [clearSelection]);
-
-  const redo = useCallback(() => {
-    setRedoStack((stack) => {
-      const next = stack.at(-1);
-      if (!next) return stack;
-      setUndoStack((undoItems) => pushLimited(undoItems, cloneObjects(objectsRef.current)));
-      setObjects(cloneObjects(next));
-      clearSelection();
-      return stack.slice(0, -1);
-    });
-  }, [clearSelection]);
-
-  function nextZIndex() {
-    return Math.max(0, ...objects.map((item) => item.zIndex)) + 1;
-  }
-
   function addText() {
     if (!page) return;
     const size = pagePdfSize(page);
-    const fontSize = 18;
     const id = crypto.randomUUID();
-    const object: TextObject = {
-      id,
-      kind: "text",
-      pageIndex: page.pageIndex,
-      text: "Novo texto",
-      x: Math.max(20, size.width * 0.12),
-      y: Math.max(20, size.height * 0.78),
-      width: 150,
-      height: fontSize * 1.35,
-      fontSize,
-      zIndex: nextZIndex(),
-    };
-    applyObjects((current) => [...current, object], id);
+    const object: TextObject = { id, kind: "text", pageIndex: page.pageIndex, text: "Novo texto", x: Math.max(20, size.width * 0.12), y: Math.max(20, size.height * 0.78), width: 150, height: 24, fontSize: 18, zIndex: nextZ() };
+    applyObjects((current) => [...current, object], [id]);
   }
 
-  function addImage(fileToAdd: File) {
-    if (!page || !["image/jpeg", "image/png"].includes(fileToAdd.type)) {
+  function addImage(imageFile: File) {
+    if (!page || !["image/jpeg", "image/png"].includes(imageFile.type)) {
       setMessage("Selecione uma imagem JPG ou PNG.");
       return;
     }
-    if (fileToAdd.size > MAX_IMAGE_SIZE) {
+    if (imageFile.size > MAX_IMAGE_SIZE) {
       setMessage("A imagem ultrapassa o limite de 20 MB.");
       return;
     }
     const id = crypto.randomUUID();
-    const object: ImageObject = {
-      id,
-      kind: "image",
-      pageIndex: page.pageIndex,
-      file: fileToAdd,
-      previewUrl: registerImagePreview(fileToAdd),
-      x: 70,
-      y: 70,
-      width: 180,
-      height: 120,
-      zIndex: nextZIndex(),
-    };
-    applyObjects((current) => [...current, object], id);
+    const object: ImageObject = { id, kind: "image", pageIndex: page.pageIndex, file: imageFile, previewUrl: registerUrl(imageFile), x: 70, y: 70, width: 180, height: 120, zIndex: nextZ() };
+    applyObjects((current) => [...current, object], [id]);
   }
 
   function addRedaction() {
     if (!page) return;
     const size = pagePdfSize(page);
     const id = crypto.randomUUID();
-    const object: RedactionObject = {
-      id,
-      kind: "redaction",
-      pageIndex: page.pageIndex,
-      x: Math.max(18, size.width * 0.16),
-      y: Math.max(18, size.height * 0.58),
-      width: Math.min(230, size.width * 0.42),
-      height: 34,
-      zIndex: nextZIndex(),
-    };
-    applyObjects((current) => [...current, object], id);
+    const object: RedactionObject = { id, kind: "redaction", pageIndex: page.pageIndex, x: Math.max(18, size.width * 0.16), y: Math.max(18, size.height * 0.58), width: Math.min(230, size.width * 0.42), height: 34, zIndex: nextZ() };
+    applyObjects((current) => [...current, object], [id]);
   }
 
   function addHighlight() {
     if (!page) return;
     const size = pagePdfSize(page);
     const id = crypto.randomUUID();
-    const object: HighlightObject = {
-      id,
-      kind: "highlight",
-      pageIndex: page.pageIndex,
-      color: "#ffe15a",
-      x: Math.max(18, size.width * 0.16),
-      y: Math.max(18, size.height * 0.5),
-      width: Math.min(230, size.width * 0.42),
-      height: 26,
-      zIndex: nextZIndex(),
-    };
-    applyObjects((current) => [...current, object], id);
+    const object: HighlightObject = { id, kind: "highlight", pageIndex: page.pageIndex, color: "#ffe15a", x: Math.max(18, size.width * 0.16), y: Math.max(18, size.height * 0.5), width: Math.min(230, size.width * 0.42), height: 26, zIndex: nextZ() };
+    applyObjects((current) => [...current, object], [id]);
   }
 
   function addComment() {
     if (!page) return;
     const size = pagePdfSize(page);
     const id = crypto.randomUUID();
-    const object: CommentObject = {
-      id,
-      kind: "comment",
-      pageIndex: page.pageIndex,
-      text: language === "en" ? "Comment" : language === "es" ? "Comentario" : "Comentário",
-      x: Math.max(18, size.width * 0.16),
-      y: Math.max(18, size.height * 0.38),
-      width: Math.min(190, size.width * 0.34),
-      height: 72,
-      zIndex: nextZIndex(),
-    };
-    applyObjects((current) => [...current, object], id);
+    const value = language === "en" ? "Comment" : language === "es" ? "Comentario" : "Comentário";
+    const object: CommentObject = { id, kind: "comment", pageIndex: page.pageIndex, text: value, x: Math.max(18, size.width * 0.16), y: Math.max(18, size.height * 0.38), width: Math.min(190, size.width * 0.34), height: 72, zIndex: nextZ() };
+    applyObjects((current) => [...current, object], [id]);
   }
 
   function addSignature() {
@@ -815,18 +749,8 @@ export function PdfEditorWorkspaceHardened() {
     }
     const size = pagePdfSize(page);
     const id = crypto.randomUUID();
-    const object: SignatureObject = {
-      id,
-      kind: "signature",
-      pageIndex: page.pageIndex,
-      dataUrl: signatureDataUrl,
-      x: Math.max(18, size.width * 0.16),
-      y: Math.max(18, size.height * 0.22),
-      width: Math.min(210, size.width * 0.38),
-      height: 74,
-      zIndex: nextZIndex(),
-    };
-    applyObjects((current) => [...current, object], id);
+    const object: SignatureObject = { id, kind: "signature", pageIndex: page.pageIndex, dataUrl: signatureDataUrl, x: Math.max(18, size.width * 0.16), y: Math.max(18, size.height * 0.22), width: Math.min(210, size.width * 0.38), height: 74, zIndex: nextZ() };
+    applyObjects((current) => [...current, object], [id]);
   }
 
   const copySelected = useCallback(() => {
@@ -837,48 +761,53 @@ export function PdfEditorWorkspaceHardened() {
 
   const duplicateSelected = useCallback(() => {
     if (!selectedObjects.length) return;
-    const maxZ = Math.max(0, ...objects.map((item) => item.zIndex));
-    const copies = selectedObjects.map((object, index) => ({
-      ...object,
-      id: crypto.randomUUID(),
-      x: object.x + 14,
-      y: object.y - 14,
-      locked: false,
-      hidden: false,
-      zIndex: maxZ + index + 1,
-    })) as EditorObject[];
-    applyObjects((current) => [...current, ...copies], copies.map((item) => item.id));
-  }, [applyObjects, objects, selectedObjects]);
+    const maxZ = Math.max(0, ...objects.map((object) => object.zIndex));
+    const copies: EditorObject[] = [];
+    selectedObjects.forEach((object, index) => {
+      if (object.kind === "image") {
+        copies.push({ ...object, id: crypto.randomUUID(), previewUrl: registerUrl(object.file), x: object.x + 14, y: object.y - 14, zIndex: maxZ + index + 1, locked: false, hidden: false });
+      } else {
+        copies.push({ ...object, id: crypto.randomUUID(), x: object.x + 14, y: object.y - 14, zIndex: maxZ + index + 1, locked: false, hidden: false } as EditorObject);
+      }
+    });
+    applyObjects((current) => [...current, ...copies], copies.map((object) => object.id));
+  }, [applyObjects, objects, registerUrl, selectedObjects]);
 
-  const pasteObjects = useCallback(() => {
+  const pasteSelected = useCallback(() => {
     if (!clipboard.length || !page) return;
-    const maxZ = Math.max(0, ...objects.map((item) => item.zIndex));
-    const copies = clipboard.map((object, index) => ({
-      ...object,
-      id: crypto.randomUUID(),
-      pageIndex: page.pageIndex,
-      x: object.x + 18,
-      y: object.y - 18,
-      locked: false,
-      hidden: false,
-      zIndex: maxZ + index + 1,
-    })) as EditorObject[];
-    applyObjects((current) => [...current, ...copies], copies.map((item) => item.id));
-  }, [applyObjects, clipboard, objects, page]);
+    const maxZ = Math.max(0, ...objects.map((object) => object.zIndex));
+    const copies: EditorObject[] = [];
+    clipboard.forEach((object, index) => {
+      if (object.kind === "image") {
+        copies.push({ ...object, id: crypto.randomUUID(), pageIndex: page.pageIndex, previewUrl: registerUrl(object.file), x: object.x + 18, y: object.y - 18, zIndex: maxZ + index + 1, locked: false, hidden: false });
+      } else {
+        copies.push({ ...object, id: crypto.randomUUID(), pageIndex: page.pageIndex, x: object.x + 18, y: object.y - 18, zIndex: maxZ + index + 1, locked: false, hidden: false } as EditorObject);
+      }
+    });
+    applyObjects((current) => [...current, ...copies], copies.map((object) => object.id));
+  }, [applyObjects, clipboard, objects, page, registerUrl]);
 
-  function moveCurrentPage(direction: -1 | 1) {
+  const deleteSelected = useCallback(() => {
+    if (!selectedIds.length) return;
+    const selected = new Set(selectedIds);
+    const locked = objects.filter((object) => selected.has(object.id) && object.locked).length;
+    applyObjects((current) => current.filter((object) => !selected.has(object.id) || object.locked), []);
+    if (locked) setMessage(`${locked} objeto(s) bloqueado(s) foram preservados.`);
+  }, [applyObjects, objects, selectedIds]);
+
+  function movePage(direction: -1 | 1) {
     setPageSequence((current) => {
-      const targetIndex = currentPage + direction;
-      if (targetIndex < 0 || targetIndex >= current.length) return current;
+      const target = currentPage + direction;
+      if (target < 0 || target >= current.length) return current;
       const next = [...current];
-      [next[currentPage], next[targetIndex]] = [next[targetIndex], next[currentPage]];
-      setCurrentPage(targetIndex);
+      [next[currentPage], next[target]] = [next[target], next[currentPage]];
+      setCurrentPage(target);
       clearSelection();
       return next;
     });
   }
 
-  function duplicateCurrentPage() {
+  function duplicatePage() {
     if (currentPageId === undefined) return;
     setPageSequence((current) => {
       const next = [...current];
@@ -889,7 +818,7 @@ export function PdfEditorWorkspaceHardened() {
     });
   }
 
-  function deleteCurrentPage() {
+  function deletePage() {
     if (pageSequence.length <= 1) {
       setMessage("O documento precisa manter pelo menos uma página.");
       return;
@@ -903,111 +832,88 @@ export function PdfEditorWorkspaceHardened() {
   }
 
   function insertBlankPage() {
-    const basePage = page || pages[0];
-    if (!basePage) return;
-    const nextPageIndex = Math.max(-1, ...pages.map((item) => item.pageIndex)) + 1;
-    const blankPage: PagePreview = {
-      pageIndex: nextPageIndex,
-      sourcePageIndex: null,
-      width: basePage.width,
-      height: basePage.height,
-      scale: basePage.scale,
-      previewUrl: createBlankPagePreview(basePage.width, basePage.height),
-      isBlank: true,
-    };
-    setPages((current) => [...current, blankPage]);
+    const base = page || pages[0];
+    if (!base) return;
+    const pageIndex = Math.max(-1, ...pages.map((item) => item.pageIndex)) + 1;
+    const blank: PagePreview = { pageIndex, sourcePageIndex: null, width: base.width, height: base.height, scale: base.scale, previewUrl: createBlankPreview(base.width, base.height), isBlank: true };
+    setPages((current) => [...current, blank]);
     setPageSequence((current) => {
       const next = [...current];
-      next.splice(currentPage + 1, 0, nextPageIndex);
+      next.splice(currentPage + 1, 0, pageIndex);
       return next;
     });
     setCurrentPage(currentPage + 1);
     clearSelection();
   }
 
+  function moveLayer(direction: "front" | "back" | "up" | "down") {
+    if (!selectedObject || selectedObject.locked) return;
+    const samePage = objects.filter((object) => object.pageIndex === selectedObject.pageIndex).sort((a, b) => a.zIndex - b.zIndex);
+    const index = samePage.findIndex((object) => object.id === selectedObject.id);
+    if (index < 0) return;
+    let zIndex = selectedObject.zIndex;
+    if (direction === "front") zIndex = Math.max(...samePage.map((object) => object.zIndex)) + 1;
+    if (direction === "back") zIndex = Math.min(...samePage.map((object) => object.zIndex)) - 1;
+    if (direction === "up" && samePage[index + 1]) zIndex = samePage[index + 1].zIndex + 0.5;
+    if (direction === "down" && samePage[index - 1]) zIndex = samePage[index - 1].zIndex - 0.5;
+    updateObject(selectedObject.id, { zIndex } as Partial<EditorObject>);
+  }
+
   function alignSelected(mode: "left" | "center" | "right" | "top" | "middle" | "bottom") {
-    if (selectedObjects.length < 2) return;
-    const selectedSet = new Set(activeSelectionIds);
-    const movableObjects = selectedObjects.filter((item) => !item.locked);
-    if (movableObjects.length < 2) return;
-    const left = Math.min(...movableObjects.map((item) => item.x));
-    const right = Math.max(...movableObjects.map((item) => item.x + item.width));
-    const bottom = Math.min(...movableObjects.map((item) => item.y));
-    const top = Math.max(...movableObjects.map((item) => item.y + item.height));
+    const movable = selectedObjects.filter((object) => !object.locked);
+    if (movable.length < 2) return;
+    const ids = new Set(movable.map((object) => object.id));
+    const left = Math.min(...movable.map((object) => object.x));
+    const right = Math.max(...movable.map((object) => object.x + object.width));
+    const bottom = Math.min(...movable.map((object) => object.y));
+    const top = Math.max(...movable.map((object) => object.y + object.height));
     const centerX = (left + right) / 2;
     const centerY = (bottom + top) / 2;
     applyObjects((current) => current.map((object) => {
-      if (!selectedSet.has(object.id) || object.locked) return object;
-      if (mode === "left") return { ...object, x: left };
-      if (mode === "right") return { ...object, x: right - object.width };
-      if (mode === "center") return { ...object, x: centerX - object.width / 2 };
-      if (mode === "bottom") return { ...object, y: bottom };
-      if (mode === "top") return { ...object, y: top - object.height };
-      return { ...object, y: centerY - object.height / 2 };
+      if (!ids.has(object.id)) return object;
+      if (mode === "left") return { ...object, x: left } as EditorObject;
+      if (mode === "right") return { ...object, x: right - object.width } as EditorObject;
+      if (mode === "center") return { ...object, x: centerX - object.width / 2 } as EditorObject;
+      if (mode === "bottom") return { ...object, y: bottom } as EditorObject;
+      if (mode === "top") return { ...object, y: top - object.height } as EditorObject;
+      return { ...object, y: centerY - object.height / 2 } as EditorObject;
     }));
   }
 
   function distributeSelected(axis: "horizontal" | "vertical") {
-    if (selectedObjects.length < 3) return;
-    const ordered = selectedObjects.filter((item) => !item.locked).sort((a, b) => axis === "horizontal" ? a.x - b.x : a.y - b.y);
-    if (ordered.length < 3) return;
-    const first = ordered[0];
-    const last = ordered[ordered.length - 1];
+    const movable = selectedObjects.filter((object) => !object.locked).sort((a, b) => axis === "horizontal" ? a.x - b.x : a.y - b.y);
+    if (movable.length < 3) return;
+    const first = movable[0];
+    const last = movable.at(-1)!;
     const firstCenter = axis === "horizontal" ? first.x + first.width / 2 : first.y + first.height / 2;
     const lastCenter = axis === "horizontal" ? last.x + last.width / 2 : last.y + last.height / 2;
-    const gap = (lastCenter - firstCenter) / (ordered.length - 1);
-    const nextPositions = new Map<string, number>();
-    ordered.forEach((object, index) => nextPositions.set(object.id, firstCenter + gap * index));
+    const gap = (lastCenter - firstCenter) / (movable.length - 1);
+    const centers = new Map<string, number>();
+    movable.forEach((object, index) => centers.set(object.id, firstCenter + gap * index));
     applyObjects((current) => current.map((object) => {
-      const center = nextPositions.get(object.id);
+      const center = centers.get(object.id);
       if (center === undefined) return object;
-      return axis === "horizontal" ? { ...object, x: center - object.width / 2 } : { ...object, y: center - object.height / 2 };
+      return axis === "horizontal" ? { ...object, x: center - object.width / 2 } as EditorObject : { ...object, y: center - object.height / 2 } as EditorObject;
     }));
   }
 
-  const deleteSelected = useCallback(() => {
-    if (!activeSelectionIds.length) return;
-    const selectedSet = new Set(activeSelectionIds);
-    const lockedCount = objects.filter((item) => selectedSet.has(item.id) && item.locked).length;
-    applyObjects((current) => current.filter((item) => !selectedSet.has(item.id) || item.locked), null);
-    if (lockedCount) setMessage(`${lockedCount} objeto(s) bloqueado(s) foram preservados.`);
-  }, [activeSelectionIds, applyObjects, objects]);
-
-  function moveLayer(direction: "front" | "back" | "up" | "down") {
-    if (!selectedObject) return;
-    if (selectedObject.locked) {
-      setMessage("Desbloqueie a camada antes de alterar a ordem.");
-      return;
-    }
-    const samePage = objects.filter((item) => item.pageIndex === selectedObject.pageIndex).sort((a, b) => a.zIndex - b.zIndex);
-    const zIndexes = samePage.map((item) => item.zIndex);
-    const currentIndex = samePage.findIndex((item) => item.id === selectedObject.id);
-    if (currentIndex === -1) return;
-    let targetZ = selectedObject.zIndex;
-    if (direction === "front") targetZ = Math.max(...zIndexes) + 1;
-    if (direction === "back") targetZ = Math.min(...zIndexes) - 1;
-    if (direction === "up" && samePage[currentIndex + 1]) targetZ = samePage[currentIndex + 1].zIndex + 0.5;
-    if (direction === "down" && samePage[currentIndex - 1]) targetZ = samePage[currentIndex - 1].zIndex - 0.5;
-    applyObjects((current) => current.map((object) => object.id === selectedObject.id ? { ...object, zIndex: targetZ } : object));
-  }
-
-  function beginDrag(event: React.PointerEvent<HTMLElement>, object: EditorObject, mode: DragMode) {
+  function beginDrag(event: React.PointerEvent<HTMLElement>, object: EditorObject, mode: "move" | "resize") {
     if (!page) return;
     event.preventDefault();
     event.stopPropagation();
     const additive = event.shiftKey || event.ctrlKey || event.metaKey;
     if (additive && mode === "move") {
-      selectObject(object.id, true);
+      setSelectedIds((current) => current.includes(object.id) ? current.filter((id) => id !== object.id) : [...current, object.id]);
       return;
     }
     if (object.locked) {
-      selectObjects([object.id]);
+      setSelectedIds([object.id]);
       setMessage("Camada bloqueada. Desbloqueie para mover ou redimensionar.");
       return;
     }
     event.currentTarget.setPointerCapture(event.pointerId);
-    const dragIds = activeSelectionIds.includes(object.id) ? activeSelectionIds : [object.id];
-    selectObjects(dragIds);
+    const dragIds = selectedIds.includes(object.id) ? selectedIds : [object.id];
+    setSelectedIds(dragIds);
     dragRef.current = {
       mode,
       objectId: object.id,
@@ -1015,7 +921,7 @@ export function PdfEditorWorkspaceHardened() {
       pointerId: event.pointerId,
       startClientX: event.clientX,
       startClientY: event.clientY,
-      startObject: { ...object },
+      startObject: { ...object } as EditorObject,
       startObjects: cloneObjects(objectsRef.current),
       changed: false,
     };
@@ -1027,14 +933,14 @@ export function PdfEditorWorkspaceHardened() {
     event.preventDefault();
     const dx = (event.clientX - drag.startClientX) / (page.scale * zoom);
     const dy = (event.clientY - drag.startClientY) / (page.scale * zoom);
-    const nextObject = drag.mode === "move"
-      ? { ...drag.startObject, x: drag.startObject.x + dx, y: drag.startObject.y - dy }
-      : { ...drag.startObject, width: drag.startObject.width + dx, height: drag.startObject.height + dy, y: drag.startObject.y - dy };
     setObjects((current) => current.map((object) => {
-      if (drag.mode === "resize") return object.id === drag.objectId && !object.locked ? clampObject(nextObject as EditorObject, pages.find((item) => item.pageIndex === object.pageIndex)) : object;
+      if (drag.mode === "resize") {
+        if (object.id !== drag.objectId || object.locked) return object;
+        return clampObject({ ...drag.startObject, width: drag.startObject.width + dx, height: drag.startObject.height + dy, y: drag.startObject.y - dy } as EditorObject, pages.find((candidate) => candidate.pageIndex === object.pageIndex));
+      }
       if (!drag.objectIds.includes(object.id) || object.locked) return object;
-      const start = drag.startObjects.find((item) => item.id === object.id) || object;
-      return clampObject({ ...object, x: start.x + dx, y: start.y - dy }, pages.find((item) => item.pageIndex === object.pageIndex));
+      const start = drag.startObjects.find((candidate) => candidate.id === object.id) || object;
+      return clampObject({ ...object, x: start.x + dx, y: start.y - dy } as EditorObject, pages.find((candidate) => candidate.pageIndex === object.pageIndex));
     }));
     drag.changed = true;
   }
@@ -1049,35 +955,35 @@ export function PdfEditorWorkspaceHardened() {
     dragRef.current = null;
   }
 
-  const nudgeSelected = useCallback((deltaX: number, deltaY: number) => {
-    if (!activeSelectionIds.length) return;
-    const selectedSet = new Set(activeSelectionIds);
-    applyObjects((current) => current.map((object) => selectedSet.has(object.id) && !object.locked ? { ...object, x: object.x + deltaX, y: object.y + deltaY } : object));
-  }, [activeSelectionIds, applyObjects]);
+  const nudge = useCallback((x: number, y: number) => {
+    if (!selectedIds.length) return;
+    const ids = new Set(selectedIds);
+    applyObjects((current) => current.map((object) => ids.has(object.id) && !object.locked ? { ...object, x: object.x + x, y: object.y + y } as EditorObject : object));
+  }, [applyObjects, selectedIds]);
 
   useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
+    function handleKey(event: KeyboardEvent) {
       const target = event.target as HTMLElement | null;
-      const isTyping = target?.tagName === "TEXTAREA" || target?.tagName === "INPUT" || target?.isContentEditable;
+      const typing = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.isContentEditable;
       const mod = event.ctrlKey || event.metaKey;
       if (mod && event.key.toLowerCase() === "z" && !event.shiftKey) { event.preventDefault(); undo(); return; }
       if ((mod && event.key.toLowerCase() === "y") || (mod && event.shiftKey && event.key.toLowerCase() === "z")) { event.preventDefault(); redo(); return; }
-      if (!isTyping && mod && event.key.toLowerCase() === "a") { event.preventDefault(); selectObjects(currentPageObjects.map((object) => object.id)); return; }
-      if (!isTyping && mod && event.key.toLowerCase() === "c") { event.preventDefault(); copySelected(); return; }
-      if (!isTyping && mod && event.key.toLowerCase() === "v") { event.preventDefault(); pasteObjects(); return; }
-      if (!isTyping && mod && event.key.toLowerCase() === "d") { event.preventDefault(); duplicateSelected(); return; }
-      if (isTyping || !activeSelectionIds.length) return;
-      if (event.key === "Delete" || event.key === "Backspace") { event.preventDefault(); deleteSelected(); }
-      if (event.key === "Escape") clearSelection();
+      if (!typing && mod && event.key.toLowerCase() === "a") { event.preventDefault(); setSelectedIds(pageObjects.map((object) => object.id)); return; }
+      if (!typing && mod && event.key.toLowerCase() === "c") { event.preventDefault(); copySelected(); return; }
+      if (!typing && mod && event.key.toLowerCase() === "v") { event.preventDefault(); pasteSelected(); return; }
+      if (!typing && mod && event.key.toLowerCase() === "d") { event.preventDefault(); duplicateSelected(); return; }
+      if (typing || !selectedIds.length) return;
+      if (event.key === "Delete" || event.key === "Backspace") { event.preventDefault(); deleteSelected(); return; }
+      if (event.key === "Escape") { clearSelection(); return; }
       const step = event.shiftKey ? 10 : 1;
-      if (event.key === "ArrowLeft") { event.preventDefault(); nudgeSelected(-step, 0); }
-      if (event.key === "ArrowRight") { event.preventDefault(); nudgeSelected(step, 0); }
-      if (event.key === "ArrowUp") { event.preventDefault(); nudgeSelected(0, step); }
-      if (event.key === "ArrowDown") { event.preventDefault(); nudgeSelected(0, -step); }
+      if (event.key === "ArrowLeft") { event.preventDefault(); nudge(-step, 0); }
+      if (event.key === "ArrowRight") { event.preventDefault(); nudge(step, 0); }
+      if (event.key === "ArrowUp") { event.preventDefault(); nudge(0, step); }
+      if (event.key === "ArrowDown") { event.preventDefault(); nudge(0, -step); }
     }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [activeSelectionIds.length, clearSelection, copySelected, currentPageObjects, deleteSelected, duplicateSelected, nudgeSelected, pasteObjects, redo, selectObjects, undo]);
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [clearSelection, copySelected, deleteSelected, duplicateSelected, nudge, pageObjects, pasteSelected, redo, selectedIds.length, undo]);
 
   async function exportPdf() {
     if (!file) return;
@@ -1085,85 +991,80 @@ export function PdfEditorWorkspaceHardened() {
     setMessage("Aplicando alterações e sanitizando conteúdo substituído...");
     let sanitizeDocument: PdfJsDocument | null = null;
     try {
-      const pdfLib = await getPdfLib();
+      const pdfLib = await import("pdf-lib");
       const sourceBytes = await file.arrayBuffer();
-      const sourceDocument = await pdfLib.PDFDocument.load(sourceBytes.slice(0));
-      const document = await pdfLib.PDFDocument.create();
-      const font = await document.embedFont(pdfLib.StandardFonts.Helvetica);
-      const sortedObjects = [...objects].sort((a, b) => a.zIndex - b.zIndex);
-      const requiresSanitization = sortedObjects.some((object) => object.kind === "redaction" || (object.kind === "text-replacement" && object.text !== object.originalText));
-      if (requiresSanitization) sanitizeDocument = await loadPdfJsDocument(sourceBytes.slice(0));
+      const sourcePdf = await pdfLib.PDFDocument.load(sourceBytes.slice(0));
+      const output = await pdfLib.PDFDocument.create();
+      const font = await output.embedFont(pdfLib.StandardFonts.Helvetica);
+      const orderedObjects = [...objects].sort((a, b) => a.zIndex - b.zIndex);
+      const needsSanitization = orderedObjects.some((object) => object.kind === "redaction" || (object.kind === "text-replacement" && object.text !== object.originalText));
+      if (needsSanitization) sanitizeDocument = await loadPdfJsDocument(sourceBytes.slice(0));
 
       for (const pageId of pageSequence) {
-        const preview = pages.find((item) => item.pageIndex === pageId);
+        const preview = pages.find((candidate) => candidate.pageIndex === pageId);
         if (!preview) continue;
-        const pageObjects = sortedObjects.filter((object) => object.pageIndex === preview.pageIndex && !object.hidden);
-        const sanitizingObjects = pageObjects.filter((object) => object.kind === "redaction" || (object.kind === "text-replacement" && object.text !== object.originalText));
+        const visibleObjects = orderedObjects.filter((object) => object.pageIndex === preview.pageIndex && !object.hidden);
+        const sanitizerObjects = visibleObjects.filter((object) => object.kind === "redaction" || (object.kind === "text-replacement" && object.text !== object.originalText));
         let pdfPage;
+
         if (preview.sourcePageIndex === null || preview.isBlank) {
           const size = pagePdfSize(preview);
-          pdfPage = document.addPage([size.width, size.height]);
-        } else if (sanitizingObjects.length && sanitizeDocument) {
-          const sanitized = await createSanitizedPageImage(sanitizeDocument, preview.sourcePageIndex, sanitizingObjects);
-          pdfPage = document.addPage([sanitized.width, sanitized.height]);
-          const pageImage = await document.embedJpg(sanitized.bytes);
-          pdfPage.drawImage(pageImage, { x: 0, y: 0, width: sanitized.width, height: sanitized.height });
+          pdfPage = output.addPage([size.width, size.height]);
+        } else if (sanitizerObjects.length && sanitizeDocument) {
+          const sanitized = await sanitizedPageImage(sanitizeDocument, preview.sourcePageIndex, sanitizerObjects);
+          pdfPage = output.addPage([sanitized.width, sanitized.height]);
+          const image = await output.embedJpg(sanitized.bytes);
+          pdfPage.drawImage(image, { x: 0, y: 0, width: sanitized.width, height: sanitized.height });
         } else {
-          const [copiedPage] = await document.copyPages(sourceDocument, [preview.sourcePageIndex]);
-          pdfPage = document.addPage(copiedPage);
+          const [copied] = await output.copyPages(sourcePdf, [preview.sourcePageIndex]);
+          pdfPage = output.addPage(copied);
         }
 
-        for (const item of pageObjects) {
-          if (item.kind === "text-replacement") {
-            if (item.text === item.originalText || !item.text.trim()) continue;
-            pdfPage.drawText(item.text, {
-              x: item.x + 1.5,
-              y: item.y + Math.max(1, item.height * 0.18),
-              size: Math.max(6, Math.min(72, item.fontSize)),
-              font,
-              color: pdfLib.rgb(0.05, 0.08, 0.15),
-              maxWidth: Math.max(20, pdfPage.getWidth() - item.x - 18),
-            });
+        for (const object of visibleObjects) {
+          if (object.kind === "text-replacement") {
+            if (object.text === object.originalText || !object.text.trim()) continue;
+            pdfPage.drawText(object.text, { x: object.x + 1.5, y: object.y + Math.max(1, object.height * 0.18), size: Math.max(6, Math.min(72, object.fontSize)), font, color: pdfLib.rgb(0.05, 0.08, 0.15), maxWidth: Math.max(20, pdfPage.getWidth() - object.x - 18) });
+            continue;
           }
-          if (item.kind === "redaction") {
-            pdfPage.drawRectangle({ x: item.x, y: item.y, width: item.width, height: item.height, color: pdfLib.rgb(0, 0, 0) });
+          if (object.kind === "redaction") {
+            pdfPage.drawRectangle({ x: object.x, y: object.y, width: object.width, height: object.height, color: pdfLib.rgb(0, 0, 0) });
+            continue;
           }
-          if (item.kind === "highlight") {
-            const color = hexToRgb01(item.color);
-            pdfPage.drawRectangle({ x: item.x, y: item.y, width: item.width, height: item.height, color: pdfLib.rgb(color.r, color.g, color.b), opacity: 0.45 });
+          if (object.kind === "highlight") {
+            const color = hexColor(object.color);
+            pdfPage.drawRectangle({ x: object.x, y: object.y, width: object.width, height: object.height, color: pdfLib.rgb(color.r, color.g, color.b), opacity: 0.45 });
+            continue;
           }
-          if (item.kind === "comment") {
-            pdfPage.drawRectangle({ x: item.x, y: item.y, width: item.width, height: item.height, color: pdfLib.rgb(1, 0.96, 0.72), borderColor: pdfLib.rgb(0.9, 0.62, 0.12), borderWidth: 1 });
-            if (item.text.trim()) {
-              pdfPage.drawText(item.text, { x: item.x + 6, y: item.y + item.height - 15, size: 9, font, color: pdfLib.rgb(0.17, 0.14, 0.08), maxWidth: Math.max(20, item.width - 12) });
-            }
+          if (object.kind === "comment") {
+            pdfPage.drawRectangle({ x: object.x, y: object.y, width: object.width, height: object.height, color: pdfLib.rgb(1, 0.96, 0.72), borderColor: pdfLib.rgb(0.9, 0.62, 0.12), borderWidth: 1 });
+            if (object.text.trim()) pdfPage.drawText(object.text, { x: object.x + 6, y: object.y + object.height - 15, size: 9, font, color: pdfLib.rgb(0.17, 0.14, 0.08), maxWidth: Math.max(20, object.width - 12) });
+            continue;
           }
-          if (item.kind === "text") {
-            pdfPage.drawText(item.text, { x: item.x, y: item.y, size: Math.max(6, Math.min(120, item.fontSize)), font, color: pdfLib.rgb(0.05, 0.08, 0.15), maxWidth: item.width });
+          if (object.kind === "text") {
+            pdfPage.drawText(object.text, { x: object.x, y: object.y, size: Math.max(6, Math.min(120, object.fontSize)), font, color: pdfLib.rgb(0.05, 0.08, 0.15), maxWidth: object.width });
+            continue;
           }
-          if (item.kind === "image") {
-            const bytes = await item.file.arrayBuffer();
-            const image = item.file.type === "image/png" ? await document.embedPng(bytes) : await document.embedJpg(bytes);
-            pdfPage.drawImage(image, { x: item.x, y: item.y, width: item.width, height: item.height || item.width * (image.height / image.width) });
+          if (object.kind === "image") {
+            const bytes = await object.file.arrayBuffer();
+            const image = object.file.type === "image/png" ? await output.embedPng(bytes) : await output.embedJpg(bytes);
+            pdfPage.drawImage(image, { x: object.x, y: object.y, width: object.width, height: object.height });
+            continue;
           }
-          if (item.kind === "signature") {
-            const image = await document.embedPng(await dataUrlToArrayBuffer(item.dataUrl));
-            pdfPage.drawImage(image, { x: item.x, y: item.y, width: item.width, height: item.height || item.width * (image.height / image.width) });
-          }
+          const image = await output.embedPng(await dataUrlBytes(object.dataUrl));
+          pdfPage.drawImage(image, { x: object.x, y: object.y, width: object.width, height: object.height });
         }
       }
 
-      const output = await document.save({ useObjectStreams: true });
-      downloadBytes(output, `${file.name.replace(/\.pdf$/i, "")}-editado-lim-pdf.pdf`);
+      downloadBytes(await output.save({ useObjectStreams: true }), `${file.name.replace(/\.pdf$/i, "")}-editado-lim-pdf.pdf`);
       setStatus("ready");
-      setMessage(requiresSanitization ? "PDF exportado. Áreas redigidas/substituídas foram removidas da base rasterizada da página." : "PDF editado. O download foi iniciado.");
+      setMessage(needsSanitization ? "PDF exportado. Áreas redigidas ou substituídas foram removidas da base achatada da página." : "PDF editado. O download foi iniciado.");
     } catch {
       setStatus("error");
       setMessage("Não foi possível exportar as alterações deste PDF.");
     } finally {
       if (sanitizeDocument) {
-        await sanitizeDocument.cleanup().catch(() => undefined);
-        await sanitizeDocument.destroy().catch(() => undefined);
+        try { await sanitizeDocument.cleanup(); } catch { /* no-op */ }
+        try { await sanitizeDocument.destroy(); } catch { /* no-op */ }
       }
     }
   }
@@ -1174,11 +1075,11 @@ export function PdfEditorWorkspaceHardened() {
     setPages([]);
     setPageSequence([]);
     setObjects([]);
-    setCurrentPage(0);
-    clearSelection();
+    setClipboard([]);
     setUndoStack([]);
     setRedoStack([]);
-    setClipboard([]);
+    setCurrentPage(0);
+    clearSelection();
     clearCache();
   }
 
@@ -1186,19 +1087,12 @@ export function PdfEditorWorkspaceHardened() {
     return (
       <section className="editor-upload-card">
         <span className="editor-upload-icon"><UploadCloud size={31} /></span>
-        <h2>{et.openTitle}</h2>
-        <p>{et.openDescription}</p>
-        <button className="primary-button large-button" type="button" onClick={() => fileInputRef.current?.click()}><FileText size={18} /> {et.selectPdf}</button>
+        <h2>{text.openTitle}</h2>
+        <p>{text.openDescription}</p>
+        <button className="primary-button large-button" type="button" onClick={() => fileInputRef.current?.click()}><FileText size={18} /> {text.selectPdf}</button>
         <input ref={fileInputRef} type="file" accept="application/pdf" hidden onChange={(event) => event.target.files?.[0] && openFile(event.target.files[0])} />
-        {recentDrafts.length ? (
-          <div className="editor-recent-drafts">
-            <strong>{et.recentDrafts}</strong>
-            {recentDrafts.map((draft) => (
-              <div key={draft.fileKey}><span>{draft.fileName}</span><small>{formatBytes(draft.fileSize)} · {draft.objectCount} alteração(ões) · {formatDraftDate(draft.updatedAt)}</small></div>
-            ))}
-          </div>
-        ) : null}
-        <div className="editor-upload-security"><ShieldCheck size={17} /> {et.noUpload}</div>
+        {recentDrafts.length ? <div className="editor-recent-drafts"><strong>{text.recentDrafts}</strong>{recentDrafts.map((draft) => <div key={draft.fileKey}><span>{draft.fileName}</span><small>{formatBytes(draft.fileSize)} · {draft.objectCount} alteração(ões) · {formatDraftDate(draft.updatedAt)}</small></div>)}</div> : null}
+        <div className="editor-upload-security"><ShieldCheck size={17} /> {text.noUpload}</div>
       </section>
     );
   }
@@ -1208,127 +1102,86 @@ export function PdfEditorWorkspaceHardened() {
       <div className="editor-topbar">
         <div className="editor-file-name"><FileText size={19} /><span><strong>{file.name}</strong><small>{draftSavedAt ? `Rascunho salvo ${formatDraftDate(draftSavedAt)}` : cached ? "Salvo temporariamente no navegador" : "Cache local indisponível para este tamanho"}{draftRestored ? " · restaurado" : ""}</small></span></div>
         <div className="editor-history"><button type="button" onClick={undo} disabled={!undoStack.length} title="Desfazer (Ctrl+Z)"><Undo2 size={17} /></button><button type="button" onClick={redo} disabled={!redoStack.length} title="Refazer (Ctrl+Y)"><Redo2 size={17} /></button></div>
-        <div className="editor-top-actions"><div className="editor-zoom-controls"><button type="button" onClick={() => setZoom((value) => Math.max(.5, Number((value - .1).toFixed(2))))}>-</button><span>{Math.round(zoom * 100)}%</span><button type="button" onClick={() => setZoom((value) => Math.min(2, Number((value + .1).toFixed(2))))}>+</button></div><button className="secondary-button" type="button" onClick={closeDocument}><Trash2 size={16} /> Fechar</button><button className="primary-button" type="button" onClick={exportPdf} disabled={status === "loading" || status === "exporting"}><Download size={17} /> Baixar PDF</button></div>
+        <div className="editor-top-actions"><div className="editor-zoom-controls"><button type="button" onClick={() => setZoom((value) => Math.max(0.5, Number((value - 0.1).toFixed(2))))}>-</button><span>{Math.round(zoom * 100)}%</span><button type="button" onClick={() => setZoom((value) => Math.min(2, Number((value + 0.1).toFixed(2))))}>+</button></div><button className="secondary-button" type="button" onClick={closeDocument}><Trash2 size={16} /> Fechar</button><button className="primary-button" type="button" onClick={exportPdf} disabled={status === "loading" || status === "exporting"}><Download size={17} /> Baixar PDF</button></div>
       </div>
+
       <div className="editor-body">
         <aside className="editor-tools">
-          <button className="active" type="button"><MousePointer2 size={20} /><span>{et.select}</span></button>
-          <button type="button" onClick={addText}><Type size={20} /><span>{et.addText}</span></button>
-          <button type="button" onClick={addHighlight}><PencilLine size={20} /><span>{et.highlight}</span></button>
-          <button type="button" onClick={addRedaction}><ShieldCheck size={20} /><span>{et.redact}</span></button>
-          <button type="button" onClick={addComment}><FileText size={20} /><span>{et.comment}</span></button>
-          <button type="button" onClick={addSignature}><Signature size={20} /><span>{et.signature}</span></button>
-          <button type="button" onClick={() => imageInputRef.current?.click()}><ImagePlus size={20} /><span>{et.addImage}</span></button>
+          <button className="active" type="button"><MousePointer2 size={20} /><span>{text.select}</span></button>
+          <button type="button" onClick={addText}><Type size={20} /><span>{text.addText}</span></button>
+          <button type="button" onClick={addHighlight}><PencilLine size={20} /><span>{text.highlight}</span></button>
+          <button type="button" onClick={addRedaction}><ShieldCheck size={20} /><span>{text.redact}</span></button>
+          <button type="button" onClick={addComment}><FileText size={20} /><span>{text.comment}</span></button>
+          <button type="button" onClick={addSignature}><Signature size={20} /><span>{text.signature}</span></button>
+          <button type="button" onClick={() => imageInputRef.current?.click()}><ImagePlus size={20} /><span>{text.addImage}</span></button>
           <input ref={imageInputRef} type="file" accept="image/jpeg,image/png" hidden onChange={(event) => event.target.files?.[0] && addImage(event.target.files[0])} />
         </aside>
+
         <aside className="editor-pages">
-          <h2>{et.pages}</h2>
+          <h2>{text.pages}</h2>
           <div className="page-production-controls">
-            <button type="button" onClick={() => moveCurrentPage(-1)} disabled={currentPage === 0} title="Mover página para cima"><ArrowUp size={14} /></button>
-            <button type="button" onClick={() => moveCurrentPage(1)} disabled={currentPage === pageSequence.length - 1} title="Mover página para baixo"><ArrowDown size={14} /></button>
-            <button type="button" onClick={duplicateCurrentPage} title="Duplicar página">Duplicar</button>
-            <button type="button" onClick={insertBlankPage} title="Inserir página em branco">Em branco</button>
-            <button type="button" onClick={deleteCurrentPage} disabled={pageSequence.length <= 1} title="Excluir página">Excluir</button>
+            <button type="button" onClick={() => movePage(-1)} disabled={currentPage === 0} title="Mover página para cima"><ArrowUp size={14} /></button>
+            <button type="button" onClick={() => movePage(1)} disabled={currentPage === pageSequence.length - 1} title="Mover página para baixo"><ArrowDown size={14} /></button>
+            <button type="button" onClick={duplicatePage}>Duplicar</button>
+            <button type="button" onClick={insertBlankPage}>Em branco</button>
+            <button type="button" onClick={deletePage} disabled={pageSequence.length <= 1}>Excluir</button>
           </div>
-          {pageSequence.map((pageId, sequenceIndex) => {
+          {pageSequence.map((pageId, index) => {
             const item = pages.find((candidate) => candidate.pageIndex === pageId);
             if (!item) return null;
-            return (
-              <button className={sequenceIndex === currentPage ? "active" : ""} type="button" key={`${pageId}:${sequenceIndex}`} onClick={() => { setCurrentPage(sequenceIndex); clearSelection(); }}>
-                <img src={item.previewUrl} alt={`Miniatura da página ${sequenceIndex + 1}`} />
-                <span>{sequenceIndex + 1}</span>
-                {item.isBlank ? <small>Em branco</small> : null}
-              </button>
-            );
+            return <button className={index === currentPage ? "active" : ""} type="button" key={`${pageId}:${index}`} onClick={() => { setCurrentPage(index); clearSelection(); }}><img src={item.previewUrl} alt={`Miniatura da página ${index + 1}`} /><span>{index + 1}</span>{item.isBlank ? <small>Em branco</small> : null}</button>;
           })}
         </aside>
+
         <div className="editor-stage-wrap" onPointerDown={(event) => { if (event.target === event.currentTarget) clearSelection(); }}>
           {status === "loading" ? <div className="editor-loading"><LoaderCircle className="spin" size={27} /><strong>Preparando editor</strong><p>{message}</p></div> : null}
-          {page ? (
-            <div className="editor-stage" style={{ width: page.width * zoom, height: page.height * zoom }}>
-              <img src={page.previewUrl} alt={`Página ${currentPage + 1} do PDF`} />
-              {currentPageObjects.map((object) => (
-                <button
-                  className={`editor-object editor-object-${object.kind} ${activeSelectionIds.includes(object.id) ? "selected" : ""} ${object.locked ? "locked" : ""} ${object.kind === "text-replacement" && object.text !== object.originalText ? "changed" : ""}`}
-                  type="button"
-                  aria-label={`Selecionar ${getObjectLabel(object)}`}
-                  title={getObjectLabel(object)}
-                  key={object.id}
-                  style={objectToCss(object, page, zoom)}
-                  onPointerDown={(event) => beginDrag(event, object, "move")}
-                  onPointerMove={continueDrag}
-                  onPointerUp={endDrag}
-                  onPointerCancel={endDrag}
-                >
-                  {object.kind === "image" ? <img src={object.previewUrl} alt="Imagem adicionada" draggable={false} /> : null}
-                  {object.kind === "signature" ? <img src={object.dataUrl} alt="Assinatura adicionada" draggable={false} /> : null}
-                  {object.kind === "text" ? <span style={{ fontSize: object.fontSize * page.scale * zoom }}>{object.text}</span> : null}
-                  {object.kind === "text-replacement" && object.text !== object.originalText ? <span style={{ fontSize: object.fontSize * page.scale * zoom }}>{object.text}</span> : null}
-                  {object.kind === "redaction" ? <span>REDACTED</span> : null}
-                  {object.kind === "highlight" ? <span>Destaque</span> : null}
-                  {object.kind === "comment" ? <span>{object.text}</span> : null}
-                  {selectedObjectId === object.id && !object.locked ? (
-                    <span className="editor-resize-handle" role="presentation" onPointerDown={(event) => beginDrag(event, object, "resize")} onPointerMove={continueDrag} onPointerUp={endDrag} onPointerCancel={endDrag} />
-                  ) : null}
-                </button>
-              ))}
-            </div>
-          ) : null}
+          {page ? <div className="editor-stage" style={{ width: page.width * zoom, height: page.height * zoom }}>
+            <img src={page.previewUrl} alt={`Página ${currentPage + 1} do PDF`} />
+            {pageObjects.map((object) => <button
+              className={`editor-object editor-object-${object.kind} ${selectedIds.includes(object.id) ? "selected" : ""} ${object.locked ? "locked" : ""} ${object.kind === "text-replacement" && object.text !== object.originalText ? "changed" : ""}`}
+              type="button"
+              aria-label={`Selecionar ${objectLabel(object)}`}
+              title={objectLabel(object)}
+              key={object.id}
+              style={objectStyle(object, page, zoom)}
+              onPointerDown={(event) => beginDrag(event, object, "move")}
+              onPointerMove={continueDrag}
+              onPointerUp={endDrag}
+              onPointerCancel={endDrag}
+            >
+              {object.kind === "image" ? <img src={object.previewUrl} alt="Imagem adicionada" draggable={false} /> : null}
+              {object.kind === "signature" ? <img src={object.dataUrl} alt="Assinatura adicionada" draggable={false} /> : null}
+              {object.kind === "text" ? <span style={{ fontSize: object.fontSize * page.scale * zoom }}>{object.text}</span> : null}
+              {object.kind === "text-replacement" && object.text !== object.originalText ? <span style={{ fontSize: object.fontSize * page.scale * zoom }}>{object.text}</span> : null}
+              {object.kind === "redaction" ? <span>REDACTED</span> : null}
+              {object.kind === "highlight" ? <span>Destaque</span> : null}
+              {object.kind === "comment" ? <span>{object.text}</span> : null}
+              {selectedObject?.id === object.id && !object.locked ? <span className="editor-resize-handle" role="presentation" onPointerDown={(event) => beginDrag(event, object, "resize")} onPointerMove={continueDrag} onPointerUp={endDrag} onPointerCancel={endDrag} /> : null}
+            </button>)}
+          </div> : null}
           {pageSequence.length ? <div className="editor-page-navigation"><button type="button" disabled={currentPage === 0} onClick={() => setCurrentPage((value) => value - 1)}><ArrowLeft size={17} /></button><span>{currentPage + 1} / {pageSequence.length}</span><button type="button" disabled={currentPage === pageSequence.length - 1} onClick={() => setCurrentPage((value) => value + 1)}><ArrowRight size={17} /></button></div> : null}
         </div>
+
         <aside className="editor-properties">
-          <h2>{et.properties}</h2>
-          {selectedObject ? (
-            <div className="properties-panel">
-              <div className="object-layer-row"><strong>{selectedObjects.length > 1 ? `${selectedObjects.length} objetos selecionados` : getObjectKindLabel(selectedObject)}</strong><button type="button" onClick={deleteSelected}><Trash2 size={15} /> {et.delete}</button></div>
-              <div className="selection-actions"><button type="button" onClick={copySelected}>{et.copy}</button><button type="button" onClick={duplicateSelected}>{et.duplicate}</button><button type="button" onClick={pasteObjects} disabled={!clipboard.length}>{et.paste}</button></div>
-              {selectedObjects.length === 1 && hasEditableText(selectedObject) ? <label><span>{et.content}</span><textarea value={selectedObject.text} disabled={selectedObject.locked} onChange={(event) => updateObject(selectedObject.id, { text: event.target.value } as Partial<EditorObject>)} /></label> : null}
-              {selectedObjects.length === 1 && hasFontSize(selectedObject) ? <label><span>{et.fontSize}</span><input type="number" min="6" max="120" value={selectedObject.fontSize} disabled={selectedObject.locked} onChange={(event) => updateObject(selectedObject.id, { fontSize: Number(event.target.value) || 12, height: Math.max(MIN_OBJECT_SIZE, (Number(event.target.value) || 12) * 1.35) } as Partial<EditorObject>)} /></label> : null}
-              {selectedObjects.length === 1 && selectedObject.kind === "highlight" ? <label><span>Cor do destaque</span><input type="color" value={selectedObject.color} disabled={selectedObject.locked} onChange={(event) => updateObject(selectedObject.id, { color: event.target.value } as Partial<EditorObject>)} /></label> : null}
-              {selectedObjects.length === 1 ? (
-                <div className="properties-grid">
-                  <label><span>X</span><input type="number" value={Math.round(selectedObject.x)} disabled={selectedObject.locked} onChange={(event) => updateObject(selectedObject.id, { x: Number(event.target.value) || 0 } as Partial<EditorObject>)} /></label>
-                  <label><span>Y</span><input type="number" value={Math.round(selectedObject.y)} disabled={selectedObject.locked} onChange={(event) => updateObject(selectedObject.id, { y: Number(event.target.value) || 0 } as Partial<EditorObject>)} /></label>
-                  <label><span>Largura</span><input type="number" min={MIN_OBJECT_SIZE} value={Math.round(selectedObject.width)} disabled={selectedObject.locked} onChange={(event) => updateObject(selectedObject.id, { width: Number(event.target.value) || MIN_OBJECT_SIZE } as Partial<EditorObject>)} /></label>
-                  <label><span>Altura</span><input type="number" min={MIN_OBJECT_SIZE} value={Math.round(selectedObject.height)} disabled={selectedObject.locked} onChange={(event) => updateObject(selectedObject.id, { height: Number(event.target.value) || MIN_OBJECT_SIZE } as Partial<EditorObject>)} /></label>
-                </div>
-              ) : null}
-              {selectedObjects.length > 1 ? (
-                <div className="alignment-controls"><button type="button" onClick={() => alignSelected("left")}>Alinhar esq.</button><button type="button" onClick={() => alignSelected("center")}>Centro H</button><button type="button" onClick={() => alignSelected("right")}>Alinhar dir.</button><button type="button" onClick={() => alignSelected("top")}>Topo</button><button type="button" onClick={() => alignSelected("middle")}>Centro V</button><button type="button" onClick={() => alignSelected("bottom")}>Base</button><button type="button" onClick={() => distributeSelected("horizontal")} disabled={selectedObjects.length < 3}>Distribuir H</button><button type="button" onClick={() => distributeSelected("vertical")} disabled={selectedObjects.length < 3}>Distribuir V</button></div>
-              ) : null}
-              <div className="layer-controls">
-                <button type="button" onClick={() => updateObject(selectedObject.id, { hidden: !selectedObject.hidden } as Partial<EditorObject>)}><CircleOff size={15} /> {selectedObject.hidden ? "Mostrar" : "Ocultar"}</button>
-                <button type="button" onClick={() => updateObject(selectedObject.id, { locked: !selectedObject.locked } as Partial<EditorObject>)}><LockKeyhole size={15} /> {selectedObject.locked ? "Desbloquear" : "Bloquear"}</button>
-                <button type="button" onClick={() => moveLayer("front")}><ArrowUp size={15} /> Frente</button>
-                <button type="button" onClick={() => moveLayer("back")}><ArrowDown size={15} /> Fundo</button>
-                <button type="button" onClick={() => moveLayer("up")}>Subir camada</button>
-                <button type="button" onClick={() => moveLayer("down")}>Descer camada</button>
-              </div>
-              {selectedObjects.length === 1 && selectedObject.kind === "text-replacement" ? <><button type="button" className="secondary-button" onClick={() => updateObject(selectedObject.id, { text: selectedObject.originalText } as Partial<EditorObject>)}>Restaurar original</button><p>Ao substituir texto, esta página será achatada e os pixels do conteúdo anterior serão apagados antes da exportação.</p></> : null}
-              <p>Atalhos: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+D, Ctrl+Z, Ctrl+Y, Delete, Esc e setas. Use Shift + seta para mover 10 pontos.</p>
-            </div>
-          ) : (
-            <div className="empty-properties"><MousePointer2 size={26} /><strong>Selecione um objeto</strong><p>Clique em textos, imagens, destaques, tarjas, comentários ou assinaturas para editar, mover, redimensionar ou excluir.</p></div>
-          )}
-          <div className="editor-layers-panel">
-            <div className="layers-panel-heading"><strong>{et.layers}</strong><span>{currentPageLayers.length}</span></div>
-            {currentPageLayers.length ? (
-              <div className="layers-list">
-                {currentPageLayers.map((object) => (
-                  <div className={`layer-item ${activeSelectionIds.includes(object.id) ? "active" : ""} ${object.hidden ? "hidden-layer" : ""}`} key={object.id}>
-                    <button type="button" className="layer-select-button" onClick={() => selectObjects([object.id])}><span>{getObjectKindLabel(object)}</span><small>{getObjectLabel(object)}</small></button>
-                    <button type="button" title={object.hidden ? "Mostrar camada" : "Ocultar camada"} onClick={() => updateObject(object.id, { hidden: !object.hidden } as Partial<EditorObject>)}><CircleOff size={14} /></button>
-                    <button type="button" title={object.locked ? "Desbloquear camada" : "Bloquear camada"} onClick={() => updateObject(object.id, { locked: !object.locked } as Partial<EditorObject>)}><LockKeyhole size={14} /></button>
-                  </div>
-                ))}
-              </div>
-            ) : <p className="layers-empty">{et.noLayers}</p>}
-          </div>
-          <div className="editor-signature-panel"><strong>{et.signature}</strong><SignaturePad onChange={setSignatureDataUrl} /><button type="button" className="secondary-button" onClick={addSignature} disabled={!signatureDataUrl}>{et.insertSignature}</button></div>
+          <h2>{text.properties}</h2>
+          {selectedObject ? <div className="properties-panel">
+            <div className="object-layer-row"><strong>{selectedObjects.length > 1 ? `${selectedObjects.length} objetos selecionados` : kindLabel(selectedObject)}</strong><button type="button" onClick={deleteSelected}><Trash2 size={15} /> {text.delete}</button></div>
+            <div className="selection-actions"><button type="button" onClick={copySelected}>{text.copy}</button><button type="button" onClick={duplicateSelected}>{text.duplicate}</button><button type="button" onClick={pasteSelected} disabled={!clipboard.length}>{text.paste}</button></div>
+            {selectedObjects.length === 1 && hasText(selectedObject) ? <label><span>{text.content}</span><textarea value={selectedObject.text} disabled={selectedObject.locked} onChange={(event) => updateObject(selectedObject.id, { text: event.target.value } as Partial<EditorObject>)} /></label> : null}
+            {selectedObjects.length === 1 && hasFontSize(selectedObject) ? <label><span>{text.fontSize}</span><input type="number" min="6" max="120" value={selectedObject.fontSize} disabled={selectedObject.locked} onChange={(event) => updateObject(selectedObject.id, { fontSize: Number(event.target.value) || 12, height: Math.max(MIN_OBJECT_SIZE, (Number(event.target.value) || 12) * 1.35) } as Partial<EditorObject>)} /></label> : null}
+            {selectedObjects.length === 1 && selectedObject.kind === "highlight" ? <label><span>Cor do destaque</span><input type="color" value={selectedObject.color} disabled={selectedObject.locked} onChange={(event) => updateObject(selectedObject.id, { color: event.target.value } as Partial<EditorObject>)} /></label> : null}
+            {selectedObjects.length === 1 ? <div className="properties-grid"><label><span>X</span><input type="number" value={Math.round(selectedObject.x)} disabled={selectedObject.locked} onChange={(event) => updateObject(selectedObject.id, { x: Number(event.target.value) || 0 } as Partial<EditorObject>)} /></label><label><span>Y</span><input type="number" value={Math.round(selectedObject.y)} disabled={selectedObject.locked} onChange={(event) => updateObject(selectedObject.id, { y: Number(event.target.value) || 0 } as Partial<EditorObject>)} /></label><label><span>Largura</span><input type="number" min={MIN_OBJECT_SIZE} value={Math.round(selectedObject.width)} disabled={selectedObject.locked} onChange={(event) => updateObject(selectedObject.id, { width: Number(event.target.value) || MIN_OBJECT_SIZE } as Partial<EditorObject>)} /></label><label><span>Altura</span><input type="number" min={MIN_OBJECT_SIZE} value={Math.round(selectedObject.height)} disabled={selectedObject.locked} onChange={(event) => updateObject(selectedObject.id, { height: Number(event.target.value) || MIN_OBJECT_SIZE } as Partial<EditorObject>)} /></label></div> : null}
+            {selectedObjects.length > 1 ? <div className="alignment-controls"><button type="button" onClick={() => alignSelected("left")}>Alinhar esq.</button><button type="button" onClick={() => alignSelected("center")}>Centro H</button><button type="button" onClick={() => alignSelected("right")}>Alinhar dir.</button><button type="button" onClick={() => alignSelected("top")}>Topo</button><button type="button" onClick={() => alignSelected("middle")}>Centro V</button><button type="button" onClick={() => alignSelected("bottom")}>Base</button><button type="button" onClick={() => distributeSelected("horizontal")}>Distribuir H</button><button type="button" onClick={() => distributeSelected("vertical")}>Distribuir V</button></div> : null}
+            <div className="layer-controls"><button type="button" onClick={() => updateObject(selectedObject.id, { hidden: !selectedObject.hidden } as Partial<EditorObject>)}><CircleOff size={15} /> {selectedObject.hidden ? "Mostrar" : "Ocultar"}</button><button type="button" onClick={() => updateObject(selectedObject.id, { locked: !selectedObject.locked } as Partial<EditorObject>)}><LockKeyhole size={15} /> {selectedObject.locked ? "Desbloquear" : "Bloquear"}</button><button type="button" onClick={() => moveLayer("front")}><ArrowUp size={15} /> Frente</button><button type="button" onClick={() => moveLayer("back")}><ArrowDown size={15} /> Fundo</button><button type="button" onClick={() => moveLayer("up")}>Subir camada</button><button type="button" onClick={() => moveLayer("down")}>Descer camada</button></div>
+            {selectedObjects.length === 1 && selectedObject.kind === "text-replacement" ? <><button type="button" className="secondary-button" onClick={() => updateObject(selectedObject.id, { text: selectedObject.originalText } as Partial<EditorObject>)}>Restaurar original</button><p>Ao substituir texto, a página é achatada e os pixels do conteúdo anterior são apagados antes da exportação.</p></> : null}
+          </div> : <div className="empty-properties"><MousePointer2 size={26} /><strong>Selecione um objeto</strong><p>Clique em uma camada para editar, mover, redimensionar, ocultar ou bloquear.</p></div>}
+
+          <div className="editor-layers-panel"><div className="layers-panel-heading"><strong>{text.layers}</strong><span>{layers.length}</span></div>{layers.length ? <div className="layers-list">{layers.map((object) => <div className={`layer-item ${selectedIds.includes(object.id) ? "active" : ""} ${object.hidden ? "hidden-layer" : ""}`} key={object.id}><button type="button" className="layer-select-button" onClick={() => setSelectedIds([object.id])}><span>{kindLabel(object)}</span><small>{objectLabel(object)}</small></button><button type="button" onClick={() => updateObject(object.id, { hidden: !object.hidden } as Partial<EditorObject>)}><CircleOff size={14} /></button><button type="button" onClick={() => updateObject(object.id, { locked: !object.locked } as Partial<EditorObject>)}><LockKeyhole size={14} /></button></div>)}</div> : <p className="layers-empty">{text.noLayers}</p>}</div>
+          <div className="editor-signature-panel"><strong>{text.signature}</strong><SignaturePad onChange={setSignatureDataUrl} /><button type="button" className="secondary-button" onClick={addSignature} disabled={!signatureDataUrl}>{text.insertSignature}</button></div>
           <div className="editor-status-card">{status === "exporting" ? <LoaderCircle className="spin" size={18} /> : <CheckCircle2 size={18} />}<span>{message || "Alterações locais e privadas."}</span></div>
         </aside>
       </div>
-      <div className="editor-cache-bar"><ShieldCheck size={16} /><span>{et.cache}</span><Save size={16} /></div>
+      <div className="editor-cache-bar"><ShieldCheck size={16} /><span>{text.cache}</span><Save size={16} /></div>
     </section>
   );
 }

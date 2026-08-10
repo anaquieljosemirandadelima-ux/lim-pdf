@@ -244,9 +244,9 @@ function isTextContentItem(item: unknown): item is TextContentItem {
   return typeof candidate.str === "string" && Array.isArray(candidate.transform);
 }
 
-function safeScale(width: number, height: number, requested: number, maxPixels: number, minimum: number) {
+function safeScale(width: number, height: number, requested: number, maxPixels: number) {
   if (width * height * requested * requested <= maxPixels) return requested;
-  return Math.max(minimum, Math.sqrt(maxPixels / Math.max(1, width * height)));
+  return Math.min(requested, Math.sqrt(maxPixels / Math.max(1, width * height)));
 }
 
 function pagePdfSize(page: PagePreview) {
@@ -423,7 +423,7 @@ async function sanitizedPageImage(document: PdfJsDocument, sourcePageIndex: numb
   const sourcePage = await document.getPage(sourcePageIndex + 1);
   try {
     const base = sourcePage.getViewport({ scale: 1 });
-    const scale = safeScale(base.width, base.height, SANITIZE_SCALE, MAX_SANITIZE_PIXELS, 1.4);
+    const scale = safeScale(base.width, base.height, SANITIZE_SCALE, MAX_SANITIZE_PIXELS);
     const viewport = sourcePage.getViewport({ scale });
     const canvas = window.document.createElement("canvas");
     canvas.width = Math.ceil(viewport.width);
@@ -584,7 +584,7 @@ export function PdfEditorWorkspaceHardened() {
             const pdfPage = await document.getPage(pageNumber);
             try {
               const base = pdfPage.getViewport({ scale: 1 });
-              const scale = safeScale(base.width, base.height, PREVIEW_SCALE, MAX_PREVIEW_PIXELS, 0.45);
+              const scale = safeScale(base.width, base.height, PREVIEW_SCALE, MAX_PREVIEW_PIXELS);
               const viewport = pdfPage.getViewport({ scale });
               const canvas = window.document.createElement("canvas");
               canvas.width = Math.ceil(viewport.width);
@@ -680,19 +680,41 @@ export function PdfEditorWorkspaceHardened() {
 
   useEffect(() => {
     if (!file || status !== "ready" || !pages.length) return;
+    let cancelled = false;
     const timeout = window.setTimeout(() => {
-      const savedAt = saveDraft(file, pageSequence, pages, objects);
-      if (savedAt) {
-        setDraftSavedAt(savedAt);
-        setRecentDrafts(safeReadJson<EditorRecent[]>(EDITOR_RECENTS_KEY, []));
-      }
-      const assets: { objectId: string; file: File }[] = [];
-      for (const object of objects) {
-        if (object.kind === "image") assets.push({ objectId: object.id, file: object.file });
-      }
-      void saveEditorImageAssets(editorFileKey(file), assets).catch(() => false);
+      void (async () => {
+        const assets: { objectId: string; file: File }[] = [];
+        for (const object of objects) {
+          if (object.kind === "image") assets.push({ objectId: object.id, file: object.file });
+        }
+        try {
+          const assetsSaved = await saveEditorImageAssets(editorFileKey(file), assets);
+          if (cancelled) return;
+          if (!assetsSaved) {
+            setDraftSavedAt(null);
+            setMessage("Rascunho não salvo: as imagens excedem o limite temporário de 40 MB. Remova ou reduza imagens para salvar com segurança.");
+            return;
+          }
+          const savedAt = saveDraft(file, pageSequence, pages, objects);
+          if (savedAt) {
+            setDraftSavedAt(savedAt);
+            setRecentDrafts(safeReadJson<EditorRecent[]>(EDITOR_RECENTS_KEY, []));
+          } else {
+            setDraftSavedAt(null);
+            setMessage("Não foi possível salvar o rascunho local neste dispositivo.");
+          }
+        } catch {
+          if (!cancelled) {
+            setDraftSavedAt(null);
+            setMessage("Não foi possível persistir as imagens do rascunho. O rascunho não foi marcado como salvo.");
+          }
+        }
+      })();
     }, 700);
-    return () => window.clearTimeout(timeout);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeout);
+    };
   }, [file, objects, pageSequence, pages, status]);
 
   function addText() {

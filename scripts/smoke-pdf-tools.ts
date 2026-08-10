@@ -1,10 +1,9 @@
 import assert from "node:assert/strict";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { PDFDocument, StandardFonts, degrees, rgb } from "pdf-lib";
-import { createStoredZip } from "../src/lib/browser-files";
+import { createStoredZip, createStoredZipFromBlobs } from "../src/lib/browser-files";
 
 async function main() {
-
   const outDir = "/tmp/limpdf-smoke";
   await rm(outDir, { recursive: true, force: true });
   await mkdir(outDir, { recursive: true });
@@ -92,16 +91,35 @@ async function main() {
     const pageDoc = await PDFDocument.create();
     const [page] = await pageDoc.copyPages(splitSource, [index]);
     pageDoc.addPage(page);
-    zipEntries.push({ name: `pagina-${index + 1}.pdf`, data: await pageDoc.save() });
+    zipEntries.push({ name: `página-${index + 1}.pdf`, data: await pageDoc.save() });
   }
+
   const zip = createStoredZip(zipEntries);
   await writeFile(`${outDir}/pages.zip`, Buffer.from(await zip.arrayBuffer()));
   const zipBytes = await readFile(`${outDir}/pages.zip`);
   assert.equal(zipBytes.readUInt32LE(0), 0x04034b50);
   assert.equal(zipBytes.readUInt32LE(zipBytes.length - 22), 0x06054b50);
   assert.equal(zipBytes.readUInt16LE(zipBytes.length - 14), zipEntries.length);
+  assert.equal(zipBytes.readUInt16LE(6) & 0x0800, 0x0800);
 
-  console.log(JSON.stringify({ ok: true, suite: "pdf-tools", files: 10, mergedPages: merged.getPageCount(), splitPages: zipEntries.length }));
+  const blobZip = await createStoredZipFromBlobs(zipEntries.map((entry) => ({
+    name: entry.name,
+    data: new Blob([Uint8Array.from(entry.data).buffer], { type: "application/pdf" }),
+  })));
+  await writeFile(`${outDir}/pages-blob.zip`, Buffer.from(await blobZip.arrayBuffer()));
+  const blobZipBytes = await readFile(`${outDir}/pages-blob.zip`);
+  assert.equal(blobZipBytes.readUInt32LE(0), 0x04034b50);
+  assert.equal(blobZipBytes.readUInt32LE(blobZipBytes.length - 22), 0x06054b50);
+  assert.equal(blobZipBytes.readUInt16LE(blobZipBytes.length - 14), zipEntries.length);
+
+  console.log(JSON.stringify({
+    ok: true,
+    suite: "pdf-tools",
+    files: 11,
+    mergedPages: merged.getPageCount(),
+    splitPages: zipEntries.length,
+    blobZipBytes: blobZipBytes.length,
+  }));
 }
 
 main().catch((error) => { console.error(error); process.exitCode = 1; });

@@ -1,6 +1,9 @@
 name: Dependency refresh
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - agent/hardening-completo-lim-pdf
@@ -33,7 +36,10 @@ jobs:
       - name: Apply compatible audit fixes
         run: npm audit fix
 
-      - name: Verify production audit
+      - name: Verify all dependencies
+        run: npm audit --audit-level=high
+
+      - name: Verify production dependencies
         run: npm audit --omit=dev --audit-level=high
 
       - name: Upload refreshed manifests

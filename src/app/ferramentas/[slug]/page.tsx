@@ -4,6 +4,7 @@ import { AdvancedToolWorkspace } from "@/components/AdvancedToolWorkspace";
 import { MemorySafePdfWorkspace } from "@/components/MemorySafePdfWorkspace";
 import { PdfEditorWorkspaceHardened } from "@/components/PdfEditorWorkspaceHardened";
 import { PdfToolWorkspace } from "@/components/PdfToolWorkspace";
+import { PremiumToolExperience } from "@/components/PremiumToolExperience";
 import { ToolIcon } from "@/components/ToolIcon";
 import { allToolBySlug, allTools, isAdvancedToolSlug, type AllToolSlug } from "@/lib/all-tools";
 import type { ToolDefinition, ToolSlug } from "@/lib/tools";
@@ -67,7 +68,7 @@ export default async function ToolPage({ params }: ToolPageProps) {
     url: `${siteUrl}/ferramentas/${tool.slug}`,
     description,
     offers: { "@type": "Offer", price: "0", priceCurrency: "BRL" },
-    featureList: ["Gratuito", "Sem cadastro", "Processamento local"],
+    featureList: ["Gratuito", "Sem cadastro", "Processamento local", "Experiência guiada"],
   };
 
   if (isAdvancedToolSlug(tool.slug)) {
@@ -78,6 +79,7 @@ export default async function ToolPage({ params }: ToolPageProps) {
           <div><h1>{tool.name}</h1><p>{description}</p></div>
           <span className={`reference-heading-icon accent-${tool.accent}`} aria-hidden="true"><ToolIcon icon={tool.icon} /></span>
         </div>
+        <PremiumToolExperience toolName={tool.name} accent={tool.accent} />
         <div className="reference-workspace-wrap"><AdvancedToolWorkspace tool={tool} /></div>
       </section>
     );
@@ -92,6 +94,7 @@ export default async function ToolPage({ params }: ToolPageProps) {
         <div className="reference-tool-heading">
           <div><h1>{baseTool.name}</h1><p>{description}</p></div>
         </div>
+        <PremiumToolExperience toolName={baseTool.name} accent={baseTool.accent} editor />
         <div className="reference-editor-wrap"><PdfEditorWorkspaceHardened /></div>
       </section>
     );
@@ -104,6 +107,7 @@ export default async function ToolPage({ params }: ToolPageProps) {
         <div><h1>{baseTool.name}</h1><p>{description}</p></div>
         <span className={`reference-heading-icon accent-${baseTool.accent}`} aria-hidden="true"><ToolIcon icon={baseTool.icon} /></span>
       </div>
+      <PremiumToolExperience toolName={baseTool.name} accent={baseTool.accent} />
       <div className="reference-workspace-wrap">
         {memorySafeToolSlugs.has(baseTool.slug) ? <MemorySafePdfWorkspace tool={baseTool} /> : <PdfToolWorkspace tool={baseTool} />}
       </div>

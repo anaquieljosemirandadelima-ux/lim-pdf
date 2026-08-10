@@ -375,7 +375,7 @@ async function highlightPdf(file: File, query: string) {
           if (!("str" in item) || !("transform" in item) || !item.str.toLocaleLowerCase("pt-BR").includes(needle)) continue;
           const pdfPage = output.getPage(pageNumber - 1);
           const height = "height" in item ? Math.max(8, item.height) : 10;
-          const width = "width" in item ? Math.max(8, item.width) : Math.max(20, item.str.length * height * 0.45);
+          const width = Math.max(8, item.width);
           pdfPage.drawRectangle({
             x: item.transform[4] - 1,
             y: item.transform[5] - height * 0.25,

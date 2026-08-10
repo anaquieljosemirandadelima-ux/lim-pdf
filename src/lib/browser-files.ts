@@ -134,13 +134,13 @@ export function createStoredZip(entries: ZipEntry[]) {
     const name = encoder.encode(entry.name);
     if (name.length > 0xffff) throw new Error("Um nome de arquivo é longo demais para o ZIP.");
     const { localHeader, central } = zipHeaders(name, crc32(entry.data), entry.data.length, offset);
-    localParts.push(localHeader, entry.data);
+    localParts.push(Uint8Array.from(localHeader).buffer, Uint8Array.from(entry.data).buffer);
     centralParts.push(central);
     offset += localHeader.length + entry.data.length;
   }
 
   const centralSize = centralParts.reduce((total, part) => total + part.length, 0);
-  return new Blob([...localParts, ...centralParts, zipEnd(entries.length, centralSize, offset)], { type: "application/zip" });
+  return new Blob([...localParts, ...centralParts.map((part) => Uint8Array.from(part).buffer), Uint8Array.from(zipEnd(entries.length, centralSize, offset)).buffer], { type: "application/zip" });
 }
 
 export async function createStoredZipFromBlobs(entries: BlobZipEntry[]) {
@@ -155,11 +155,11 @@ export async function createStoredZipFromBlobs(entries: BlobZipEntry[]) {
     if (name.length > 0xffff) throw new Error("Um nome de arquivo é longo demais para o ZIP.");
     const checksum = await crc32Blob(entry.data);
     const { localHeader, central } = zipHeaders(name, checksum, entry.data.size, offset);
-    localParts.push(localHeader, entry.data);
+    localParts.push(Uint8Array.from(localHeader).buffer, entry.data);
     centralParts.push(central);
     offset += localHeader.length + entry.data.size;
   }
 
   const centralSize = centralParts.reduce((total, part) => total + part.length, 0);
-  return new Blob([...localParts, ...centralParts, zipEnd(entries.length, centralSize, offset)], { type: "application/zip" });
+  return new Blob([...localParts, ...centralParts.map((part) => Uint8Array.from(part).buffer), Uint8Array.from(zipEnd(entries.length, centralSize, offset)).buffer], { type: "application/zip" });
 }

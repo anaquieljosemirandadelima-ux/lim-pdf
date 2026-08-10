@@ -72,7 +72,6 @@ export async function renderPdfPagesSequentially(
     }
   } finally {
     await document.cleanup();
-    await document.destroy();
   }
 }
 
@@ -114,7 +113,6 @@ export async function extractTextByPage(bytes: ArrayBuffer) {
     }
   } finally {
     await document.cleanup();
-    await document.destroy();
   }
   return result;
 }

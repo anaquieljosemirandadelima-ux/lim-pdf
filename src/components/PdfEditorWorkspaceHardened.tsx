@@ -620,7 +620,6 @@ export function PdfEditorWorkspaceHardened() {
           }
         } finally {
           await document.cleanup();
-          await document.destroy();
         }
 
         const draft = loadDraft(file);
@@ -1064,7 +1063,6 @@ export function PdfEditorWorkspaceHardened() {
     } finally {
       if (sanitizeDocument) {
         try { await sanitizeDocument.cleanup(); } catch { /* no-op */ }
-        try { await sanitizeDocument.destroy(); } catch { /* no-op */ }
       }
     }
   }

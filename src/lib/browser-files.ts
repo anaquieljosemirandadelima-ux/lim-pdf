@@ -57,35 +57,36 @@ function writeU32(target: Uint8Array, offset: number, value: number) {
 }
 
 export function createStoredZip(entries: ZipEntry[]) {
+  if (entries.length > 0xffff) throw new Error("O ZIP ultrapassa o limite de 65.535 arquivos.");
   const encoder = new TextEncoder();
-  const localParts: Uint8Array[] = [];
+  const localParts: BlobPart[] = [];
   const centralParts: Uint8Array[] = [];
   let offset = 0;
 
   for (const entry of entries) {
     const name = encoder.encode(entry.name);
+    if (name.length > 0xffff) throw new Error("Um nome de arquivo é longo demais para o ZIP.");
     const checksum = crc32(entry.data);
-    const local = new Uint8Array(30 + name.length + entry.data.length);
-    writeU32(local, 0, 0x04034b50);
-    writeU16(local, 4, 20);
-    writeU16(local, 6, 0);
-    writeU16(local, 8, 0);
-    writeU16(local, 10, 0);
-    writeU16(local, 12, 0);
-    writeU32(local, 14, checksum);
-    writeU32(local, 18, entry.data.length);
-    writeU32(local, 22, entry.data.length);
-    writeU16(local, 26, name.length);
-    writeU16(local, 28, 0);
-    local.set(name, 30);
-    local.set(entry.data, 30 + name.length);
-    localParts.push(local);
+    const localHeader = new Uint8Array(30 + name.length);
+    writeU32(localHeader, 0, 0x04034b50);
+    writeU16(localHeader, 4, 20);
+    writeU16(localHeader, 6, 0x0800);
+    writeU16(localHeader, 8, 0);
+    writeU16(localHeader, 10, 0);
+    writeU16(localHeader, 12, 0);
+    writeU32(localHeader, 14, checksum);
+    writeU32(localHeader, 18, entry.data.length);
+    writeU32(localHeader, 22, entry.data.length);
+    writeU16(localHeader, 26, name.length);
+    writeU16(localHeader, 28, 0);
+    localHeader.set(name, 30);
+    localParts.push(localHeader, entry.data);
 
     const central = new Uint8Array(46 + name.length);
     writeU32(central, 0, 0x02014b50);
     writeU16(central, 4, 20);
     writeU16(central, 6, 20);
-    writeU16(central, 8, 0);
+    writeU16(central, 8, 0x0800);
     writeU16(central, 10, 0);
     writeU16(central, 12, 0);
     writeU16(central, 14, 0);
@@ -101,7 +102,7 @@ export function createStoredZip(entries: ZipEntry[]) {
     writeU32(central, 42, offset);
     central.set(name, 46);
     centralParts.push(central);
-    offset += local.length;
+    offset += localHeader.length + entry.data.length;
   }
 
   const centralOffset = offset;
@@ -116,6 +117,5 @@ export function createStoredZip(entries: ZipEntry[]) {
   writeU32(end, 16, centralOffset);
   writeU16(end, 20, 0);
 
-  const parts = [...localParts, ...centralParts, end].map((part) => Uint8Array.from(part).buffer);
-  return new Blob(parts, { type: "application/zip" });
+  return new Blob([...localParts, ...centralParts, end], { type: "application/zip" });
 }

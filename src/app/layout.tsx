@@ -12,6 +12,7 @@ import { allTools } from "@/lib/all-tools";
 import "./globals.css";
 import "./reference-ui-v2.css";
 import "./premium-ui.css";
+import "./premium-suite-v2.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://limpdf.com.br";
 const adsenseClient = ADSENSE_CLIENT;

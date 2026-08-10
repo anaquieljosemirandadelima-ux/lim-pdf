@@ -21,9 +21,10 @@ export function PdfEditorExperienceSwitcher() {
         </button>
       </div>
       <div className="editor-mode-note">
-        {mode === "studio" ? "Studio é ideal para criar e anotar. Para correções finas em texto já existente, use o Modo preciso." : "Modo preciso preserva o editor endurecido com substituição sanitizada de texto e rascunho local."}
+        {mode === "studio" ? "Studio é ideal para criar, desenhar e anotar. O Modo preciso fica disponível para correções de texto existente e mantém sua sessão separada." : "Modo preciso preserva substituição sanitizada de texto, seleção múltipla, camadas e rascunhos. Voltar ao Studio não apaga a sessão dele."}
       </div>
-      {mode === "studio" ? <PdfEditorStudio /> : <PdfEditorWorkspaceHardened />}
+      <div hidden={mode !== "studio"} aria-hidden={mode !== "studio"}><PdfEditorStudio /></div>
+      <div hidden={mode !== "precise"} aria-hidden={mode !== "precise"}><PdfEditorWorkspaceHardened /></div>
     </section>
   );
 }

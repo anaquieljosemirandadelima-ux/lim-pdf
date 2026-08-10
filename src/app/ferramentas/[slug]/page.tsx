@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { LucideClientIcon } from "@/components/LucideClientIcon";
 import { AdSlot } from "@/components/AdSlot";
+import { MemorySafePdfWorkspace } from "@/components/MemorySafePdfWorkspace";
 import { PdfEditorWorkspace } from "@/components/PdfEditorWorkspace";
 import { PdfToolWorkspace } from "@/components/PdfToolWorkspace";
 import { ToolCard } from "@/components/ToolCard";
@@ -11,6 +12,13 @@ import { toolBySlug, tools, type ToolSlug } from "@/lib/tools";
 import { getWorkflowsForTool } from "@/lib/workflows";
 
 interface ToolPageProps { params: Promise<{ slug: string }> }
+
+const memorySafeToolSlugs = new Set<ToolSlug>([
+  "pdf-para-jpg",
+  "pdf-para-png",
+  "compactar-pdf",
+  "pdf-em-escala-de-cinza",
+]);
 
 export function generateStaticParams() { return tools.map((tool) => ({ slug: tool.slug })); }
 
@@ -91,7 +99,7 @@ export default async function ToolPage({ params }: ToolPageProps) {
           <div className="tool-screen-badges"><span><LucideClientIcon name="CheckCircle2" size={16} /> Ferramenta pronta</span><span><LucideClientIcon name="LockKeyhole" size={16} /> Sessão temporária</span></div>
         </div>
         <div className="container tool-workspace-layout">
-          <PdfToolWorkspace tool={tool} />
+          {memorySafeToolSlugs.has(tool.slug) ? <MemorySafePdfWorkspace tool={tool} /> : <PdfToolWorkspace tool={tool} />}
           <aside className="tool-guide-panel">
             <h2>Como usar</h2>
             <ol><li><span>1</span> Selecione {tool.multiple ? "os arquivos" : "o arquivo"}.</li><li><span>2</span> Ajuste as opções necessárias.</li><li><span>3</span> Processe e baixe o resultado.</li></ol>
@@ -115,4 +123,3 @@ export default async function ToolPage({ params }: ToolPageProps) {
     </>
   );
 }
-

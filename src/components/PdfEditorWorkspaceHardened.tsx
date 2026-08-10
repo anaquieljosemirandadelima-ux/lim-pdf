@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 import {
   ArrowDown,
@@ -505,7 +506,7 @@ export function PdfEditorWorkspaceHardened() {
   useEffect(() => () => releaseUrls(), [releaseUrls]);
   useEffect(() => { objectsRef.current = objects; }, [objects]);
 
-  const clearSelection = useCallback(() => setSelectedIds([]), []);
+  const clearSelection = useCallback(() => setSelectedIds([]), [setSelectedIds]);
 
   const applyObjects = useCallback((updater: (current: EditorObject[]) => EditorObject[], select?: string[]) => {
     setObjects((current) => {
@@ -518,7 +519,7 @@ export function PdfEditorWorkspaceHardened() {
       return after;
     });
     if (select) setSelectedIds(select);
-  }, [pages]);
+  }, [pages, setSelectedIds]);
 
   const undo = useCallback(() => {
     setUndoStack((stack) => {

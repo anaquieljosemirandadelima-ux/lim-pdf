@@ -4,7 +4,7 @@ import { ConsentBanner } from "@/components/ConsentBanner";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { NativeTranslator } from "@/components/NativeTranslator";
-import { ADSENSE_CLIENT, ADSENSE_SCRIPT_SRC } from "@/lib/adsense";
+import { ADSENSE_CLIENT } from "@/lib/adsense";
 import { tools } from "@/lib/tools";
 import "./globals.css";
 
@@ -21,7 +21,7 @@ const structuredData = {
   operatingSystem: "Web",
   inLanguage: "pt-BR",
   offers: { "@type": "Offer", price: "0", priceCurrency: "BRL" },
-  featureList: tools.slice(0, 24).map((tool) => tool.name),
+  featureList: tools.map((tool) => tool.name),
   publisher: {
     "@type": "Organization",
     name: "LIM PDF",
@@ -70,9 +70,6 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="pt-BR">
-      <head>
-        {adsenseClient ? <script async src={ADSENSE_SCRIPT_SRC} crossOrigin="anonymous" /> : null}
-      </head>
       <body className="app-body">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
         <a className="skip-link" href="#conteudo">Pular para o conteúdo</a>

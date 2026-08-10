@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Trash2 } from "lucide-react";
+import { clearAllEditorImageAssets } from "@/lib/editor-assets";
 import {
   clearAllEditorDrafts,
   getEditorDraftStorageStatus,
@@ -37,7 +38,7 @@ export function TemporaryCachePanel() {
 
   async function clearNow() {
     setClearing(true);
-    await clearAllTemporaryFiles();
+    await Promise.all([clearAllTemporaryFiles(), clearAllEditorImageAssets()]);
     clearAllEditorDrafts();
     await refresh();
     setClearing(false);
@@ -54,12 +55,12 @@ export function TemporaryCachePanel() {
       <div>
         <span className="eyebrow">Cache local</span>
         <h2 id="local-cache-title">Dados temporários neste dispositivo</h2>
-        <p>Arquivos de tarefas ficam no IndexedDB e rascunhos do editor ficam no armazenamento local do navegador. Nenhum desses dados é enviado ao servidor do LIM PDF e ambos expiram em até 4 horas.</p>
+        <p>Arquivos de tarefas e imagens do editor ficam no IndexedDB; metadados dos rascunhos ficam no armazenamento local. Nenhum desses dados é enviado ao servidor do LIM PDF e todos expiram em até 4 horas.</p>
       </div>
       <dl>
         <div><dt>Tarefas armazenadas</dt><dd>{status?.sessionCount ?? "..."}</dd></div>
         <div><dt>Rascunhos do editor</dt><dd>{draftStatus?.draftCount ?? "..."}</dd></div>
-        <div><dt>Espaço usado</dt><dd>{status && draftStatus ? formatBytes(totalBytes) : "..."}</dd></div>
+        <div><dt>Espaço contabilizado</dt><dd>{status && draftStatus ? formatBytes(totalBytes) : "..."}</dd></div>
         <div><dt>Próxima expiração</dt><dd>{status && draftStatus ? formatExpiry(nextExpiry) : "..."}</dd></div>
       </dl>
       <button className="secondary-button" type="button" onClick={clearNow} disabled={clearing || !hasLocalData}>

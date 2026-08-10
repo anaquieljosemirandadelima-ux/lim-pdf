@@ -4,13 +4,16 @@ Portal gratuito de ferramentas PDF com processamento local no navegador, página
 
 ## Recursos
 
-- 30 ferramentas funcionais.
-- 30 páginas estáticas de ferramentas.
+- 32 ferramentas funcionais.
+- 32 páginas estáticas de ferramentas.
+- Editor visual com rascunho temporário, persistência local de imagens e sanitização de páginas com redação/substituição de texto.
+- Conversão e compactação pesada com processamento sequencial por página para reduzir uso de memória.
+- Cache local com expiração automática de até 4 horas e limpeza manual pela página de privacidade.
 - 8 guias originais.
 - Sitemap, robots, dados estruturados e canonical.
-- Consentimento, políticas legais, acessibilidade e segurança.
-- AdSense e Search Console configuráveis por variáveis de ambiente.
-- Sem armazenamento dos documentos no servidor.
+- Consentimento, políticas legais, acessibilidade e cabeçalhos de segurança.
+- AdSense carregado somente após consentimento opcional e Search Console configurável por variáveis de ambiente.
+- Sem armazenamento dos documentos nos servidores do LIM PDF.
 
 ## Desenvolvimento
 
@@ -24,6 +27,8 @@ npm run dev
 ```bash
 npm run check
 ```
+
+O mesmo comando é executado no GitHub Actions em pull requests e branches de agente.
 
 ## Produção
 

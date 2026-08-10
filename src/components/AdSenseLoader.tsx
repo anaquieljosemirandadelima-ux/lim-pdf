@@ -2,10 +2,14 @@
 
 import { useEffect } from "react";
 import { CONSENT_KEY } from "@/components/ConsentBanner";
+import { ADSENSE_SCRIPT_SRC } from "@/lib/adsense";
+
+const SCRIPT_ID = "limpdf-adsense-script";
 
 declare global {
   interface Window {
     dataLayer?: unknown[];
+    adsbygoogle?: unknown[];
   }
 }
 
@@ -24,9 +28,27 @@ export function AdSenseLoader({ client }: { client?: string }) {
       });
     };
 
+    const removeAdSense = () => {
+      document.getElementById(SCRIPT_ID)?.remove();
+      document.querySelectorAll("script[src*='pagead2.googlesyndication.com/pagead/js/adsbygoogle.js']").forEach((node) => node.remove());
+    };
+
+    const loadAdSense = () => {
+      if (document.getElementById(SCRIPT_ID)) return;
+      const script = document.createElement("script");
+      script.id = SCRIPT_ID;
+      script.async = true;
+      script.src = ADSENSE_SCRIPT_SRC;
+      script.crossOrigin = "anonymous";
+      script.dataset.adClient = client;
+      document.head.appendChild(script);
+    };
+
     const sync = () => {
       const accepted = window.localStorage.getItem(CONSENT_KEY) === "accepted";
       applyConsentMode(accepted);
+      if (accepted) loadAdSense();
+      else removeAdSense();
     };
 
     sync();

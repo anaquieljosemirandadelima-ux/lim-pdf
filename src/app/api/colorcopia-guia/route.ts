@@ -105,12 +105,6 @@ function productCard(page: PDFPage, fonts: Fonts, x: number, y: number, w: numbe
   });
 }
 
-function drawMug(page: PDFPage, x: number, y: number, s = 1) {
-  rect(page, x, y, 72*s, 82*s, C.white, 8*s, C.deep2, 2*s);
-  page.drawCircle({ x: x + 76*s, y: y + 45*s, size: 21*s, borderColor: C.deep2, borderWidth: 6*s, color: C.paper });
-  rect(page, x + 18*s, y + 28*s, 38*s, 26*s, C.orange, 6*s);
-  page.drawText("CC", { x: x + 27*s, y: y + 36*s, size: 12*s, font: undefined as never, color: C.white });
-}
 
 function drawBottle(page: PDFPage, x: number, y: number, s = 1) {
   rect(page, x + 12*s, y, 54*s, 112*s, C.deep, 17*s);
@@ -155,10 +149,6 @@ function drawBox(page: PDFPage, x: number, y: number, s = 1) {
   line(page, x + 48*s, y, x + 48*s, y + 78*s, C.deep2, 2*s);
 }
 
-function drawShirt(page: PDFPage, x: number, y: number, s = 1) {
-  page.drawSvgPath(`M ${x+28*s} ${y+96*s} L ${x+8*s} ${y+80*s} L ${x+20*s} ${y+55*s} L ${x+34*s} ${y+64*s} L ${x+34*s} ${y} L ${x+88*s} ${y} L ${x+88*s} ${y+64*s} L ${x+102*s} ${y+55*s} L ${x+114*s} ${y+80*s} L ${x+94*s} ${y+96*s} Q ${x+61*s} ${y+75*s} ${x+28*s} ${y+96*s} Z`, { color: C.deep2 });
-  rect(page, x + 48*s, y + 32*s, 28*s, 25*s, C.orange, 5*s);
-}
 
 function drawTrendBadge(page: PDFPage, fonts: Fonts, x: number, y: number, value: string) {
   rect(page, x, y, 112, 26, C.orange, 13);

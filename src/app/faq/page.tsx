@@ -3,19 +3,23 @@ import type { Metadata } from "next";
 const faqItems = [
   {
     question: "Os arquivos são enviados para o servidor do LIM PDF?",
-    answer: "Não nas ferramentas publicadas atualmente. O processamento acontece no navegador, e o conteúdo dos PDFs e imagens permanece no dispositivo do usuário.",
+    answer: "Não nas ferramentas publicadas atualmente. O processamento acontece no navegador. Arquivos, imagens do editor e rascunhos temporários permanecem no dispositivo e expiram conforme a política de privacidade.",
   },
   {
     question: "Por que o site usa cache temporário?",
-    answer: "O cache temporário em IndexedDB ajuda a recuperar uma tarefa interrompida. Ele expira automaticamente em até 4 horas e pode ser apagado nas preferências de privacidade.",
+    answer: "O cache local ajuda a recuperar uma tarefa interrompida. Arquivos e imagens podem ficar no IndexedDB e metadados do rascunho no armazenamento local. Esses dados expiram em até 4 horas e podem ser apagados manualmente.",
   },
   {
-    question: "A ferramenta Editar PDF altera o texto original internamente?",
-    answer: "Quando a edição estrutural do texto original não é segura, o LIM PDF usa substituição visual: cobre o conteúdo selecionado e escreve o novo texto por cima. Essa limitação é informada na página da ferramenta.",
+    question: "O Editar PDF remove o conteúdo que foi substituído?",
+    answer: "Quando um texto detectado é substituído, a página correspondente é rasterizada e a área antiga é apagada antes de o novo texto ser inserido. Isso remove o conteúdo subjacente daquela área, mas a página sanitizada perde recursos estruturais como texto selecionável, links e formulários.",
+  },
+  {
+    question: "A ferramenta de redação apenas coloca uma tarja preta?",
+    answer: "Não. Na exportação, a página que contém redação é achatada e os pixels da área redigida são apagados antes da geração do PDF final. Ainda assim, o resultado deve ser revisado antes de distribuição de documentos sensíveis.",
   },
   {
     question: "A compactação preserva texto selecionável?",
-    answer: "A compactação atual é indicada para documentos digitalizados e pode rasterizar páginas. Quando isso acontece, texto selecionável, links e formulários podem deixar de funcionar.",
+    answer: "O modo de compactação atual é rasterizado e indicado principalmente para digitalizações. Ele pode remover texto selecionável, links, camadas e formulários em troca de uma saída visual mais compacta.",
   },
   {
     question: "A assinatura visual é um certificado digital?",
@@ -29,7 +33,7 @@ const faqItems = [
 
 export const metadata: Metadata = {
   title: "Perguntas frequentes",
-  description: "Respostas sobre privacidade, cache temporário, edição visual, compactação e assinatura no LIM PDF.",
+  description: "Respostas sobre privacidade, cache temporário, edição sanitizada, redação, compactação e assinatura no LIM PDF.",
   alternates: { canonical: "/faq" },
 };
 

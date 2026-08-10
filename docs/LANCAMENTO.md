@@ -2,16 +2,21 @@
 
 ## Entregue no código
 
-- 30 páginas individuais de ferramentas com URL, metadata, canonical, FAQ e dados estruturados.
+- 32 páginas individuais de ferramentas com URL, metadata, canonical, FAQ e dados estruturados.
 - 8 guias originais com páginas estáticas e dados estruturados Article/FAQ.
 - Página inicial, catálogo por categoria, pesquisa e links internos.
 - Privacidade, cookies, termos, segurança, acessibilidade, sobre e contato.
 - Sitemap XML, robots.txt, manifest, ads.txt dinâmico e security.txt.
-- Consentimento para publicidade e medição opcional.
+- Consentimento para publicidade e medição opcional; o script do AdSense só é inserido após opt-in.
 - Espaços do AdSense separados dos controles e com altura reservada.
 - Processamento local, carregamento sob demanda de pdf-lib/pdf.js e worker hospedado localmente.
+- Conversões rasterizadas pesadas executadas sequencialmente por página, com limite de pixels para reduzir risco de falta de memória.
+- Editor com cache temporário, imagens persistidas no IndexedDB e sanitização das páginas que recebem redação ou substituição de texto.
+- Cache de arquivos, imagens e rascunhos com expiração de até 4 horas e limpeza manual.
+- Endpoint de contato com validação de origem, tamanho, campos e limitação de requisições.
 - Testes de seleção de páginas, ZIP, união, formulários, espelhamento, fundo e rotas.
-- Cabeçalhos HTTP de segurança.
+- GitHub Actions executando `npm run check` em pull requests e branches de agente.
+- Cabeçalhos HTTP de segurança e CSP mais restritiva em produção.
 
 ## Credenciais externas ainda necessárias
 
@@ -30,3 +35,5 @@ npm run check
 npm run start
 npm run test:routes -- http://127.0.0.1:3000
 ```
+
+Além da validação local, somente promover para produção uma revisão cuja Vercel Preview e checks do GitHub estejam verdes.

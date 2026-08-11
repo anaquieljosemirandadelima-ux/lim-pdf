@@ -41,17 +41,24 @@ for (const route of ["/faq", "/sobre", "/api/colorcopia-guia"]) {
   if (response.status !== 404) throw new Error(`${route} should return 404, got ${response.status}`);
 }
 
+const metricPayload = JSON.stringify({ v: 1, event: "process_success", tool: "compactar-pdf", browser: "chrome", sampleRate: 1, inputSizeBucket: "2mb_10mb", outputSizeBucket: "512kb_2mb", durationBucket: "500ms_2s" });
 const metric = await fetch(`${base}/api/telemetry`, {
   method: "POST",
-  headers: { "content-type": "application/json", origin: base },
-  body: JSON.stringify({ v: 1, event: "process_success", tool: "compactar-pdf", browser: "chrome", sampleRate: 1, inputSizeBucket: "2mb_10mb", outputSizeBucket: "512kb_2mb", durationBucket: "500ms_2s" }),
+  headers: { "content-type": "application/json" },
+  body: metricPayload,
 });
 if (metric.status !== 204) throw new Error(`telemetry valid payload returned ${metric.status}`);
 const invalidMetric = await fetch(`${base}/api/telemetry`, {
   method: "POST",
-  headers: { "content-type": "application/json", origin: base },
+  headers: { "content-type": "application/json" },
   body: JSON.stringify({ v: 1, event: "upload_document", tool: "compactar-pdf", browser: "chrome" }),
 });
 if (invalidMetric.status !== 400) throw new Error(`telemetry invalid payload returned ${invalidMetric.status}`);
+const foreignOriginMetric = await fetch(`${base}/api/telemetry`, {
+  method: "POST",
+  headers: { "content-type": "application/json", origin: "https://example.invalid" },
+  body: metricPayload,
+});
+if (foreignOriginMetric.status !== 403) throw new Error(`telemetry foreign origin returned ${foreignOriginMetric.status}`);
 
 console.log(JSON.stringify({ ok: true, suite: "routes", checked: routes.length, removed: 3, telemetry: true, base, premiumEditor: true }));

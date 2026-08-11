@@ -3,9 +3,7 @@ export {
   addHyperlink,
   addInternalPageLink,
   addNativeAnnotation,
-  editMetadata,
   preparePdfA,
-  processBatch,
   readMetadata,
   safeBaseName,
   type BookmarkDraft,
@@ -13,7 +11,7 @@ export {
   type MetadataDraft,
   type Progress,
 } from "@/lib/pro-pdf-core";
-
+export { editMetadataEnhanced as editMetadata, processBatchEnhanced as processBatch } from "@/lib/pro-pdf-document";
 export { createFormPdfAdvanced as createFormPdf } from "@/lib/pro-pdf-form";
 export { addBookmarksAdvanced as addBookmarks, removeAllHyperlinks } from "@/lib/pro-pdf-navigation";
 export { readHyperlinks, editHyperlink, removeHyperlink, type PdfHyperlinkInfo } from "@/lib/pro-pdf-links";

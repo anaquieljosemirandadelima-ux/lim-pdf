@@ -13,7 +13,7 @@ function subscribe(callback: () => void) {
 }
 
 function getClientSnapshot(): LanguageCode {
-  return normalizeLanguage(window.localStorage.getItem("limpdf_language") ?? window.navigator.language);
+  return normalizeLanguage(window.localStorage.getItem("limpdf_language") ?? DEFAULT_LANGUAGE);
 }
 
 function getServerSnapshot(): LanguageCode {

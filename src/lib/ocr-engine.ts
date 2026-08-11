@@ -21,6 +21,7 @@ const MAX_RASTER_PIXELS = 18_000_000;
 const MAX_CANVAS_SIDE = 8_192;
 const MIN_USEFUL_SCALE = 0.1;
 const TESSERACT_SRC = "https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js";
+let tesseractLoadPromise: Promise<void> | null = null;
 
 function safeBaseName(file: File) {
   return file.name.replace(/\.pdf$/i, "").replace(/[^a-zA-Z0-9._ -]+/g, "-").trim() || "documento";
@@ -28,24 +29,36 @@ function safeBaseName(file: File) {
 
 function loadTesseract() {
   if (window.Tesseract?.createWorker) return Promise.resolve();
-  const existing = document.querySelector<HTMLScriptElement>(`script[data-limpdf-ocr="${TESSERACT_SRC}"]`);
-  if (existing) {
-    return new Promise<void>((resolve, reject) => {
-      if (window.Tesseract?.createWorker) return resolve();
-      existing.addEventListener("load", () => resolve(), { once: true });
-      existing.addEventListener("error", () => reject(new Error("Não foi possível carregar o motor OCR.")), { once: true });
-    });
-  }
-  return new Promise<void>((resolve, reject) => {
+  if (tesseractLoadPromise) return tesseractLoadPromise;
+
+  document.querySelectorAll<HTMLScriptElement>('script[data-limpdf-ocr]').forEach((script) => script.remove());
+  tesseractLoadPromise = new Promise<void>((resolve, reject) => {
     const script = document.createElement("script");
     script.src = TESSERACT_SRC;
     script.async = true;
     script.crossOrigin = "anonymous";
-    script.dataset.limpdfOcr = TESSERACT_SRC;
-    script.addEventListener("load", () => resolve(), { once: true });
-    script.addEventListener("error", () => reject(new Error("Não foi possível carregar o motor OCR.")), { once: true });
+    script.dataset.limpdfOcr = "loading";
+
+    const fail = (message: string) => {
+      script.dataset.limpdfOcr = "error";
+      script.remove();
+      tesseractLoadPromise = null;
+      reject(new Error(message));
+    };
+
+    script.addEventListener("load", () => {
+      if (!window.Tesseract?.createWorker) {
+        fail("O motor OCR foi carregado, mas não ficou disponível neste navegador.");
+        return;
+      }
+      script.dataset.limpdfOcr = "loaded";
+      resolve();
+    }, { once: true });
+    script.addEventListener("error", () => fail("Não foi possível carregar o motor OCR. Verifique sua conexão e tente novamente."), { once: true });
     document.head.appendChild(script);
   });
+
+  return tesseractLoadPromise;
 }
 
 async function createWorker(languages: string, progress?: OcrProgress) {
@@ -89,13 +102,14 @@ function safeOcrScale(width: number, height: number) {
 }
 
 export async function createSearchablePdf(file: File, languages: string, progress?: OcrProgress) {
-  const worker = await createWorker(languages, progress);
+  const source = await loadPdfJsDocument(await file.arrayBuffer());
+  let worker: TesseractWorker | null = null;
   const output = await PDFDocument.create();
   const font = await output.embedFont(StandardFonts.Helvetica);
-  const source = await loadPdfJsDocument(await file.arrayBuffer());
   let recognizedWords = 0;
 
   try {
+    worker = await createWorker(languages, progress);
     for (let pageNumber = 1; pageNumber <= source.numPages; pageNumber += 1) {
       progress?.(`OCR da página ${pageNumber} de ${source.numPages}`, Math.round(((pageNumber - 1) / source.numPages) * 100));
       const sourcePage = await source.getPage(pageNumber);
@@ -137,7 +151,7 @@ export async function createSearchablePdf(file: File, languages: string, progres
               color: rgb(0, 0, 0),
             });
           } catch {
-            // O texto continua visível na imagem quando algum caractere não cabe em WinAnsi.
+            // A página visual continua intacta quando um caractere não cabe em WinAnsi.
           }
         }
         canvas.width = 1;
@@ -156,6 +170,6 @@ export async function createSearchablePdf(file: File, languages: string, progres
     };
   } finally {
     await source.cleanup();
-    await worker.terminate();
+    if (worker) await worker.terminate();
   }
 }

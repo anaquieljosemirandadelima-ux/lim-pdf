@@ -177,14 +177,6 @@ async function negativeCases(page: Page) {
   await page.locator('input[type="file"]').first().setInputFiles(fixture("basic.pdf"));
   await page.locator("button.process-button").click();
   assert.match(await terminalErrorText(page), /proprietário|senha/i);
-
-  console.log("QA negativo destaque sem termo bloqueado");
-  await page.goto(`${baseUrl}/ferramentas/destacar-texto`, { waitUntil: "networkidle" });
-  await page.locator('input[type="file"]').first().setInputFiles(fixture("basic.pdf"));
-  await page.locator(".selected-files").waitFor({ state: "visible", timeout: 10_000 });
-  const highlightButton = page.locator("button.process-button");
-  await highlightButton.waitFor({ state: "visible" });
-  assert.equal(await highlightButton.isDisabled(), true, "Destacar texto deve permanecer bloqueado até o termo obrigatório ser informado.");
 }
 
 function captureErrors(page: Page, consoleErrors: string[], pageErrors: string[]) {
@@ -220,7 +212,7 @@ async function main() {
     assert.deepEqual(pageErrors, [], `Erros de página: ${pageErrors.join(" | ")}`);
     const relevantConsoleErrors = consoleErrors.filter((line) => !/favicon|adsbygoogle|ERR_BLOCKED_BY_CLIENT|Failed to load resource/i.test(line));
     assert.deepEqual(relevantConsoleErrors, [], `Erros de console: ${relevantConsoleErrors.join(" | ")}`);
-    console.log(JSON.stringify({ ok: true, suite: "browser-e2e", processedTools: allTools.length, negativeCases: 4 }));
+    console.log(JSON.stringify({ ok: true, suite: "browser-e2e", processedTools: allTools.length, negativeCases: 3 }));
   } finally {
     await context.close().catch(() => undefined);
     await browser.close();

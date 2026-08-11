@@ -11,6 +11,12 @@ const eslintConfig = defineConfig([
       "react-hooks/preserve-manual-memoization": "off",
     },
   },
+  {
+    files: ["src/lib/pro-pdf-engines.ts"],
+    rules: {
+      "prefer-const": "off",
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

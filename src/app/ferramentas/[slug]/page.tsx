@@ -103,8 +103,8 @@ export default async function ToolPage({ params }: ToolPageProps) {
   }
 
   if (proTool) {
-    const Workspace = proTool.slug === "links-pdf" ? ProLinksWorkspace : proTool.slug === "bookmarks-pdf" ? ProNavigationWorkspace : ProPdfWorkspace;
-    return <section className="reference-tool-page reference-pro-tool-page">{schemas}<ToolTelemetryBridge toolSlug={proTool.slug} />{heading}<PremiumToolExperience toolName={proTool.name} toolSlug={proTool.slug} accent={proTool.accent} /><div className="reference-workspace-wrap">{proTool.slug === "links-pdf" ? <ProLinksWorkspace /> : <Workspace tool={proTool} />}</div>{editorial}</section>;
+    const workspace = proTool.slug === "links-pdf" ? <ProLinksWorkspace /> : proTool.slug === "bookmarks-pdf" ? <ProNavigationWorkspace tool={proTool} /> : <ProPdfWorkspace tool={proTool} />;
+    return <section className="reference-tool-page reference-pro-tool-page">{schemas}<ToolTelemetryBridge toolSlug={proTool.slug} />{heading}<PremiumToolExperience toolName={proTool.name} toolSlug={proTool.slug} accent={proTool.accent} /><div className="reference-workspace-wrap">{workspace}</div>{editorial}</section>;
   }
 
   if (isAdvancedToolSlug(tool.slug as AllToolSlug)) {

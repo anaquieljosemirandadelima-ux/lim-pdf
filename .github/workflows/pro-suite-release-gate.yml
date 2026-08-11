@@ -1,0 +1,67 @@
+name: Pro Suite Release Gate
+
+on:
+  push:
+    branches:
+      - pro-suite-ocr-editor-20260810
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pro-suite-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Require finalized source tree
+        shell: bash
+        run: |
+          TEMP=(
+            pro-suite-autopatch.yml
+            pro-suite-form-patch.yml
+            studio-pro-integration.yml
+            studio-pro-test-patch.yml
+            studio-pro-dock-patch.yml
+            pro-compare-patch.yml
+            pro-links-patch.yml
+            office-fidelity-patch.yml
+            scan-orientation-patch.yml
+            pro-suite-finalize.yml
+          )
+          for file in "${TEMP[@]}"; do
+            if [ -e ".github/workflows/$file" ]; then
+              echo "Temporary integration workflow still present: $file"
+              exit 1
+            fi
+          done
+          grep -Fq 'OfficeFidelityWorkspace' 'src/app/ferramentas/[slug]/page.tsx'
+          grep -Fq 'ProLinksWorkspace' 'src/app/ferramentas/[slug]/page.tsx'
+          grep -Fq 'StudioProDock' 'src/components/PdfEditorStudio.tsx'
+          grep -Fq 'limpdf:studio-pro' 'src/components/PdfEditorStudio.tsx'
+          grep -Fq 'dataset.limpdfEditorMode !== "studio"' 'src/components/PdfEditorStudio.tsx'
+          grep -Fq 'dataset.limpdfEditorMode !== "precise"' 'src/components/PdfEditorWorkspaceHardened.tsx'
+          grep -Fq 'from "@/lib/pro-pdf-compare"' 'src/lib/pro-pdf-engines.ts'
+          grep -Fq 'from "@/lib/pro-pdf-scan"' 'src/lib/pro-pdf-engines.ts'
+          grep -Fq 'from "@/lib/pro-pdf-links"' 'src/lib/pro-pdf-engines.ts'
+
+      - run: npm ci --no-audit --no-fund
+      - run: npm run lint
+      - run: npm test
+      - run: npx tsx scripts/test-studio-source.ts
+      - run: npx tsx scripts/test-pades-verify.ts
+      - run: npm run build
+      - run: npm run test:perf:build

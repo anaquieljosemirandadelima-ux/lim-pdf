@@ -8,7 +8,8 @@ import { PremiumToolExperience } from "@/components/PremiumToolExperience";
 import { ToolEditorialPanel } from "@/components/ToolEditorialPanel";
 import { ToolIcon } from "@/components/ToolIcon";
 import { ToolTelemetryBridge } from "@/components/ToolTelemetryBridge";
-import { UnifiedConverterWorkspace, converterOutputSlugs, type ConverterOutputSlug } from "@/components/UnifiedConverterWorkspace";
+import { UnifiedConverterWorkspace } from "@/components/UnifiedConverterWorkspace";
+import type { ConverterOutputSlug } from "@/components/UnifiedConverterWorkspace";
 import { allToolBySlug, allTools, isAdvancedToolSlug, type AllToolSlug } from "@/lib/all-tools";
 import type { ToolDefinition, ToolSlug } from "@/lib/tools";
 
@@ -20,7 +21,13 @@ const memorySafeToolSlugs = new Set<ToolSlug>([
   "compactar-pdf",
   "pdf-em-escala-de-cinza",
 ]);
-const converterOutputSet = new Set<AllToolSlug>(converterOutputSlugs as readonly AllToolSlug[]);
+const converterOutputSet = new Set<AllToolSlug>([
+  "pdf-para-word",
+  "pdf-para-excel",
+  "pdf-para-jpg",
+  "pdf-para-png",
+  "extrair-texto-pdf",
+]);
 
 const pageDescriptions: Partial<Record<AllToolSlug, string>> = {
   "editar-pdf": "Edite textos, imagens, páginas e anotações do seu PDF com rapidez e precisão.",

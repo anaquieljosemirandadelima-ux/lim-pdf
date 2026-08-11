@@ -9,17 +9,20 @@ import { NativeTranslator } from "@/components/NativeTranslator";
 import { TrustStrip } from "@/components/TrustStrip";
 import { ADSENSE_CLIENT } from "@/lib/adsense";
 import { allTools } from "@/lib/all-tools";
+import { proTools } from "@/lib/pro-tools";
 import "./globals.css";
 import "./reference-ui-v2.css";
 import "./premium-ui.css";
 import "./premium-suite-v2.css";
 import "./premium-suite-v2-fixes.css";
 import "./launch-hardening.css";
+import "./pro-suite.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://limpdf.com.br";
 const adsenseClient = ADSENSE_CLIENT;
 const googleVerification = process.env.GOOGLE_SITE_VERIFICATION;
-const toolCount = allTools.length;
+const publicTools = [...allTools, ...proTools];
+const toolCount = publicTools.length;
 const structuredData = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
@@ -30,7 +33,7 @@ const structuredData = {
   inLanguage: ["pt-BR", "en", "es"],
   isAccessibleForFree: true,
   offers: { "@type": "Offer", price: "0", priceCurrency: "BRL" },
-  featureList: allTools.map((tool) => tool.name),
+  featureList: publicTools.map((tool) => tool.name),
   publisher: {
     "@type": "Organization",
     name: "LIM PDF",
@@ -41,10 +44,10 @@ const structuredData = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: { default: "LIM PDF — Ferramentas PDF gratuitas e online", template: "%s | LIM PDF" },
-  description: "Edite visualmente, organize páginas, converta, assine, proteja e compacte arquivos PDF gratuitamente, sem cadastro e com processamento no navegador.",
+  title: { default: "LIM PDF — Suíte profissional de PDF gratuita e online", template: "%s | LIM PDF" },
+  description: "Edite, reconheça texto com OCR, compare, crie formulários, assine digitalmente, converta, organize, repare, proteja e otimize PDFs no navegador.",
   applicationName: "LIM PDF",
-  keywords: ["PDF grátis", "ferramentas PDF", "juntar PDF", "editar PDF", "converter PDF", "PDF para Word", "PDF para Excel", "proteger PDF", "compactar PDF", "PDF online"],
+  keywords: ["PDF grátis", "ferramentas PDF", "OCR PDF", "editar PDF", "assinatura digital PDF", "comparar PDF", "formulário PDF", "PDF para PowerPoint", "PDF para Word", "PDF para Excel", "proteger PDF", "compactar PDF", "PDF online"],
   authors: [{ name: "LIM PDF" }],
   creator: "LIM PDF",
   publisher: "LIM PDF",
@@ -61,14 +64,14 @@ export const metadata: Metadata = {
     locale: "pt_BR",
     url: siteUrl,
     siteName: "LIM PDF",
-    title: "LIM PDF — Ferramentas PDF gratuitas e online",
-    description: `${toolCount} ferramentas reais para organizar, editar, converter, proteger e otimizar PDFs no navegador.`,
+    title: "LIM PDF — Suíte profissional de PDF gratuita e online",
+    description: `${toolCount} ferramentas para OCR, edição, organização, conversão, formulários, assinatura, proteção e otimização de PDFs no navegador.`,
     images: [{ url: "/brand/lim-pdf-og.png", width: 1200, height: 630, alt: "LIM PDF" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "LIM PDF — Ferramentas PDF gratuitas",
-    description: "Trabalhe com PDF gratuitamente e diretamente no navegador.",
+    title: "LIM PDF — Suíte profissional de PDF gratuita",
+    description: "OCR, edição, comparação, formulários, assinatura e ferramentas PDF diretamente no navegador.",
     images: ["/brand/lim-pdf-og.png"],
   },
   robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 } },

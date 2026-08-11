@@ -18,6 +18,7 @@ export { readHyperlinks, editHyperlink, removeHyperlink, type PdfHyperlinkInfo }
 export { comparePdfs } from "@/lib/pro-pdf-compare";
 export { cleanScannedPdfEnhanced as cleanScannedPdf, type ScanRotation } from "@/lib/pro-pdf-scan";
 export { optimizePdfAdvancedEnhanced as optimizePdfAdvanced, type AdvancedOptimizeOptions } from "@/lib/pro-pdf-optimize";
-export { extractEmbeddedImages, ocrPdf, repairPdf } from "@/lib/pro-pdf-visual";
+export { extractEmbeddedImagesEnhanced as extractEmbeddedImages } from "@/lib/pro-pdf-images";
+export { ocrPdf, repairPdf } from "@/lib/pro-pdf-visual";
 export { pdfToPptx, pptxToPdf, readZipEntries } from "@/lib/pro-pdf-office";
 export { signPdfPades } from "@/lib/pro-pdf-sign";

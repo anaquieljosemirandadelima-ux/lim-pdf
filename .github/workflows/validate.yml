@@ -1,0 +1,49 @@
+name: Validate LIM PDF
+
+on:
+  push:
+    branches:
+      - main
+      - premium-suite-v2-20260810
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install
+        run: npm ci --no-audit --no-fund
+      - name: Lint
+        run: npm run lint
+      - name: Unit and PDF tests
+        run: npm test
+      - name: Production build
+        run: npm run build
+      - name: Route smoke tests
+        run: |
+          npm run start > /tmp/limpdf-next.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID || true' EXIT
+          READY=0
+          for i in $(seq 1 25); do
+            if curl -fsS http://127.0.0.1:3000/ferramentas/editar-pdf > /dev/null; then
+              READY=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$READY" -ne 1 ]; then
+            cat /tmp/limpdf-next.log
+            exit 1
+          fi
+          npm run test:routes

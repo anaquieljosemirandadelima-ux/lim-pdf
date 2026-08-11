@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AdvancedToolWorkspace } from "@/components/AdvancedToolWorkspace";
 import { MemorySafePdfWorkspace } from "@/components/MemorySafePdfWorkspace";
-import { PdfEditorWorkspaceHardened } from "@/components/PdfEditorWorkspaceHardened";
+import { PdfEditorExperienceSwitcher } from "@/components/PdfEditorExperienceSwitcher";
 import { PdfToolWorkspace } from "@/components/PdfToolWorkspace";
 import { PremiumToolExperience } from "@/components/PremiumToolExperience";
 import { ToolIcon } from "@/components/ToolIcon";
@@ -56,7 +56,6 @@ export default async function ToolPage({ params }: ToolPageProps) {
   const { slug } = await params;
   const tool = allToolBySlug.get(slug as AllToolSlug);
   if (!tool) notFound();
-
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://limpdf.com.br";
   const description = pageDescriptions[tool.slug] || tool.description;
   const softwareSchema = {
@@ -72,45 +71,28 @@ export default async function ToolPage({ params }: ToolPageProps) {
   };
 
   if (isAdvancedToolSlug(tool.slug)) {
-    return (
-      <section className="reference-tool-page">
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }} />
-        <div className="reference-tool-heading">
-          <div><h1>{tool.name}</h1><p>{description}</p></div>
-          <span className={`reference-heading-icon accent-${tool.accent}`} aria-hidden="true"><ToolIcon icon={tool.icon} /></span>
-        </div>
-        <PremiumToolExperience toolName={tool.name} accent={tool.accent} />
-        <div className="reference-workspace-wrap"><AdvancedToolWorkspace tool={tool} /></div>
-      </section>
-    );
+    return <section className="reference-tool-page">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }} />
+      <div className="reference-tool-heading"><div><h1>{tool.name}</h1><p>{description}</p></div><span className={`reference-heading-icon accent-${tool.accent}`} aria-hidden="true"><ToolIcon icon={tool.icon} /></span></div>
+      <PremiumToolExperience toolName={tool.name} toolSlug={tool.slug} accent={tool.accent} />
+      <div className="reference-workspace-wrap"><AdvancedToolWorkspace tool={tool} /></div>
+    </section>;
   }
 
   const baseTool = tool as ToolDefinition;
-
   if (baseTool.slug === "editar-pdf") {
-    return (
-      <section className="reference-tool-page reference-editor-page">
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }} />
-        <div className="reference-tool-heading">
-          <div><h1>{baseTool.name}</h1><p>{description}</p></div>
-        </div>
-        <PremiumToolExperience toolName={baseTool.name} accent={baseTool.accent} editor />
-        <div className="reference-editor-wrap"><PdfEditorWorkspaceHardened /></div>
-      </section>
-    );
+    return <section className="reference-tool-page reference-editor-page">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }} />
+      <div className="reference-tool-heading"><div><h1>{baseTool.name}</h1><p>{description}</p></div></div>
+      <PremiumToolExperience toolName={baseTool.name} toolSlug={baseTool.slug} accent={baseTool.accent} editor />
+      <div className="reference-editor-wrap"><PdfEditorExperienceSwitcher /></div>
+    </section>;
   }
 
-  return (
-    <section className="reference-tool-page">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }} />
-      <div className="reference-tool-heading">
-        <div><h1>{baseTool.name}</h1><p>{description}</p></div>
-        <span className={`reference-heading-icon accent-${baseTool.accent}`} aria-hidden="true"><ToolIcon icon={baseTool.icon} /></span>
-      </div>
-      <PremiumToolExperience toolName={baseTool.name} accent={baseTool.accent} />
-      <div className="reference-workspace-wrap">
-        {memorySafeToolSlugs.has(baseTool.slug) ? <MemorySafePdfWorkspace tool={baseTool} /> : <PdfToolWorkspace tool={baseTool} />}
-      </div>
-    </section>
-  );
+  return <section className="reference-tool-page">
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }} />
+    <div className="reference-tool-heading"><div><h1>{baseTool.name}</h1><p>{description}</p></div><span className={`reference-heading-icon accent-${baseTool.accent}`} aria-hidden="true"><ToolIcon icon={baseTool.icon} /></span></div>
+    <PremiumToolExperience toolName={baseTool.name} toolSlug={baseTool.slug} accent={baseTool.accent} />
+    <div className="reference-workspace-wrap">{memorySafeToolSlugs.has(baseTool.slug) ? <MemorySafePdfWorkspace tool={baseTool} /> : <PdfToolWorkspace tool={baseTool} />}</div>
+  </section>;
 }

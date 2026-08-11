@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test:unit": "tsx scripts/test-page-selection.ts",
     "test:pdf": "tsx scripts/smoke-pdf-tools.ts",
-    "test": "npm run test:unit && npm run test:pdf",
+    "test:experience": "tsx scripts/test-tool-experience.ts",
+    "test": "npm run test:unit && npm run test:pdf && npm run test:experience",
     "test:routes": "node scripts/smoke-routes.mjs",
     "check": "npm run lint && npm test && npm run build"
   },

@@ -7,12 +7,14 @@ import { DEFAULT_LANGUAGE, getLanguage, normalizeLanguage, supportedLanguages, t
 
 export function Header() {
   const [languageOpen, setLanguageOpen] = useState(false);
-  const [selectedLanguage, setSelectedLanguage] = useState<LanguageCode>(() => {
-    if (typeof window === "undefined") return DEFAULT_LANGUAGE;
-    return normalizeLanguage(window.localStorage.getItem("limpdf_language") ?? window.navigator.language);
-  });
+  const [selectedLanguage, setSelectedLanguage] = useState<LanguageCode>(DEFAULT_LANGUAGE);
   const headerRef = useRef<HTMLElement>(null);
   const currentLanguage = getLanguage(selectedLanguage);
+
+  useEffect(() => {
+    const persisted = normalizeLanguage(window.localStorage.getItem("limpdf_language") ?? window.navigator.language);
+    setSelectedLanguage(persisted);
+  }, []);
 
   useEffect(() => {
     const onPointer = (event: MouseEvent) => {

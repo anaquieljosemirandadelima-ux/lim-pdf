@@ -87,7 +87,7 @@ export function sendToolMetric(payload: MetricPayload) {
       body,
       keepalive: true,
       credentials: "same-origin",
-    });
+    }).catch(() => undefined);
   } catch {
     // Telemetria nunca pode interromper uma ferramenta.
   }

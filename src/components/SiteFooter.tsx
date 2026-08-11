@@ -1,0 +1,5 @@
+import Link from "next/link";
+
+export function SiteFooter() {
+  return <footer className="site-footer"><div className="site-footer-brand"><strong>LIM PDF</strong><p>Ferramentas gratuitas para editar, converter, organizar e proteger PDFs diretamente no navegador.</p></div><nav aria-label="Rodapé"><div><span>Produto</span><Link href="/ferramentas">Ferramentas</Link><Link href="/ferramentas/editar-pdf">Editar PDF</Link><Link href="/ferramentas/converter-pdf">Converter PDF</Link><Link href="/ferramentas/ocr-pdf">OCR PDF</Link></div><div><span>Conteúdo</span><Link href="/guias">Guias</Link><Link href="/sobre">Sobre</Link><Link href="/contato">Contato</Link></div><div><span>Políticas</span><Link href="/privacidade">Privacidade</Link><Link href="/cookies">Cookies</Link><Link href="/termos">Termos</Link><Link href="/seguranca">Segurança</Link><Link href="/acessibilidade">Acessibilidade</Link></div></nav><div className="site-footer-bottom"><span>© 2026 LIM PDF</span><span>Sem cadastro obrigatório · processamento local quando indicado</span></div></footer>;
+}

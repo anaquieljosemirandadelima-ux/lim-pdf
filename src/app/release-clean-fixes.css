@@ -1,0 +1,30 @@
+.unified-converter-host .selected-files-title > button,
+.unified-converter-host .selected-files .remove-file,
+.unified-converter-host .selected-file-row > button[aria-label^="Remover"] {
+  display: none !important;
+}
+
+.unified-converter-host .selected-files-title::after {
+  content: "Use ‘Trocar arquivo’ acima para substituir o PDF";
+  margin-left: auto;
+  color: #7b8491;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.limpdf-no-ads ins.adsbygoogle,
+.limpdf-no-ads .google-auto-placed,
+.limpdf-no-ads iframe[id^="google_ads_iframe"],
+.limpdf-no-ads iframe[src*="googleads.g.doubleclick.net"],
+.limpdf-no-ads iframe[src*="tpc.googlesyndication.com"],
+.limpdf-no-ads div[id^="google_ads_iframe"],
+.limpdf-no-ads div[id^="google_vignette"] {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+@media (max-width: 720px) {
+  .unified-converter-host .selected-files-title::after {
+    display: none;
+  }
+}

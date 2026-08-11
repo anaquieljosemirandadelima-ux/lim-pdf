@@ -1,0 +1,51 @@
+name: Pro Compare Patch
+
+on:
+  push:
+    branches:
+      - pro-suite-ocr-editor-20260810
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[compare-patched]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: pro-suite-ocr-editor-20260810
+          fetch-depth: 0
+      - name: Route compare tool to semantic+visual engine
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          barrel = Path('src/lib/pro-pdf-engines.ts')
+          s = barrel.read_text()
+          s = s.replace('  comparePdfs,\n', '')
+          if 'from "@/lib/pro-pdf-compare"' not in s:
+              s += '\nexport { comparePdfs } from "@/lib/pro-pdf-compare";\n'
+          barrel.write_text(s)
+
+          workspace = Path('src/components/ProPdfWorkspace.tsx')
+          s = workspace.read_text()
+          old = 'else if (tool.slug === "comparar-pdfs") { const result = await comparePdfs(files[0], files[1], compareThreshold, progress); downloadBytes(result.bytes, result.filename); }'
+          new = 'else if (tool.slug === "comparar-pdfs") { const result = await comparePdfs(files[0], files[1], compareThreshold, progress); downloadBytes(result.bytes, result.filename); setReport(result.report); }'
+          if old in s:
+              s = s.replace(old, new)
+          workspace.write_text(s)
+          PY
+      - run: |
+          npm ci --no-audit --no-fund
+          npm run lint
+          npm test
+          npm run build
+      - name: Commit
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/lib/pro-pdf-engines.ts src/components/ProPdfWorkspace.tsx
+          git commit -m "Combina comparação visual e textual [compare-patched]"
+          git push origin HEAD:pro-suite-ocr-editor-20260810

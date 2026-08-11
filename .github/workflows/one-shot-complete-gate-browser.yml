@@ -1,0 +1,68 @@
+name: One Shot Complete Gate Browser
+
+on:
+  push:
+    branches:
+      - pro-suite-ocr-editor-20260810
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: pro-suite-ocr-editor-20260810
+          fetch-depth: 0
+      - name: Add browser QA to complete gate
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('.github/workflows/pro-suite-complete-gate.yml')
+          s = p.read_text()
+          marker = '      - run: npm run test:perf:build\n'
+          addition = '''      - run: npm run test:perf:build
+      - run: npx playwright-core install --with-deps chromium
+      - run: npm run qa:fixtures
+      - name: Full browser release proof
+        shell: bash
+        run: |
+          npm run start > /tmp/limpdf-complete-gate.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID || true' EXIT
+          READY=0
+          for i in $(seq 1 45); do
+            if curl -fsS http://127.0.0.1:3000/ferramentas/ocr-pdf >/dev/null; then READY=1; break; fi
+            sleep 1
+          done
+          if [ "$READY" -ne 1 ]; then cat /tmp/limpdf-complete-gate.log; exit 1; fi
+          npm run test:routes
+          npm run test:telemetry-consent
+          npm run test:e2e
+          npm run test:e2e:pro
+          npx tsx scripts/test-ocr-searchable-browser.ts
+          npx tsx scripts/test-studio-pro-browser.ts
+          npx tsx scripts/test-office-fidelity-browser.ts
+          npm run test:visual
+          npm run test:perf:browser
+'''
+          if 'Full browser release proof' not in s:
+            if marker not in s:
+              raise SystemExit('complete gate build marker missing')
+            s = s.replace(marker, addition)
+          p.write_text(s)
+          PY
+          rm -f .github/workflows/one-shot-complete-gate-browser.yml
+      - name: Validate YAML shape
+        run: |
+          grep -Fq 'Full browser release proof' .github/workflows/pro-suite-complete-gate.yml
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Exige prova completa em navegador antes do merge"
+          git push origin HEAD:pro-suite-ocr-editor-20260810

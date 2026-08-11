@@ -166,12 +166,11 @@ async function negativeCases(page: Page) {
   await page.locator("button.process-button").click();
   assert.match(await terminalErrorText(page), /confirmação|senha/i);
 
-  console.log("QA negativo senha incorreta");
+  console.log("QA negativo senha obrigatória para desbloquear");
   await page.goto(`${baseUrl}/ferramentas/desbloquear-pdf`, { waitUntil: "networkidle" });
   await page.locator('input[type="file"]').first().setInputFiles(fixture("protected.pdf"));
-  await page.locator('input[type="password"]').first().fill("senha-incorreta");
   await page.locator("button.process-button").click();
-  assert.match(await terminalErrorText(page), /senha|password|desbloquear|criptograf/i);
+  assert.match(await terminalErrorText(page), /informe|senha/i);
 
   console.log("QA negativo PDF sem camada de texto");
   await page.goto(`${baseUrl}/ferramentas/pdf-para-word`, { waitUntil: "networkidle" });

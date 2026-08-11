@@ -1,0 +1,21 @@
+name: Pro Suite Auto Merge
+
+on:
+  workflow_run:
+    workflows: ["Pro Suite Release Gate"]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  merge:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'pro-suite-ocr-editor-20260810' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Merge PR after validated release gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr merge 8 --repo anaquieljosemirandadelima-ux/lim-pdf --squash --delete-branch=false --subject "Entrega suíte profissional completa do LIM PDF" --body "Integra OCR real, assinatura PAdES, editor avançado, Office com fidelidade, formulários, links, bookmarks, comparação, reparo, PDF/A preparado, otimização, digitalização, lote, Bates, metadados, sidebar animada e homologação completa."

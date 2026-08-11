@@ -2,12 +2,19 @@ import { createStoredZipFromBlobs } from "@/lib/browser-files";
 import { canvasToBlob, loadPdfJsDocument } from "@/lib/pdf-render";
 import { safeBaseName, type Progress } from "@/lib/pro-pdf-core";
 
-function imageObjectToCanvas(image: any) {
-  const width = Number(image?.width || image?.bitmap?.width || 0); const height = Number(image?.height || image?.bitmap?.height || 0);
+type PdfRasterObject = { width?: unknown; height?: unknown; bitmap?: unknown; data?: unknown };
+type PdfObjectStore = { get: (name: string, callback: (value: unknown) => void) => unknown };
+type PdfPageObjectSource = { objs: PdfObjectStore };
+
+function imageObjectToCanvas(image: unknown) {
+  if (!image || typeof image !== "object") throw new Error("Imagem incorporada inválida.");
+  const value = image as PdfRasterObject;
+  const bitmap = value.bitmap && typeof value.bitmap === "object" ? value.bitmap as { width?: unknown; height?: unknown } : null;
+  const width = Number(value.width || bitmap?.width || 0); const height = Number(value.height || bitmap?.height || 0);
   if (!width || !height) throw new Error("Imagem incorporada sem dimensões válidas.");
   const canvas = document.createElement("canvas"); canvas.width = width; canvas.height = height; const ctx = canvas.getContext("2d", { alpha: true }); if (!ctx) throw new Error("Canvas indisponível.");
-  if (image.bitmap) { ctx.drawImage(image.bitmap, 0, 0, width, height); return canvas; }
-  const data = image.data as Uint8Array | Uint8ClampedArray | undefined; if (!data) throw new Error("Imagem incorporada não expôs pixels.");
+  if (value.bitmap) { ctx.drawImage(value.bitmap as CanvasImageSource, 0, 0, width, height); return canvas; }
+  const data = value.data instanceof Uint8Array || value.data instanceof Uint8ClampedArray ? value.data : undefined; if (!data) throw new Error("Imagem incorporada não expôs pixels.");
   const rgba = new Uint8ClampedArray(width * height * 4);
   if (data.length === rgba.length) rgba.set(data);
   else if (data.length === width * height * 3) for (let s = 0, d = 0; s < data.length; s += 3, d += 4) { rgba[d] = data[s]; rgba[d + 1] = data[s + 1]; rgba[d + 2] = data[s + 2]; rgba[d + 3] = 255; }
@@ -16,10 +23,10 @@ function imageObjectToCanvas(image: any) {
   ctx.putImageData(new ImageData(rgba, width, height), 0, 0); return canvas;
 }
 
-async function xObject(page: any, name: string) {
-  return new Promise<any>((resolve) => {
+async function xObject(page: PdfPageObjectSource, name: string) {
+  return new Promise<unknown>((resolve) => {
     let settled = false; const timer = window.setTimeout(() => { if (!settled) { settled = true; resolve(null); } }, 2500);
-    try { page.objs.get(name, (value: any) => { if (settled) return; settled = true; window.clearTimeout(timer); resolve(value); }); } catch { window.clearTimeout(timer); resolve(null); }
+    try { page.objs.get(name, (value: unknown) => { if (settled) return; settled = true; window.clearTimeout(timer); resolve(value); }); } catch { window.clearTimeout(timer); resolve(null); }
   });
 }
 
@@ -40,7 +47,7 @@ export async function extractEmbeddedImagesEnhanced(file: File, onProgress?: Pro
           }
         }
         for (const name of names) {
-          const image = await xObject(page, name); if (!image) continue;
+          const image = await xObject(page as unknown as PdfPageObjectSource, name); if (!image) continue;
           try { const canvas = imageObjectToCanvas(image); const blob = await canvasToBlob(canvas, "image/png"); xObjectCount += 1; entries.push({ name: `pagina-${String(pageNumber).padStart(3, "0")}-imagem-${String(xObjectCount).padStart(3, "0")}.png`, data: blob }); canvas.width = 1; } catch { /* continua */ }
         }
       } finally { page.cleanup(); }

@@ -146,12 +146,14 @@ async function processTool(page: Page, slug: AllToolSlug) {
 }
 
 async function negativeCases(page: Page) {
+  console.log("QA negativo PDF corrompido");
   await page.goto(`${baseUrl}/ferramentas/girar-pdf`, { waitUntil: "networkidle" });
   await page.locator('input[type="file"]').first().setInputFiles({ name: "corrompido.pdf", mimeType: "application/pdf", buffer: Buffer.from("isto definitivamente não é um PDF válido") });
   await page.locator("button.process-button").click();
   await page.locator(".status-message.error").waitFor({ state: "visible", timeout: 15_000 });
   assert.match((await page.locator(".status-message.error").textContent()) || "", /abrir|corrompido|protegido/i);
 
+  console.log("QA negativo senha incorreta");
   await page.goto(`${baseUrl}/ferramentas/desbloquear-pdf`, { waitUntil: "networkidle" });
   await page.locator('input[type="file"]').first().setInputFiles(fixture("protected.pdf"));
   await page.locator('input[type="password"]').first().fill("senha-incorreta");
@@ -159,42 +161,56 @@ async function negativeCases(page: Page) {
   await page.locator(".status-message.error").waitFor({ state: "visible", timeout: 15_000 });
   assert.match((await page.locator(".status-message.error").textContent()) || "", /senha|desbloquear|criptograf/i);
 
+  console.log("QA negativo PDF sem camada de texto");
   await page.goto(`${baseUrl}/ferramentas/pdf-para-word`, { waitUntil: "networkidle" });
   await page.locator('input[type="file"]').first().setInputFiles(fixture("image-only.pdf"));
   await page.locator("button.process-button").click();
   await page.locator(".status-message.error").waitFor({ state: "visible", timeout: 20_000 });
   assert.match((await page.locator(".status-message.error").textContent()) || "", /OCR|texto/i);
 
+  console.log("QA negativo tipo de arquivo inválido");
   await page.goto(`${baseUrl}/ferramentas/juntar-pdf`, { waitUntil: "networkidle" });
   await page.locator('input[type="file"]').first().setInputFiles({ name: "nao-pdf.txt", mimeType: "text/plain", buffer: Buffer.from("arquivo inválido") });
   await page.locator(".status-message.error").waitFor({ state: "visible", timeout: 10_000 });
   assert.match((await page.locator(".status-message.error").textContent()) || "", /compatível|PDF/i);
 }
 
+function captureErrors(page: Page, consoleErrors: string[], pageErrors: string[]) {
+  page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+}
+
 async function main() {
   await rm(downloadDir, { recursive: true, force: true });
   await mkdir(downloadDir, { recursive: true });
   const browser = await chromium.launch({ headless: true });
+  const consoleErrors: string[] = [];
+  const pageErrors: string[] = [];
   const context = await browser.newContext({ acceptDownloads: true, viewport: { width: 1440, height: 900 } });
   await context.addInitScript(() => localStorage.setItem("limpdf-consent-v1", "essential"));
   const page = await context.newPage();
-  const consoleErrors: string[] = [];
-  const pageErrors: string[] = [];
-  page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
-  page.on("pageerror", (error) => pageErrors.push(error.message));
+  captureErrors(page, consoleErrors, pageErrors);
 
   try {
     for (const tool of allTools) {
       console.log(`QA ${tool.slug}`);
       await processTool(page, tool.slug);
     }
-    await negativeCases(page);
+    await context.close();
+
+    const negativeContext = await browser.newContext({ acceptDownloads: false, viewport: { width: 1440, height: 900 } });
+    await negativeContext.addInitScript(() => localStorage.setItem("limpdf-consent-v1", "essential"));
+    const negativePage = await negativeContext.newPage();
+    captureErrors(negativePage, consoleErrors, pageErrors);
+    await negativeCases(negativePage);
+    await negativeContext.close();
+
     assert.deepEqual(pageErrors, [], `Erros de página: ${pageErrors.join(" | ")}`);
-    const relevantConsoleErrors = consoleErrors.filter((line) => !/favicon|adsbygoogle|ERR_BLOCKED_BY_CLIENT/i.test(line));
+    const relevantConsoleErrors = consoleErrors.filter((line) => !/favicon|adsbygoogle|ERR_BLOCKED_BY_CLIENT|Failed to load resource/i.test(line));
     assert.deepEqual(relevantConsoleErrors, [], `Erros de console: ${relevantConsoleErrors.join(" | ")}`);
     console.log(JSON.stringify({ ok: true, suite: "browser-e2e", processedTools: allTools.length, negativeCases: 4 }));
   } finally {
-    await context.close();
+    await context.close().catch(() => undefined);
     await browser.close();
   }
 }

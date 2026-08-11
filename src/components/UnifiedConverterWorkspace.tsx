@@ -39,6 +39,17 @@ export function UnifiedConverterWorkspace({ initialOutput = "pdf-para-word" }: {
     setFile(selected);
   }
 
+  function clearFile() {
+    setFile(null);
+    if (inputRef.current) inputRef.current.value = "";
+  }
+
+  function openPicker() {
+    if (!inputRef.current) return;
+    inputRef.current.value = "";
+    inputRef.current.click();
+  }
+
   useEffect(() => {
     if (!file || !hostRef.current) return;
     const frame = window.requestAnimationFrame(() => {
@@ -56,7 +67,7 @@ export function UnifiedConverterWorkspace({ initialOutput = "pdf-para-word" }: {
 
   return <section className="workspace unified-converter">
     <div className="unified-converter-upload" onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); selectFile(event.dataTransfer.files[0] || null); }}>
-      {!file ? <><span><UploadCloud size={30} /></span><div><strong>Escolha o PDF uma vez</strong><small>Depois você pode trocar o formato de saída sem voltar ao catálogo.</small></div><button className="primary-button" type="button" onClick={() => inputRef.current?.click()}><FileText size={18} /> Selecionar PDF</button></> : <><span><FileText size={27} /></span><div className="unified-file-copy"><strong>{file.name}</strong><small>{humanSize(file.size)} · escolha abaixo como deseja converter</small></div><button className="secondary-button" type="button" onClick={() => { setFile(null); }}><Trash2 size={15} /> Trocar arquivo</button></>}
+      {!file ? <><span><UploadCloud size={30} /></span><div><strong>Escolha o PDF uma vez</strong><small>Depois você pode trocar o formato de saída sem voltar ao catálogo.</small></div><button className="primary-button" type="button" onClick={openPicker}><FileText size={18} /> Selecionar PDF</button></> : <><span><FileText size={27} /></span><div className="unified-file-copy"><strong>{file.name}</strong><small>{humanSize(file.size)} · escolha abaixo como deseja converter</small></div><button className="secondary-button" type="button" onClick={clearFile}><Trash2 size={15} /> Trocar arquivo</button></>}
       <input ref={inputRef} hidden type="file" accept="application/pdf,.pdf" onChange={(event) => selectFile(event.target.files?.[0] || null)} />
     </div>
 

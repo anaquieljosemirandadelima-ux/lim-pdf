@@ -1,0 +1,238 @@
+name: Master Finalize Pro Suite
+
+on:
+  push:
+    branches:
+      - pro-suite-ocr-editor-20260810
+
+permissions:
+  contents: write
+
+concurrency:
+  group: master-finalize-pro-suite
+  cancel-in-progress: false
+
+jobs:
+  finalize:
+    if: ${{ !contains(github.event.head_commit.message, '[master-finalized]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: pro-suite-ocr-editor-20260810
+          fetch-depth: 0
+
+      - name: Force all critical integrations into one deterministic tree
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json, re
+
+          # 1) Persistent editor modes + active-mode keyboard gate.
+          switcher = Path('src/components/PdfEditorExperienceSwitcher.tsx')
+          switcher.write_text('''"use client";\n\nimport dynamic from "next/dynamic";\nimport { ShieldCheck, Sparkles } from "lucide-react";\nimport { useEffect, useState } from "react";\n\nconst PdfEditorStudio = dynamic(() => import("@/components/PdfEditorStudio").then((module) => module.PdfEditorStudio), { loading: () => <div className="editor-mode-loading" role="status">Preparando o Studio…</div> });\nconst PdfEditorWorkspaceHardened = dynamic(() => import("@/components/PdfEditorWorkspaceHardened").then((module) => module.PdfEditorWorkspaceHardened), { loading: () => <div className="editor-mode-loading" role="status">Preparando o modo preciso…</div> });\n\ntype EditorMode = "studio" | "precise";\n\nexport function PdfEditorExperienceSwitcher() {\n  const [mode, setMode] = useState<EditorMode>("studio");\n  const [preciseMounted, setPreciseMounted] = useState(false);\n  useEffect(() => {\n    document.documentElement.dataset.limpdfEditorMode = mode;\n    return () => { delete document.documentElement.dataset.limpdfEditorMode; };\n  }, [mode]);\n  function selectMode(next: EditorMode) { if (next === "precise") setPreciseMounted(true); setMode(next); }\n  return (\n    <section className="editor-experience-switcher">\n      <div className="editor-mode-tabs" role="tablist" aria-label="Modo de edição">\n        <button type="button" role="tab" aria-selected={mode === "studio"} className={mode === "studio" ? "active" : ""} onClick={() => selectMode("studio")}><Sparkles size={16} /><span><strong>Studio</strong><small>Desenho, formas, carimbos e tipografia</small></span></button>\n        <button type="button" role="tab" aria-selected={mode === "precise"} className={mode === "precise" ? "active" : ""} onClick={() => selectMode("precise")}><ShieldCheck size={16} /><span><strong>Modo preciso</strong><small>Texto detectado, camadas e rascunhos</small></span></button>\n      </div>\n      <div className="editor-mode-note">{mode === "studio" ? "Studio é ideal para criar, desenhar e anotar. O Modo preciso permanece montado depois do primeiro acesso para não perder a sessão." : "Modo preciso preserva substituição sanitizada de texto, seleção múltipla, camadas, histórico em memória e rascunhos ao alternar de modo."}</div>\n      <div data-editor-mode="studio" hidden={mode !== "studio"} aria-hidden={mode !== "studio"}><PdfEditorStudio /></div>\n      {preciseMounted ? <div data-editor-mode="precise" hidden={mode !== "precise"} aria-hidden={mode !== "precise"}><PdfEditorWorkspaceHardened /></div> : null}\n    </section>\n  );\n}\n''')
+
+          def gate_keydown(path, mode):
+              p = Path(path); s = p.read_text(); marker = f'dataset.limpdfEditorMode !== "{mode}"'
+              if marker in s: return
+              pattern = re.compile(r'window\.addEventListener\("keydown",\s*([A-Za-z_$][\w$]*)\);\s*\n\s*return \(\) => window\.removeEventListener\("keydown",\s*\1\);')
+              match = pattern.search(s)
+              if not match: raise SystemExit(f'keydown listener not found: {path}')
+              fn = match.group(1); gated = 'gated' + fn[:1].upper() + fn[1:]
+              repl = f'''const {gated} = (event: KeyboardEvent) => {{\n      if (document.documentElement.dataset.limpdfEditorMode !== "{mode}") return;\n      {fn}(event);\n    }};\n    window.addEventListener("keydown", {gated});\n    return () => window.removeEventListener("keydown", {gated});'''
+              p.write_text(s[:match.start()] + repl + s[match.end():])
+          gate_keydown('src/components/PdfEditorStudio.tsx', 'studio')
+          gate_keydown('src/components/PdfEditorWorkspaceHardened.tsx', 'precise')
+
+          # 2) Studio Pro integration, idempotent.
+          p = Path('src/components/PdfEditorStudio.tsx'); s = p.read_text()
+          if 'import { StudioProDock }' not in s:
+              anchor = 'import { SignaturePad } from "./SignaturePad";'
+              if anchor not in s: raise SystemExit('Studio SignaturePad import missing')
+              s = s.replace(anchor, anchor + '\nimport { StudioProDock } from "./StudioProDock";')
+          if 'data-studio-object-id={object.id}' not in s:
+              s = s.replace('key={object.id}', 'key={object.id} data-studio-object-id={object.id} data-studio-group-id={(object as StudioObject & { groupId?: string }).groupId || ""}', 1)
+          if 'limpdf:studio-pro' not in s:
+              state_match = re.search(r'(const \[objects,\s*setObjects\]\s*=\s*useState<StudioObject\[\]>\(\[\]\);)', s)
+              if not state_match: raise SystemExit('Studio objects state missing')
+              hook = r'''
+
+  const studioProSyncingRef = useRef(false);
+  const studioProPreviousObjectsRef = useRef<StudioObject[]>([]);
+  useEffect(() => {
+    if (studioProSyncingRef.current) { studioProSyncingRef.current = false; studioProPreviousObjectsRef.current = objects; return; }
+    const previous = new Map(studioProPreviousObjectsRef.current.map((object) => [object.id, object]));
+    const moved = objects.find((object) => { const grouped = (object as StudioObject & { groupId?: string }).groupId; const before = previous.get(object.id); return grouped && before && (before.x !== object.x || before.y !== object.y); });
+    if (!moved) { studioProPreviousObjectsRef.current = objects; return; }
+    const groupId = (moved as StudioObject & { groupId?: string }).groupId; const before = previous.get(moved.id)!; const dx = moved.x - before.x; const dy = moved.y - before.y;
+    if (!groupId || (!dx && !dy)) { studioProPreviousObjectsRef.current = objects; return; }
+    studioProSyncingRef.current = true; studioProPreviousObjectsRef.current = objects;
+    setObjects((current) => current.map((object) => { const objectGroup = (object as StudioObject & { groupId?: string }).groupId; if (object.id === moved.id || objectGroup !== groupId || object.locked) return object; return { ...object, x: object.x + dx, y: object.y + dy } as StudioObject; }));
+  }, [objects]);
+
+  useEffect(() => {
+    type StudioProDetail = { action: "group" | "ungroup" | "copy-page" | "duplicate" | "delete-selection" | "save-style" | "apply-style"; ids?: string[]; targetPage?: number; styleName?: string };
+    const styleKey = (name: string) => `limpdf:studio-style:${name.trim().toLowerCase()}`;
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<StudioProDetail>).detail; if (!detail?.action) return; const ids = new Set(detail.ids || []);
+      if (detail.action === "group" && ids.size >= 2) { const groupId = crypto.randomUUID(); setObjects((current) => current.map((object) => ids.has(object.id) ? ({ ...object, groupId } as StudioObject) : object)); return; }
+      if (detail.action === "ungroup" && ids.size) { setObjects((current) => current.map((object) => { if (!ids.has(object.id)) return object; const next = { ...object } as StudioObject & { groupId?: string }; delete next.groupId; return next as StudioObject; })); return; }
+      if ((detail.action === "duplicate" || detail.action === "copy-page") && ids.size) {
+        setObjects((current) => { const selected = current.filter((object) => ids.has(object.id)); if (!selected.length) return current; const target = pages[Math.max(0, Math.min(pages.length - 1, (detail.targetPage || 1) - 1))]; const pageIndex = detail.action === "copy-page" ? (target?.pageIndex ?? selected[0].pageIndex) : selected[0].pageIndex; const maxZ = Math.max(0, ...current.map((object) => object.zIndex)); const clones = selected.map((object, index) => { const clone = { ...object, id: crypto.randomUUID(), pageIndex, x: object.x + 8, y: object.y - 8, zIndex: maxZ + index + 1 } as StudioObject & { groupId?: string }; delete clone.groupId; return clone as StudioObject; }); return [...current, ...clones]; }); return;
+      }
+      if (detail.action === "delete-selection" && ids.size) { setObjects((current) => current.filter((object) => !ids.has(object.id))); return; }
+      if (detail.action === "save-style" && ids.size && detail.styleName?.trim()) { const source = objects.find((object) => ids.has(object.id)); if (!source) return; const candidate = source as unknown as Record<string, unknown>; const keys = ["color", "fillColor", "strokeColor", "fontSize", "fontFamily", "bold", "italic", "opacity", "strokeWidth"]; const style = Object.fromEntries(keys.filter((key) => key in candidate).map((key) => [key, candidate[key]])); try { localStorage.setItem(styleKey(detail.styleName), JSON.stringify(style)); window.dispatchEvent(new Event("limpdf:studio-pro-style-saved")); } catch {} return; }
+      if (detail.action === "apply-style" && detail.styleName?.trim()) { try { const raw = localStorage.getItem(styleKey(detail.styleName)); if (!raw) return; const style = JSON.parse(raw) as Record<string, unknown>; setObjects((current) => current.map((object) => !ids.size || ids.has(object.id) ? ({ ...object, ...style } as StudioObject) : object)); } catch {} }
+    };
+    window.addEventListener("limpdf:studio-pro", handler); return () => window.removeEventListener("limpdf:studio-pro", handler);
+  }, [objects, pages]);
+'''
+              s = s[:state_match.end()] + hook + s[state_match.end():]
+          if '<StudioProDock />' not in s:
+              match = re.search(r'(<(?:section|div)\s+className=(?:"studio-shell[^\"]*"|\{`studio-shell[^`]*`\})[^>]*>)', s)
+              if not match: raise SystemExit('studio-shell root missing')
+              s = s[:match.end()] + '\n        <StudioProDock />' + s[match.end():]
+          p.write_text(s)
+
+          # 3) Barrel exports must point to enhanced engines.
+          p = Path('src/lib/pro-pdf-engines.ts'); s = p.read_text()
+          s = s.replace('  comparePdfs,\n', '').replace('  cleanScannedPdf,\n', '').replace('  optimizePdfAdvanced,\n', '')
+          required = [
+            'export { createFormPdfAdvanced as createFormPdf } from "@/lib/pro-pdf-form";',
+            'export { addBookmarksAdvanced as addBookmarks, removeAllHyperlinks } from "@/lib/pro-pdf-navigation";',
+            'export { comparePdfs } from "@/lib/pro-pdf-compare";',
+            'export { cleanScannedPdfEnhanced as cleanScannedPdf, type ScanRotation } from "@/lib/pro-pdf-scan";',
+            'export { optimizePdfAdvancedEnhanced as optimizePdfAdvanced } from "@/lib/pro-pdf-optimize";',
+            'export { editHyperlink, readHyperlinks, removeHyperlink, type PdfHyperlinkInfo } from "@/lib/pro-pdf-links";',
+          ]
+          for line in required:
+              if line not in s: s += '\n' + line
+          p.write_text(s + ('\n' if not s.endswith('\n') else ''))
+
+          # 4) Route specialized workspaces.
+          p = Path('src/app/ferramentas/[slug]/page.tsx'); s = p.read_text()
+          def add_import(anchor, line):
+              nonlocal_dummy = None
+              return
+          if 'OfficeFidelityWorkspace' not in s:
+              s = s.replace('import { MemorySafePdfWorkspace } from "@/components/MemorySafePdfWorkspace";', 'import { MemorySafePdfWorkspace } from "@/components/MemorySafePdfWorkspace";\nimport { OfficeFidelityWorkspace } from "@/components/OfficeFidelityWorkspace";')
+          if 'ProLinksWorkspace' not in s:
+              s = s.replace('import { ProNavigationWorkspace } from "@/components/ProNavigationWorkspace";', 'import { ProNavigationWorkspace } from "@/components/ProNavigationWorkspace";\nimport { ProLinksWorkspace } from "@/components/ProLinksWorkspace";')
+          if 'officeFidelityToolSlugs' not in s:
+              anchor = 'const memorySafeToolSlugs = new Set<ToolSlug>(["pdf-para-jpg", "pdf-para-png", "compactar-pdf", "pdf-em-escala-de-cinza"]);'
+              s = s.replace(anchor, anchor + '\nconst officeFidelityToolSlugs = new Set<AllToolSlug>(["pdf-para-word", "pdf-para-excel", "word-para-pdf", "excel-para-pdf"]);')
+          s = s.replace('const navigationProTools = new Set<ProToolSlug>(["links-pdf", "bookmarks-pdf"]);', 'const navigationProTools = new Set<ProToolSlug>(["bookmarks-pdf"]);')
+          s = s.replace('const Workspace = navigationProTools.has(proTool.slug) ? ProNavigationWorkspace : ProPdfWorkspace;', 'const Workspace = proTool.slug === "links-pdf" ? ProLinksWorkspace : navigationProTools.has(proTool.slug) ? ProNavigationWorkspace : ProPdfWorkspace;')
+          s = s.replace('<div className="reference-workspace-wrap"><AdvancedToolWorkspace tool={advancedTool} /></div>', '<div className="reference-workspace-wrap">{officeFidelityToolSlugs.has(advancedTool.slug) ? <OfficeFidelityWorkspace tool={advancedTool} /> : <AdvancedToolWorkspace tool={advancedTool} />}</div>')
+          p.write_text(s)
+
+          # 5) Pro workspace scan/optimizer/signature/batch polish.
+          p = Path('src/components/ProPdfWorkspace.tsx'); s = p.read_text()
+          if 'folderInputRef' not in s: s = s.replace('const fileInputRef = useRef<HTMLInputElement>(null);', 'const fileInputRef = useRef<HTMLInputElement>(null);\n  const folderInputRef = useRef<HTMLInputElement>(null);')
+          s = s.replace('<option value="signature">Assinatura visual</option>', '<option value="signature">Campo de assinatura digital</option>')
+          s = s.replace('const [cleanDeskew, setCleanDeskew] = useState(true); const [cleanBlank, setCleanBlank] = useState(true); const [cleanStrength, setCleanStrength] = useState(1); const [cleanRotate, setCleanRotate] = useState(0);', 'const [cleanDeskew, setCleanDeskew] = useState(true); const [cleanBlank, setCleanBlank] = useState(true); const [cleanStrength, setCleanStrength] = useState(1); const [cleanRotate, setCleanRotate] = useState<"auto" | 0 | 90 | -90 | 180>("auto");')
+          s = s.replace('setReport([`${result.removed} página(s) em branco removida(s).`]);', 'setReport([`${result.correctedOrientation} página(s) com orientação corrigida automaticamente.`, `${result.fineDeskewed} página(s) com inclinação fina corrigida.`, `${result.removed} página(s) em branco removida(s).`]);')
+          old_rotate = '<label><span>Rotação adicional</span><select value={cleanRotate} onChange={(event) => setCleanRotate(Number(event.target.value))}><option value={0}>Nenhuma</option><option value={90}>90°</option><option value={-90}>-90°</option><option value={180}>180°</option></select></label>'
+          new_rotate = '<label><span>Orientação</span><select value={cleanRotate} onChange={(event) => { const value = event.target.value; setCleanRotate(value === "auto" ? "auto" : Number(value) as 0 | 90 | -90 | 180); }}><option value="auto">Automática</option><option value={0}>Manter orientação</option><option value={90}>90°</option><option value={-90}>-90°</option><option value={180}>180°</option></select></label>'
+          s = s.replace(old_rotate, new_rotate)
+          s = s.replace('downloadBytes(result.bytes, result.filename); setReport([`Modo aplicado: ${result.mode}.`]);', 'downloadBytes(result.bytes, result.filename); setReport([`Modo aplicado: ${result.mode}.`, ...result.report]);')
+          old_sign = '<Info title="Chave não sai do navegador">O Web Crypto assina localmente e o PDF recebe um contêiner CMS destacado.</Info>'
+          new_sign = '<Info title="Chave não sai do navegador">O Web Crypto assina localmente e o PDF recebe um contêiner CMS destacado. Certificados A1 podem ser usados quando chave e certificado estiverem disponíveis em PEM; tokens/cartões A3 exigem ponte nativa ou extensão porque uma página web comum não recebe acesso direto ao dispositivo criptográfico.</Info>'
+          s = s.replace(old_sign, new_sign)
+          if 'title="Fast Web View"' not in s:
+              anchor = '{tool.slug === "processamento-lote-pdf" ? <label>'
+              note = '{tool.slug === "otimizar-pdf-avancado" ? <Info title="Fast Web View"><>A saída é compactada e reorganizada localmente. Linearização PDF verdadeira (hint tables para streaming progressivo) exige um motor qpdf equivalente; o LIM PDF não marca o arquivo como linearizado quando isso não foi realmente produzido.</></Info> : null}\n      '
+              s = s.replace(anchor, note + anchor)
+          file_anchor = '<input ref={fileInputRef} type="file" accept={tool.accept} multiple={multiple} hidden onChange={(event) => void selectFiles(event.target.files)} />'
+          if 'pro-folder-button' not in s and file_anchor in s:
+              s = s.replace(file_anchor, file_anchor + '{tool.slug === "processamento-lote-pdf" ? <><button className="secondary-button pro-folder-button" type="button" onClick={() => folderInputRef.current?.click()}><FilePlus2 size={16} /> Selecionar pasta</button><input ref={(node) => { folderInputRef.current = node; if (node) node.setAttribute("webkitdirectory", ""); }} type="file" accept="application/pdf,.pdf" multiple hidden onChange={(event) => void selectFiles(event.target.files)} /></> : null}')
+          if 'const candidates = tool.slug === "processamento-lote-pdf"' not in s:
+              s = s.replace('const selected = validateSelection(Array.from(list));', 'const candidates = tool.slug === "processamento-lote-pdf" ? Array.from(list).filter((file) => file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) : Array.from(list);\n      const selected = validateSelection(candidates);')
+          p.write_text(s)
+
+          # 6) Form outputs uncompressed objects for deterministic native signature field visibility.
+          p = Path('src/lib/pro-pdf-form.ts'); s = p.read_text().replace('return { bytes: await pdf.save(), filename: `${safeBaseName(file)}-formulario.pdf` };', 'return { bytes: await pdf.save({ useObjectStreams: false }), filename: `${safeBaseName(file)}-formulario.pdf` };'); p.write_text(s)
+
+          # 7) Link manager stable label.
+          p = Path('src/components/ProLinksWorkspace.tsx'); s = p.read_text().replace('<span>Endereço</span>', '<span>URL do hyperlink</span>'); p.write_text(s)
+
+          # 8) Dock uses ResizeObserver, never a self-triggering MutationObserver.
+          p = Path('src/components/StudioProDock.tsx'); s = p.read_text()
+          old = '    const observer = new MutationObserver(update); observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden", "style", "class"] });\n    return () => { observer.disconnect(); window.removeEventListener("resize", update); window.removeEventListener("scroll", update, true); document.querySelectorAll(".studio-pro-guide,.studio-pro-ruler-x,.studio-pro-ruler-y").forEach((node) => node.remove()); };'
+          if old in s:
+              new = '''    const resizeObserver = new ResizeObserver(update);\n    const initialRoot = currentCanvasRoot();\n    if (initialRoot) resizeObserver.observe(initialRoot);\n    let observedRoot = initialRoot;\n    const refreshTimer = window.setInterval(() => { const nextRoot = currentCanvasRoot(); if (nextRoot && nextRoot !== observedRoot) { resizeObserver.disconnect(); resizeObserver.observe(nextRoot); observedRoot = nextRoot; } update(); }, 1200);\n    return () => { resizeObserver.disconnect(); window.clearInterval(refreshTimer); window.removeEventListener("resize", update); window.removeEventListener("scroll", update, true); document.querySelectorAll(".studio-pro-guide,.studio-pro-ruler-x,.studio-pro-ruler-y").forEach((node) => node.remove()); };'''
+              s = s.replace(old, new)
+          p.write_text(s)
+
+          # 9) Package QA scripts.
+          p = Path('package.json'); data = json.loads(p.read_text()); scripts = data['scripts']
+          scripts['test:pro-navigation'] = 'tsx scripts/test-pro-navigation.ts'
+          scripts['test:pades-verify'] = 'tsx scripts/test-pades-verify.ts'
+          scripts['test'] = 'npm run test:unit && npm run test:pdf && npm run test:experience && npm run test:matrix && npm run test:pro && npm run test:pro-navigation && npm run test:pades-verify'
+          p.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n')
+          PY
+
+      - name: Install and generate fixtures
+        run: |
+          npm ci --no-audit --no-fund
+          npx playwright-core install --with-deps chromium
+          npm run qa:fixtures
+
+      - name: Full static and engine validation
+        run: |
+          npm run lint
+          npm test
+          npx tsx scripts/test-studio-source.ts
+          npm run build
+          npm run test:perf:build
+
+      - name: Full browser validation
+        shell: bash
+        run: |
+          npm run start > /tmp/limpdf-master-final.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID || true' EXIT
+          READY=0
+          for i in $(seq 1 45); do
+            if curl -fsS http://127.0.0.1:3000/ferramentas/ocr-pdf >/dev/null; then READY=1; break; fi
+            sleep 1
+          done
+          if [ "$READY" -ne 1 ]; then cat /tmp/limpdf-master-final.log; exit 1; fi
+          npm run test:routes
+          npm run test:telemetry-consent
+          npm run test:e2e
+          npm run test:e2e:pro
+          npx tsx scripts/test-ocr-searchable-browser.ts
+          npx tsx scripts/test-studio-pro-browser.ts
+          npx tsx scripts/test-office-fidelity-browser.ts
+          npm run test:visual
+          npm run test:perf:browser
+
+      - name: Clean temporary integration workflows and fold permanent QA into Validate
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('.github/workflows/validate.yml'); s = p.read_text()
+          if 'test-studio-source.ts' not in s:
+              s = s.replace('      - name: Unit, PDF, experience, matrix and professional engine tests\n        run: npm test', '      - name: Unit, PDF, experience, matrix and professional engine tests\n        run: |\n          npm test\n          npx tsx scripts/test-studio-source.ts')
+          if 'test-studio-pro-browser.ts' not in s:
+              s = s.replace('          npm run test:e2e:pro\n          npm run test:visual', '          npm run test:e2e:pro\n          npx tsx scripts/test-ocr-searchable-browser.ts\n          npx tsx scripts/test-studio-pro-browser.ts\n          npx tsx scripts/test-office-fidelity-browser.ts\n          npm run test:visual')
+          p.write_text(s)
+          PY
+          shopt -s nullglob
+          for file in .github/workflows/*patch*.yml .github/workflows/one-shot-*.yml .github/workflows/pro-suite-finalize.yml .github/workflows/studio-pro-integration.yml .github/workflows/master-finalize-pro-suite.yml; do
+            rm -f "$file"
+          done
+          rm -f .github/workflows/studio-pro-browser.yml .github/workflows/studio-source-check.yml .github/workflows/office-fidelity-browser.yml
+
+      - name: Commit final tree
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit --allow-empty -m "Finaliza suíte profissional completa e validada [master-finalized] [pro-suite-final]"
+          git push origin HEAD:pro-suite-ocr-editor-20260810

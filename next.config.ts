@@ -8,6 +8,7 @@ const scriptSources = [
   "https://pagead2.googlesyndication.com",
   "https://www.googletagservices.com",
   "https://googleads.g.doubleclick.net",
+  "https://cdn.jsdelivr.net",
 ].join(" ");
 
 const securityHeaders = [
@@ -27,8 +28,8 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' blob: data: https:",
       "font-src 'self' data:",
-      "connect-src 'self' blob: https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net",
-      "worker-src 'self' blob:",
+      "connect-src 'self' blob: https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://cdn.jsdelivr.net https://tessdata.projectnaptha.com",
+      "worker-src 'self' blob: https://cdn.jsdelivr.net",
       "frame-src https://googleads.g.doubleclick.net https://tpc.googlesyndication.com",
       "object-src 'none'",
       "base-uri 'self'",

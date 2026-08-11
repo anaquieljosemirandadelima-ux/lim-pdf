@@ -1,0 +1,65 @@
+name: One Shot Studio Copy Page
+
+on:
+  push:
+    branches:
+      - pro-suite-ocr-editor-20260810
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: pro-suite-ocr-editor-20260810
+          fetch-depth: 0
+      - name: Patch copy-to-page against real page order
+        id: patch
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/components/PdfEditorStudio.tsx')
+          s = p.read_text()
+          if 'limpdf:studio-pro' not in s:
+            print('Studio integration not landed yet; keeping workflow for next push.')
+            raise SystemExit(0)
+          old = 'const pageIndex = detail.action === "copy-page" ? Math.max(0, (detail.targetPage || 1) - 1) : selected[0].pageIndex;'
+          new = 'const targetPage = pages[Math.max(0, Math.min(pages.length - 1, (detail.targetPage || 1) - 1))];\n          const pageIndex = detail.action === "copy-page" ? (targetPage?.pageIndex ?? selected[0].pageIndex) : selected[0].pageIndex;'
+          changed = False
+          if old in s:
+            s = s.replace(old, new)
+            changed = True
+          marker = 'type StudioProDetail = {'
+          if marker in s:
+            start = s.index(marker)
+            end = s.find('}, [objects]);', start)
+            if end >= 0:
+              s = s[:end] + '}, [objects, pages]);' + s[end + len('}, [objects]);'):]
+              changed = True
+          if changed:
+            p.write_text(s)
+            Path('.studio-copy-patched').write_text('1')
+          PY
+          if [ -f .studio-copy-patched ]; then
+            rm .studio-copy-patched .github/workflows/one-shot-studio-copy-page.yml
+            echo 'changed=1' >> "$GITHUB_OUTPUT"
+          else
+            echo 'changed=0' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Validate
+        if: steps.patch.outputs.changed == '1'
+        run: |
+          npm ci --no-audit --no-fund
+          npm run lint
+          npm run build
+      - name: Commit
+        if: steps.patch.outputs.changed == '1'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Copia objetos para a página real após reordenação"
+          git push origin HEAD:pro-suite-ocr-editor-20260810

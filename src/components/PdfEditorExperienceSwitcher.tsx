@@ -32,9 +32,9 @@ export function PdfEditorExperienceSwitcher() {
           ? "Use a faixa abaixo para ir direto ao que precisa. As opções de página abrem a ferramenta certa sem procurar no catálogo."
           : "Use este modo quando precisar substituir texto detectado, trabalhar com camadas e aplicar correções mais controladas."}
       </div>
-      <EditorCommandBar />
-      <div hidden={mode !== "studio"} aria-hidden={mode !== "studio"}><PdfEditorStudio /></div>
-      {mode === "precise" ? <div><PdfEditorWorkspaceHardened /></div> : null}
+      <EditorCommandBar mode={mode} />
+      <div data-editor-panel="studio" hidden={mode !== "studio"} aria-hidden={mode !== "studio"}><PdfEditorStudio /></div>
+      {mode === "precise" ? <div data-editor-panel="precise"><PdfEditorWorkspaceHardened /></div> : null}
     </section>
   );
 }

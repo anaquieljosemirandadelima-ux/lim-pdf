@@ -30,7 +30,7 @@ async function main() {
   assert.ok(switcher.includes("preciseMounted") && switcher.includes("limpdfEditorMode"), "Os dois modos devem preservar sessão e sinalizar o modo ativo.");
   assert.ok(sitemap.includes("releaseTools") && sitemap.includes("guides") && sitemap.includes('"/sobre"'));
   assert.ok(home.includes("toolCount") && !home.includes("58 ferramentas") && !home.includes("32 funções"));
-  assert.ok(sidebar.includes("reference-sidebar-label") && sidebar.includes("converter-pdf")); assert.ok(footer.includes("Preferências de privacidade") && footer.includes("/guias")); assert.ok(guides.includes("remover-dados-sensiveis-pdf"));
+  assert.ok(sidebar.includes("reference-sidebar-label") && sidebar.includes("converter-pdf")); assert.ok(footer.includes("PrivacyPreferencesButton") && footer.includes("/guias")); assert.ok(guides.includes("remover-dados-sensiveis-pdf"));
   assert.ok(/^google\.com, pub-\d+, DIRECT, f08c47fec0942fa0/m.test(ads));
   assert.ok(telemetryBridge.includes("file.size") && !telemetryBridge.includes("file.name")); assert.ok(telemetryLib.includes("ReleaseToolSlug") && telemetryLib.includes('localStorage.getItem(CONSENT_KEY) === "accepted"')); assert.ok(telemetryApi.includes("releaseTools") && telemetryApi.includes("Nunca registrar nome do arquivo"));
   console.log(JSON.stringify({ ok: true, suite: "tool-matrix", legacyTools: 41, proTools: 17, releaseTools: 3, totalTools: 61, advanced: 9, realOcr: true, padesBasic: true, pageSizing: true, unifiedConverter: true, preflight: true, adsenseTransparency: true, seoContent: true }));

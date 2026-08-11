@@ -19,7 +19,7 @@ concurrency:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -51,7 +51,7 @@ jobs:
       - name: Build performance budget
         run: npm run test:perf:build
 
-      - name: Browser QA, consent, route smoke, visual audit and runtime performance
+      - name: Browser QA, OCR, consent, routes, visual audit and runtime performance
         run: |
           npm run start > /tmp/limpdf-next.log 2>&1 &
           SERVER_PID=$!
@@ -71,6 +71,7 @@ jobs:
           npm run test:routes
           npm run test:telemetry-consent
           npm run test:e2e
+          npm run test:ocr-browser
           npm run test:visual
           npm run test:perf:browser
 
@@ -88,6 +89,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: limpdf-e2e-outputs
-          path: /tmp/limpdf-qa-downloads
+          path: |
+            /tmp/limpdf-qa-downloads
+            /tmp/limpdf-ocr-qa
           if-no-files-found: warn
           retention-days: 7

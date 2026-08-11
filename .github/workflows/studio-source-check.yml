@@ -1,0 +1,25 @@
+name: Studio Source Hardening
+
+on:
+  push:
+    branches:
+      - pro-suite-ocr-editor-20260810
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  studio-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx tsx scripts/test-studio-source.ts

@@ -1,0 +1,105 @@
+name: Release Build Fix
+
+on:
+  push:
+    branches:
+      - release-top-ux-adsense-seo-20260811
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-build-fix
+  cancel-in-progress: true
+
+jobs:
+  fix:
+    if: ${{ !contains(github.event.head_commit.message, '[fix-release-build]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: release-top-ux-adsense-seo-20260811
+          fetch-depth: 0
+      - name: Normalize icon compatibility, typing and browser QA
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          def patch(path, transforms):
+              p=Path(path); s=p.read_text()
+              for old,new in transforms: s=s.replace(old,new)
+              p.write_text(s)
+
+          patch('src/components/OfficeFidelityWorkspace.tsx', [
+              ('FileSpreadsheet, ', ''), ('Presentation, ', ''), ('<FileSpreadsheet ', '<FileText '), ('<Presentation ', '<FileText ')
+          ])
+          patch('src/components/PageNormalizeWorkspace.tsx', [
+              ('Maximize2', 'Grid2X2')
+          ])
+          patch('src/components/PreflightWorkspace.tsx', [
+              ('AlertTriangle, ', ''), ('ClipboardCheck, ', ''), ('<AlertTriangle ', '<ShieldCheck '), ('<ClipboardCheck ', '<CheckCircle2 ')
+          ])
+          patch('src/components/PremiumToolExperience.tsx', [
+              ('Maximize2, ', ''), ('icon: Maximize2', 'icon: Grid2X2')
+          ])
+          patch('src/components/ProLinksWorkspace.tsx', [
+              ('Link2, ', ''), ('RefreshCcw, ', ''), ('<Link2 ', '<ExternalLink '), ('<RefreshCcw ', '<LoaderCircle ')
+          ])
+          patch('src/components/ProNavigationWorkspace.tsx', [
+              ('Link2, ', ''), ('ListTree, ', ''), ('Plus, ', ''), ('<Link2 ', '<FileText '), ('<ListTree ', '<FileText '), ('<Plus ', '<CheckCircle2 ')
+          ])
+          patch('src/components/StudioProDock.tsx', [
+              ('import { CopyPlus, Group, Layers3, Ruler, Save, ScanSearch, Trash2, Ungroup }', 'import { CopyPlus, Layers3, Save, Search, Trash2 }'),
+              ('<Group ', '<Layers3 '), ('<Ungroup ', '<Layers3 '), ('<Ruler ', '<Layers3 '), ('<ScanSearch ', '<Search ')
+          ])
+          patch('src/components/ToolEditorialContent.tsx', [
+              ('Lightbulb, ', ''), ('TriangleAlert ', 'ShieldCheck '), ('<Lightbulb ', '<Sparkles '), ('<TriangleAlert ', '<ShieldCheck '),
+              ('import { ArrowRight, CheckCircle2, ShieldCheck, ShieldCheck }', 'import { ArrowRight, CheckCircle2, ShieldCheck, Sparkles }')
+          ])
+          patch('src/components/UnifiedConverterWorkspace.tsx', [
+              ('FileSpreadsheet, ', ''), ('Presentation, ', ''), ('<FileSpreadsheet ', '<FileText '), ('<Presentation ', '<FileText ')
+          ])
+
+          p=Path('src/components/PageNormalizeWorkspace.tsx'); s=p.read_text();
+          if 'Grid2X2' in s and 'Grid2X2,' not in s.split('from "lucide-react"')[0].split('import {')[-1]:
+              s=s.replace('import { ', 'import { Grid2X2, ', 1)
+          p.write_text(s)
+
+          p=Path('src/components/ProPdfWorkspace.tsx'); s=p.read_text()
+          if 'type ScanRotation' not in s:
+              s=s.replace('type BookmarkDraft, type FormFieldDraft, type MetadataDraft,', 'type BookmarkDraft, type FormFieldDraft, type MetadataDraft, type ScanRotation,')
+          s=s.replace('const [cleanRotate, setCleanRotate] = useState(0);', 'const [cleanRotate, setCleanRotate] = useState<ScanRotation>(0);')
+          s=s.replace('setCleanRotate(Number(event.target.value))', 'setCleanRotate(Number(event.target.value) as ScanRotation)')
+          p.write_text(s)
+
+          p=Path('package.json'); import json; data=json.loads(p.read_text()); data['scripts']['test:e2e:release']='tsx scripts/e2e-release-browser.ts'; p.write_text(json.dumps(data, ensure_ascii=False, indent=2)+'\n')
+
+          p=Path('scripts/e2e-browser.ts'); s=p.read_text()
+          s=s.replace('await page.waitForSelector(".selected-files", { timeout: 10_000 });', 'await page.waitForSelector(".selected-files,.converter-file-summary", { timeout: 10_000 });')
+          s=s.replace('"pdf-para-word", "pdf-para-excel", "extrair-texto-pdf",', '"pdf-para-word", "pdf-para-excel",')
+          if 'tool.slug === "extrair-texto-pdf"' not in s:
+              marker='''      if (zipOutputs.has(tool.slug)) {\n        assert.ok(output.bytes[0] === 0x50 && output.bytes[1] === 0x4b, `${tool.slug}: saída não é ZIP`);\n      } else {\n'''
+              replacement='''      if (zipOutputs.has(tool.slug)) {\n        assert.ok(output.bytes[0] === 0x50 && output.bytes[1] === 0x4b, `${tool.slug}: saída não é ZIP`);\n      } else if (tool.slug === "extrair-texto-pdf") {\n        assert.ok(output.filename.toLowerCase().endsWith(".txt"), `${tool.slug}: saída deveria ser TXT`);\n        assert.ok(new TextDecoder().decode(output.bytes).trim().length > 0, `${tool.slug}: TXT vazio`);\n      } else {\n'''
+              assert marker in s
+              s=s.replace(marker,replacement,1)
+          p.write_text(s)
+          PY
+      - name: Commit fixes
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "Corrige compatibilidade, tipos e E2E da release [fix-release-build]"
+            git push origin HEAD:release-top-ux-adsense-seo-20260811
+          fi
+      - name: Install
+        run: npm ci --no-audit --no-fund
+      - name: Verify
+        run: |
+          npm run lint
+          npm test
+          npm run build

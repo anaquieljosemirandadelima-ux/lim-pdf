@@ -5,6 +5,7 @@ import { MemorySafePdfWorkspace } from "@/components/MemorySafePdfWorkspace";
 import { PdfEditorExperienceSwitcher } from "@/components/PdfEditorExperienceSwitcher";
 import { PdfToolWorkspace } from "@/components/PdfToolWorkspace";
 import { PremiumToolExperience } from "@/components/PremiumToolExperience";
+import { ProNavigationWorkspace } from "@/components/ProNavigationWorkspace";
 import { ProPdfWorkspace } from "@/components/ProPdfWorkspace";
 import { ToolIcon } from "@/components/ToolIcon";
 import { ToolTelemetryBridge } from "@/components/ToolTelemetryBridge";
@@ -14,13 +15,9 @@ import type { ToolDefinition, ToolSlug } from "@/lib/tools";
 
 interface ToolPageProps { params: Promise<{ slug: string }> }
 
-const proToolBySlug = new Map<ProToolSlug, (typeof proTools)[number]>(proTools.map((tool) => [tool.slug as ProToolSlug, tool]));
-const memorySafeToolSlugs = new Set<ToolSlug>([
-  "pdf-para-jpg",
-  "pdf-para-png",
-  "compactar-pdf",
-  "pdf-em-escala-de-cinza",
-]);
+const proToolBySlug = new Map<ProToolSlug, (typeof proTools)[number]>(proTools.map((tool) => [tool.slug, tool]));
+const memorySafeToolSlugs = new Set<ToolSlug>(["pdf-para-jpg", "pdf-para-png", "compactar-pdf", "pdf-em-escala-de-cinza"]);
+const navigationProTools = new Set<ProToolSlug>(["links-pdf", "bookmarks-pdf"]);
 
 const pageDescriptions: Partial<Record<AllToolSlug | ProToolSlug, string>> = {
   "editar-pdf": "Edite textos, imagens, páginas e anotações do seu PDF com rapidez e precisão.",
@@ -42,6 +39,8 @@ const pageDescriptions: Partial<Record<AllToolSlug | ProToolSlug, string>> = {
   "marcar-confidencial": "Aplique uma marca visual de confidencialidade ao documento.",
   "ocr-pdf": "Reconheça texto em PDFs escaneados e gere uma cópia pesquisável com OCR real.",
   "assinatura-digital-pdf": "Aplique assinatura criptográfica PAdES básica com certificado X.509 e chave RSA.",
+  "links-pdf": "Adicione links para sites ou páginas internas e remova hyperlinks existentes sem rasterizar o PDF.",
+  "bookmarks-pdf": "Crie uma árvore hierárquica de marcadores nativos para navegar pelo documento.",
   "comparar-pdfs": "Compare duas versões de PDF e destaque visualmente todas as alterações.",
   "reparar-pdf": "Normalize ou reconstrua PDFs com estrutura problemática diretamente no navegador.",
   "pdf-a": "Prepare o documento para fluxo PDF/A-2B e gere um relatório de pré-validação.",
@@ -90,13 +89,14 @@ export default async function ToolPage({ params }: ToolPageProps) {
   };
 
   if (proTool) {
-    const telemetrySlug = proTool.slug as unknown as AllToolSlug;
+    const experienceSlug = proTool.slug as unknown as AllToolSlug;
+    const Workspace = navigationProTools.has(proTool.slug) ? ProNavigationWorkspace : ProPdfWorkspace;
     return <section className="reference-tool-page reference-pro-tool-page">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }} />
-      <ToolTelemetryBridge toolSlug={telemetrySlug} />
+      <ToolTelemetryBridge toolSlug={proTool.slug} />
       <div className="reference-tool-heading"><div><h1>{proTool.name}</h1><p>{description}</p></div><span className={`reference-heading-icon accent-${proTool.accent}`} aria-hidden="true"><ToolIcon icon={proTool.icon} /></span></div>
-      <PremiumToolExperience toolName={proTool.name} toolSlug={telemetrySlug} accent={proTool.accent} />
-      <div className="reference-workspace-wrap"><ProPdfWorkspace tool={{ ...proTool, slug: proTool.slug as ProToolSlug }} /></div>
+      <PremiumToolExperience toolName={proTool.name} toolSlug={experienceSlug} accent={proTool.accent} />
+      <div className="reference-workspace-wrap"><Workspace tool={proTool} /></div>
     </section>;
   }
 

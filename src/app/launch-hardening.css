@@ -1,0 +1,84 @@
+.editor-mode-loading {
+  min-height: 230px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #e7e9ee;
+  border-radius: 18px;
+  background: linear-gradient(115deg, #fafbfc 20%, #f2f5f8 45%, #fafbfc 70%);
+  background-size: 220% 100%;
+  color: #667085;
+  font-size: 14px;
+  font-weight: 650;
+  animation: limpdf-loading-sheen 1.4s ease-in-out infinite;
+}
+
+.reference-tool-section {
+  content-visibility: auto;
+  contain-intrinsic-size: 520px;
+}
+
+.reference-catalog,
+.reference-catalog-sections,
+.reference-tool-section,
+.reference-catalog-grid,
+.reference-personal-grid,
+.reference-catalog-tool-wrap,
+.reference-catalog-tool,
+.reference-catalog-copy {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.reference-catalog-tool-wrap,
+.reference-catalog-tool {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.reference-catalog-copy strong,
+.reference-catalog-copy small {
+  overflow-wrap: anywhere;
+}
+
+.reference-catalog-tool,
+.process-button,
+.primary-button,
+.secondary-button,
+.editor-mode-tabs button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.reference-catalog-tool:focus-visible,
+.process-button:focus-visible,
+.primary-button:focus-visible,
+.secondary-button:focus-visible,
+.editor-mode-tabs button:focus-visible {
+  outline: 3px solid rgba(70, 92, 255, .24);
+  outline-offset: 3px;
+}
+
+@keyframes limpdf-loading-sheen {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+@media (max-width: 560px) {
+  .reference-catalog-grid,
+  .reference-personal-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .reference-tool-section > header,
+  .reference-catalog-head {
+    min-width: 0;
+  }
+
+  .reference-tool-section > header > div,
+  .reference-catalog-head > div {
+    min-width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editor-mode-loading { animation: none; }
+}

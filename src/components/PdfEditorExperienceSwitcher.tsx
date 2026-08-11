@@ -1,9 +1,15 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { ShieldCheck, Sparkles } from "lucide-react";
 import { useState } from "react";
-import { PdfEditorStudio } from "@/components/PdfEditorStudio";
-import { PdfEditorWorkspaceHardened } from "@/components/PdfEditorWorkspaceHardened";
+
+const PdfEditorStudio = dynamic(() => import("@/components/PdfEditorStudio").then((module) => module.PdfEditorStudio), {
+  loading: () => <div className="editor-mode-loading" role="status">Preparando o Studio…</div>,
+});
+const PdfEditorWorkspaceHardened = dynamic(() => import("@/components/PdfEditorWorkspaceHardened").then((module) => module.PdfEditorWorkspaceHardened), {
+  loading: () => <div className="editor-mode-loading" role="status">Preparando o modo preciso…</div>,
+});
 
 type EditorMode = "studio" | "precise";
 
@@ -21,10 +27,12 @@ export function PdfEditorExperienceSwitcher() {
         </button>
       </div>
       <div className="editor-mode-note">
-        {mode === "studio" ? "Studio é ideal para criar, desenhar e anotar. O Modo preciso fica disponível para correções de texto existente e mantém sua sessão separada." : "Modo preciso preserva substituição sanitizada de texto, seleção múltipla, camadas e rascunhos. Voltar ao Studio não apaga a sessão dele."}
+        {mode === "studio"
+          ? "Studio é ideal para criar, desenhar e anotar. O Modo preciso é carregado somente quando você entra nele, evitando atalhos e eventos do editor inativo."
+          : "Modo preciso mantém correções de texto, camadas e rascunhos locais. Ao voltar ao Studio, a sessão visual aberta continua preservada."}
       </div>
       <div hidden={mode !== "studio"} aria-hidden={mode !== "studio"}><PdfEditorStudio /></div>
-      <div hidden={mode !== "precise"} aria-hidden={mode !== "precise"}><PdfEditorWorkspaceHardened /></div>
+      {mode === "precise" ? <div><PdfEditorWorkspaceHardened /></div> : null}
     </section>
   );
 }

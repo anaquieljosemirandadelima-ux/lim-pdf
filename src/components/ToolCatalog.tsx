@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { ArrowRight, Grid2X2, PencilLine, Repeat2, Search, ShieldCheck, Sparkles } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { ToolIcon } from "@/components/ToolIcon";
 import { allToolBySlug, type AllToolSlug, type AnyToolDefinition } from "@/lib/all-tools";
 import {
-  readStoredToolSlugs,
   recordRecentTool,
   toggleFavoriteTool,
+  TOOL_EXPERIENCE_CHANGE_EVENT,
   TOOL_EXPERIENCE_FAVORITES_KEY,
   TOOL_EXPERIENCE_RECENTS_KEY,
 } from "@/lib/tool-experience";
@@ -38,6 +38,29 @@ function resolveTools(slugs: AllToolSlug[]) {
   });
 }
 
+function parseStoredToolSlugs(raw: string): AllToolSlug[] {
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed) ? parsed.filter((value): value is AllToolSlug => typeof value === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function useToolStorage(key: string) {
+  const subscribe = useCallback((callback: () => void) => {
+    window.addEventListener(TOOL_EXPERIENCE_CHANGE_EVENT, callback);
+    window.addEventListener("storage", callback);
+    return () => {
+      window.removeEventListener(TOOL_EXPERIENCE_CHANGE_EVENT, callback);
+      window.removeEventListener("storage", callback);
+    };
+  }, []);
+  const getSnapshot = useCallback(() => window.localStorage.getItem(key) || "[]", [key]);
+  const raw = useSyncExternalStore(subscribe, getSnapshot, () => "[]");
+  return useMemo(() => parseStoredToolSlugs(raw), [raw]);
+}
+
 function ToolItem({ tool, favorite, onFavorite }: { tool: AnyToolDefinition; favorite: boolean; onFavorite: (slug: AllToolSlug) => void }) {
   return (
     <div className={`reference-catalog-tool-wrap ${favorite ? "favorite" : ""}`}>
@@ -56,10 +79,10 @@ function ToolItem({ tool, favorite, onFavorite }: { tool: AnyToolDefinition; fav
 export function ToolCatalog() {
   const [active, setActive] = useState<"todas" | "converter" | "editar" | "organizar" | "proteger" | "outros">("todas");
   const [query, setQuery] = useState("");
-  const [favorites, setFavorites] = useState<AllToolSlug[]>(() => readStoredToolSlugs(TOOL_EXPERIENCE_FAVORITES_KEY));
-  const [recents] = useState<AllToolSlug[]>(() => readStoredToolSlugs(TOOL_EXPERIENCE_RECENTS_KEY));
+  const favorites = useToolStorage(TOOL_EXPERIENCE_FAVORITES_KEY);
+  const recents = useToolStorage(TOOL_EXPERIENCE_RECENTS_KEY);
   const normalizedQuery = normalize(query.trim());
-  const handleFavorite = (slug: AllToolSlug) => setFavorites(toggleFavoriteTool(slug));
+  const handleFavorite = (slug: AllToolSlug) => { toggleFavoriteTool(slug); };
 
   const filteredSections = useMemo(() => sections
     .filter((section) => active === "todas" || section.id === active)

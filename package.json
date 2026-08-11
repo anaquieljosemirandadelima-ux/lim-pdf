@@ -10,9 +10,16 @@
     "test:unit": "tsx scripts/test-page-selection.ts",
     "test:pdf": "tsx scripts/smoke-pdf-tools.ts",
     "test:experience": "tsx scripts/test-tool-experience.ts",
-    "test": "npm run test:unit && npm run test:pdf && npm run test:experience",
+    "test:matrix": "tsx scripts/test-tool-matrix.ts",
+    "test": "npm run test:unit && npm run test:pdf && npm run test:experience && npm run test:matrix",
+    "qa:fixtures": "tsx scripts/generate-qa-fixtures.ts",
     "test:routes": "node scripts/smoke-routes.mjs",
-    "check": "npm run lint && npm test && npm run build"
+    "test:e2e": "tsx scripts/e2e-browser.ts",
+    "test:telemetry-consent": "tsx scripts/test-telemetry-consent.ts",
+    "test:visual": "tsx scripts/visual-audit.ts",
+    "test:perf:build": "tsx scripts/performance-budget.ts build",
+    "test:perf:browser": "tsx scripts/performance-budget.ts browser",
+    "check": "npm run lint && npm test && npm run build && npm run test:perf:build"
   },
   "dependencies": {
     "@pdfsmaller/pdf-decrypt": "^1.0.1",

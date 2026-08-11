@@ -2,6 +2,7 @@ import type { AllToolSlug } from "@/lib/all-tools";
 
 export const TOOL_EXPERIENCE_RECENTS_KEY = "limpdf:tool-recents:v2";
 export const TOOL_EXPERIENCE_FAVORITES_KEY = "limpdf:tool-favorites:v2";
+export const TOOL_EXPERIENCE_CHANGE_EVENT = "limpdf:tool-experience-change";
 
 const fallback: AllToolSlug[] = ["editar-pdf", "compactar-pdf", "proteger-pdf"];
 
@@ -63,11 +64,17 @@ export function readStoredToolSlugs(key: string): AllToolSlug[] {
   }
 }
 
+function announceToolExperienceChange(key: string) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(TOOL_EXPERIENCE_CHANGE_EVENT, { detail: { key } }));
+}
+
 export function recordRecentTool(slug: AllToolSlug) {
   if (typeof window === "undefined") return;
   try {
     const current = readStoredToolSlugs(TOOL_EXPERIENCE_RECENTS_KEY).filter((item) => item !== slug);
     window.localStorage.setItem(TOOL_EXPERIENCE_RECENTS_KEY, JSON.stringify([slug, ...current].slice(0, 8)));
+    announceToolExperienceChange(TOOL_EXPERIENCE_RECENTS_KEY);
   } catch {
     // Storage is an enhancement only.
   }
@@ -78,6 +85,7 @@ export function toggleFavoriteTool(slug: AllToolSlug) {
   const next = current.includes(slug) ? current.filter((item) => item !== slug) : [slug, ...current].slice(0, 16);
   try {
     window.localStorage.setItem(TOOL_EXPERIENCE_FAVORITES_KEY, JSON.stringify(next));
+    announceToolExperienceChange(TOOL_EXPERIENCE_FAVORITES_KEY);
   } catch {
     // Storage is an enhancement only.
   }

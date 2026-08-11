@@ -6,6 +6,7 @@ import { PdfEditorExperienceSwitcher } from "@/components/PdfEditorExperienceSwi
 import { PdfToolWorkspace } from "@/components/PdfToolWorkspace";
 import { PremiumToolExperience } from "@/components/PremiumToolExperience";
 import { ToolIcon } from "@/components/ToolIcon";
+import { ToolTelemetryBridge } from "@/components/ToolTelemetryBridge";
 import { allToolBySlug, allTools, isAdvancedToolSlug, type AllToolSlug } from "@/lib/all-tools";
 import type { ToolDefinition, ToolSlug } from "@/lib/tools";
 
@@ -44,11 +45,27 @@ export async function generateMetadata({ params }: ToolPageProps): Promise<Metad
   const { slug } = await params;
   const tool = allToolBySlug.get(slug as AllToolSlug);
   if (!tool) return {};
+  const description = pageDescriptions[tool.slug] || tool.description;
+  const canonical = `/ferramentas/${tool.slug}`;
   return {
     title: `${tool.name} grátis e online`,
-    description: pageDescriptions[tool.slug] || tool.description,
-    keywords: [tool.name, ...tool.keywords, "grátis", "online", "sem cadastro"],
-    alternates: { canonical: `/ferramentas/${tool.slug}` },
+    description,
+    keywords: [tool.name, ...tool.keywords, "grátis", "online", "sem cadastro", "PDF no navegador"],
+    alternates: { canonical },
+    robots: { index: true, follow: true },
+    openGraph: {
+      type: "website",
+      title: `${tool.name} grátis e online | LIM PDF`,
+      description,
+      url: canonical,
+      siteName: "LIM PDF",
+      locale: "pt_BR",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${tool.name} grátis e online | LIM PDF`,
+      description,
+    },
   };
 }
 
@@ -66,6 +83,8 @@ export default async function ToolPage({ params }: ToolPageProps) {
     operatingSystem: "Web",
     url: `${siteUrl}/ferramentas/${tool.slug}`,
     description,
+    isAccessibleForFree: true,
+    browserRequirements: "JavaScript e navegador moderno com APIs de arquivo locais",
     offers: { "@type": "Offer", price: "0", priceCurrency: "BRL" },
     featureList: ["Gratuito", "Sem cadastro", "Processamento local", "Experiência guiada"],
   };
@@ -73,6 +92,7 @@ export default async function ToolPage({ params }: ToolPageProps) {
   if (isAdvancedToolSlug(tool.slug)) {
     return <section className="reference-tool-page">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }} />
+      <ToolTelemetryBridge toolSlug={tool.slug} />
       <div className="reference-tool-heading"><div><h1>{tool.name}</h1><p>{description}</p></div><span className={`reference-heading-icon accent-${tool.accent}`} aria-hidden="true"><ToolIcon icon={tool.icon} /></span></div>
       <PremiumToolExperience toolName={tool.name} toolSlug={tool.slug} accent={tool.accent} />
       <div className="reference-workspace-wrap"><AdvancedToolWorkspace tool={tool} /></div>
@@ -83,6 +103,7 @@ export default async function ToolPage({ params }: ToolPageProps) {
   if (baseTool.slug === "editar-pdf") {
     return <section className="reference-tool-page reference-editor-page">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }} />
+      <ToolTelemetryBridge toolSlug={baseTool.slug} />
       <div className="reference-tool-heading"><div><h1>{baseTool.name}</h1><p>{description}</p></div></div>
       <PremiumToolExperience toolName={baseTool.name} toolSlug={baseTool.slug} accent={baseTool.accent} editor />
       <div className="reference-editor-wrap"><PdfEditorExperienceSwitcher /></div>
@@ -91,6 +112,7 @@ export default async function ToolPage({ params }: ToolPageProps) {
 
   return <section className="reference-tool-page">
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }} />
+    <ToolTelemetryBridge toolSlug={baseTool.slug} />
     <div className="reference-tool-heading"><div><h1>{baseTool.name}</h1><p>{description}</p></div><span className={`reference-heading-icon accent-${baseTool.accent}`} aria-hidden="true"><ToolIcon icon={baseTool.icon} /></span></div>
     <PremiumToolExperience toolName={baseTool.name} toolSlug={baseTool.slug} accent={baseTool.accent} />
     <div className="reference-workspace-wrap">{memorySafeToolSlugs.has(baseTool.slug) ? <MemorySafePdfWorkspace tool={baseTool} /> : <PdfToolWorkspace tool={baseTool} />}</div>

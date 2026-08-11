@@ -14,6 +14,7 @@ import "./reference-ui-v2.css";
 import "./premium-ui.css";
 import "./premium-suite-v2.css";
 import "./premium-suite-v2-fixes.css";
+import "./launch-hardening.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://limpdf.com.br";
 const adsenseClient = ADSENSE_CLIENT;
@@ -27,6 +28,7 @@ const structuredData = {
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
   inLanguage: ["pt-BR", "en", "es"],
+  isAccessibleForFree: true,
   offers: { "@type": "Offer", price: "0", priceCurrency: "BRL" },
   featureList: allTools.map((tool) => tool.name),
   publisher: {

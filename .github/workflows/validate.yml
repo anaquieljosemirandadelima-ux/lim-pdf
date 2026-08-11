@@ -4,38 +4,60 @@ on:
   push:
     branches:
       - main
-      - premium-suite-v2-20260810
+      - "launch-*"
   pull_request:
     branches:
       - main
 
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
+
       - name: Install
         run: npm ci --no-audit --no-fund
+
+      - name: Install Chromium for browser QA
+        run: npx playwright-core install --with-deps chromium
+
+      - name: Generate QA fixtures
+        run: npm run qa:fixtures
+
       - name: Lint
         run: npm run lint
-      - name: Unit and PDF tests
+
+      - name: Unit, PDF, experience and tool-matrix tests
         run: npm test
+
       - name: Production build
         run: npm run build
-      - name: Route smoke tests
+
+      - name: Build performance budget
+        run: npm run test:perf:build
+
+      - name: Browser QA, consent, route smoke, visual audit and runtime performance
         run: |
           npm run start > /tmp/limpdf-next.log 2>&1 &
           SERVER_PID=$!
           trap 'kill $SERVER_PID || true' EXIT
           READY=0
-          for i in $(seq 1 25); do
+          for i in $(seq 1 35); do
             if curl -fsS http://127.0.0.1:3000/ferramentas/editar-pdf > /dev/null; then
               READY=1
               break
@@ -47,3 +69,25 @@ jobs:
             exit 1
           fi
           npm run test:routes
+          npm run test:telemetry-consent
+          npm run test:e2e
+          npm run test:visual
+          npm run test:perf:browser
+
+      - name: Upload visual audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: limpdf-visual-audit
+          path: /tmp/limpdf-visual
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload E2E outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: limpdf-e2e-outputs
+          path: /tmp/limpdf-qa-downloads
+          if-no-files-found: warn
+          retention-days: 7

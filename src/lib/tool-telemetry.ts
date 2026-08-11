@@ -12,6 +12,8 @@ type MetricPayload = {
   errorCode?: "ui_error" | "uncaught_error" | "unhandled_rejection";
 };
 
+const CONSENT_KEY = "limpdf-consent-v1";
+
 function sizeBucket(bytes: number) {
   if (!Number.isFinite(bytes) || bytes <= 0) return "unknown";
   if (bytes < 512 * 1024) return "lt_512kb";
@@ -47,6 +49,15 @@ function shouldSample(event: ToolMetricEvent) {
   return { send: Math.random() <= rate, rate };
 }
 
+export function measurementConsentGranted() {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(CONSENT_KEY) === "accepted";
+  } catch {
+    return false;
+  }
+}
+
 export function bytesBucket(bytes: number) {
   return sizeBucket(bytes);
 }
@@ -56,7 +67,7 @@ export function timeBucket(milliseconds: number) {
 }
 
 export function sendToolMetric(payload: MetricPayload) {
-  if (typeof window === "undefined") return;
+  if (!measurementConsentGranted()) return;
   const sample = shouldSample(payload.event);
   if (!sample.send) return;
   const body = JSON.stringify({

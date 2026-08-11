@@ -4,22 +4,13 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { ToolIcon } from "@/components/ToolIcon";
 import type { AnyToolDefinition } from "@/lib/all-tools";
+import type { ProToolDefinition } from "@/lib/pro-tools";
+import type { ReleaseToolDefinition } from "@/lib/release-tools";
 
 interface ToolCardProps {
-  tool: AnyToolDefinition;
+  tool: AnyToolDefinition | ProToolDefinition | ReleaseToolDefinition;
 }
 
 export function ToolCard({ tool }: ToolCardProps) {
-  return (
-    <Link className="tool-card" href={`/ferramentas/${tool.slug}`}>
-      <span className={`tool-icon accent-${tool.accent}`}>
-        <ToolIcon icon={tool.icon} />
-      </span>
-      <span className="tool-card-copy">
-        <strong>{tool.name}</strong>
-        <small>{tool.shortDescription}</small>
-      </span>
-      <ArrowRight className="tool-arrow" size={18} aria-hidden="true" />
-    </Link>
-  );
+  return <Link className="tool-card" href={`/ferramentas/${tool.slug}`}><span className={`tool-icon accent-${tool.accent}`}><ToolIcon icon={tool.icon} /></span><span className="tool-card-copy"><strong>{tool.name}</strong><small>{tool.shortDescription}</small></span><ArrowRight className="tool-arrow" size={18} aria-hidden="true" /></Link>;
 }

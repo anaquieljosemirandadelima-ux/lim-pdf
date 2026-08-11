@@ -1,0 +1,65 @@
+name: Studio Pro Dock Patch
+
+on:
+  push:
+    branches:
+      - pro-suite-ocr-editor-20260810
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[dock-patched]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: pro-suite-ocr-editor-20260810
+          fetch-depth: 0
+      - name: Replace mutation loop with ResizeObserver
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/components/StudioProDock.tsx')
+          s = p.read_text()
+          old = '''    const observer = new MutationObserver(update); observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden", "style", "class"] });
+    return () => { observer.disconnect(); window.removeEventListener("resize", update); window.removeEventListener("scroll", update, true); document.querySelectorAll(".studio-pro-guide,.studio-pro-ruler-x,.studio-pro-ruler-y").forEach((node) => node.remove()); };'''
+          new = '''    const resizeObserver = new ResizeObserver(update);
+    const initialRoot = currentCanvasRoot();
+    if (initialRoot) resizeObserver.observe(initialRoot);
+    let observedRoot = initialRoot;
+    const refreshTimer = window.setInterval(() => {
+      const nextRoot = currentCanvasRoot();
+      if (nextRoot && nextRoot !== observedRoot) {
+        resizeObserver.disconnect();
+        resizeObserver.observe(nextRoot);
+        observedRoot = nextRoot;
+      }
+      update();
+    }, 1200);
+    return () => {
+      resizeObserver.disconnect();
+      window.clearInterval(refreshTimer);
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+      document.querySelectorAll(".studio-pro-guide,.studio-pro-ruler-x,.studio-pro-ruler-y").forEach((node) => node.remove());
+    };'''
+          if old in s:
+              s = s.replace(old, new)
+          elif 'new MutationObserver(update)' in s:
+              raise SystemExit('Dock observer block changed unexpectedly')
+          p.write_text(s)
+          PY
+      - run: |
+          npm ci --no-audit --no-fund
+          npm run lint
+          npm run build
+      - name: Commit
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/StudioProDock.tsx
+          git commit -m "Evita loop de observação nas guias do Studio [dock-patched]"
+          git push origin HEAD:pro-suite-ocr-editor-20260810

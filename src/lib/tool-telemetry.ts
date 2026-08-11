@@ -1,10 +1,12 @@
 import type { AllToolSlug } from "@/lib/all-tools";
 
+export type StandaloneToolMetricSlug = "converter-pdf" | "ocr-pdf" | "dimensionar-pdf" | "preflight-pdf";
+export type ToolMetricSlug = AllToolSlug | StandaloneToolMetricSlug;
 export type ToolMetricEvent = "tool_view" | "file_selected" | "process_started" | "process_success" | "process_error";
 
 type MetricPayload = {
   event: ToolMetricEvent;
-  tool: AllToolSlug;
+  tool: ToolMetricSlug;
   inputSizeBucket?: string;
   outputSizeBucket?: string;
   durationBucket?: string;

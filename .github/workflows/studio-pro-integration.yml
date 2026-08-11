@@ -1,0 +1,196 @@
+name: Integrate Studio Pro
+
+on:
+  push:
+    branches:
+      - pro-suite-ocr-editor-20260810
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: ${{ !contains(github.event.head_commit.message, '[studio-pro-integrated]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: pro-suite-ocr-editor-20260810
+          fetch-depth: 0
+
+      - name: Integrate grouping, marquee actions, copy-to-page and reusable styles
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('src/components/PdfEditorStudio.tsx')
+          s = p.read_text()
+
+          if 'StudioProDock' not in s:
+              import_anchor = 'import { SignaturePad } from "./SignaturePad";'
+              if import_anchor not in s:
+                  raise SystemExit('SignaturePad import anchor not found')
+              s = s.replace(import_anchor, import_anchor + '\nimport { StudioProDock } from "./StudioProDock";')
+
+          if 'data-studio-object-id={object.id}' not in s:
+              if 'key={object.id}' not in s:
+                  raise SystemExit('Studio object key anchor not found')
+              s = s.replace('key={object.id}', 'key={object.id} data-studio-object-id={object.id} data-studio-group-id={(object as StudioObject & { groupId?: string }).groupId || ""}')
+
+          if 'limpdf:studio-pro' not in s:
+              state_pattern = re.compile(r'(const \[objects,\s*setObjects\]\s*=\s*useState<StudioObject\[\]>\(\[\]\);)')
+              match = state_pattern.search(s)
+              if not match:
+                  raise SystemExit('objects/setObjects state anchor not found')
+              hook = r'''
+
+  const studioProSyncingRef = useRef(false);
+  const studioProPreviousObjectsRef = useRef<StudioObject[]>([]);
+
+  useEffect(() => {
+    if (studioProSyncingRef.current) {
+      studioProSyncingRef.current = false;
+      studioProPreviousObjectsRef.current = objects;
+      return;
+    }
+    const previous = new Map(studioProPreviousObjectsRef.current.map((object) => [object.id, object]));
+    const moved = objects.find((object) => {
+      const grouped = (object as StudioObject & { groupId?: string }).groupId;
+      const before = previous.get(object.id);
+      return grouped && before && (before.x !== object.x || before.y !== object.y);
+    });
+    if (!moved) {
+      studioProPreviousObjectsRef.current = objects;
+      return;
+    }
+    const groupId = (moved as StudioObject & { groupId?: string }).groupId;
+    const before = previous.get(moved.id)!;
+    const dx = moved.x - before.x;
+    const dy = moved.y - before.y;
+    if (!groupId || (!dx && !dy)) {
+      studioProPreviousObjectsRef.current = objects;
+      return;
+    }
+    studioProSyncingRef.current = true;
+    studioProPreviousObjectsRef.current = objects;
+    setObjects((current) => current.map((object) => {
+      const objectGroup = (object as StudioObject & { groupId?: string }).groupId;
+      if (object.id === moved.id || objectGroup !== groupId || object.locked) return object;
+      return { ...object, x: object.x + dx, y: object.y + dy } as StudioObject;
+    }));
+  }, [objects]);
+
+  useEffect(() => {
+    type StudioProDetail = {
+      action: "group" | "ungroup" | "copy-page" | "duplicate" | "delete-selection" | "save-style" | "apply-style";
+      ids?: string[];
+      targetPage?: number;
+      styleName?: string;
+    };
+    const styleKey = (name: string) => `limpdf:studio-style:${name.trim().toLowerCase()}`;
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<StudioProDetail>).detail;
+      if (!detail?.action) return;
+      const ids = new Set(detail.ids || []);
+      if (detail.action === "group" && ids.size >= 2) {
+        const groupId = crypto.randomUUID();
+        setObjects((current) => current.map((object) => ids.has(object.id) ? ({ ...object, groupId } as StudioObject) : object));
+        return;
+      }
+      if (detail.action === "ungroup" && ids.size) {
+        setObjects((current) => current.map((object) => {
+          if (!ids.has(object.id)) return object;
+          const next = { ...object } as StudioObject & { groupId?: string };
+          delete next.groupId;
+          return next as StudioObject;
+        }));
+        return;
+      }
+      if ((detail.action === "duplicate" || detail.action === "copy-page") && ids.size) {
+        setObjects((current) => {
+          const selected = current.filter((object) => ids.has(object.id));
+          if (!selected.length) return current;
+          const pageIndex = detail.action === "copy-page" ? Math.max(0, (detail.targetPage || 1) - 1) : selected[0].pageIndex;
+          const maxZ = Math.max(0, ...current.map((object) => object.zIndex));
+          const clones = selected.map((object, index) => {
+            const clone = { ...object, id: crypto.randomUUID(), pageIndex, x: object.x + 8, y: object.y - 8, zIndex: maxZ + index + 1 } as StudioObject & { groupId?: string };
+            delete clone.groupId;
+            return clone as StudioObject;
+          });
+          return [...current, ...clones];
+        });
+        return;
+      }
+      if (detail.action === "delete-selection" && ids.size) {
+        setObjects((current) => current.filter((object) => !ids.has(object.id)));
+        return;
+      }
+      if (detail.action === "save-style" && ids.size && detail.styleName?.trim()) {
+        const source = objects.find((object) => ids.has(object.id));
+        if (!source) return;
+        const candidate = source as unknown as Record<string, unknown>;
+        const keys = ["color", "fillColor", "strokeColor", "fontSize", "fontFamily", "bold", "italic", "opacity", "strokeWidth"];
+        const style = Object.fromEntries(keys.filter((key) => key in candidate).map((key) => [key, candidate[key]]));
+        try {
+          localStorage.setItem(styleKey(detail.styleName), JSON.stringify(style));
+          window.dispatchEvent(new Event("limpdf:studio-pro-style-saved"));
+        } catch { /* armazenamento opcional */ }
+        return;
+      }
+      if (detail.action === "apply-style" && detail.styleName?.trim()) {
+        try {
+          const raw = localStorage.getItem(styleKey(detail.styleName));
+          if (!raw) return;
+          const style = JSON.parse(raw) as Record<string, unknown>;
+          setObjects((current) => current.map((object) => !ids.size || ids.has(object.id) ? ({ ...object, ...style } as StudioObject) : object));
+        } catch { /* estilo local inválido ou storage bloqueado */ }
+      }
+    };
+    window.addEventListener("limpdf:studio-pro", handler);
+    return () => window.removeEventListener("limpdf:studio-pro", handler);
+  }, [objects]);
+'''
+              s = s[:match.end()] + hook + s[match.end():]
+
+          if '<StudioProDock />' not in s:
+              patterns = [
+                  r'(<section\s+className="studio-shell"[^>]*>)',
+                  r'(<div\s+className="studio-shell"[^>]*>)',
+                  r'(<section\s+className=\{`studio-shell[^>]*>)',
+                  r'(<div\s+className=\{`studio-shell[^>]*>)',
+              ]
+              replaced = False
+              for pattern in patterns:
+                  updated, count = re.subn(pattern, r'\1\n        <StudioProDock />', s, count=1)
+                  if count:
+                      s = updated
+                      replaced = True
+                      break
+              if not replaced:
+                  raise SystemExit('studio-shell JSX anchor not found')
+
+          p.write_text(s)
+          PY
+
+      - name: Validate Studio integration
+        run: |
+          npm ci --no-audit --no-fund
+          npm run lint
+          npm test
+          npm run build
+
+      - name: Commit Studio integration
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "No integration changes required"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/PdfEditorStudio.tsx
+          git commit -m "Integra agrupamento, guias, estilos e seleção por área [studio-pro-integrated]"
+          git push origin HEAD:pro-suite-ocr-editor-20260810

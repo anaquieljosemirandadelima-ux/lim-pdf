@@ -44,7 +44,7 @@ const structuredData = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: { default: "LIM PDF — editar, converter e organizar PDF grátis", template: "%s | LIM PDF" },
+  title: { default: "LIM PDF — editar, converter e organizar PDFs grátis", template: "%s | LIM PDF" },
   description: "Edite, converta, organize, reconheça texto com OCR, assine, proteja, compare e prepare PDFs gratuitamente no navegador.",
   applicationName: "LIM PDF",
   keywords: ["PDF grátis", "editar PDF", "converter PDF", "OCR PDF", "juntar PDF", "compactar PDF", "PDF para Word", "assinar PDF", "PDF online"],

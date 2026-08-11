@@ -1,0 +1,65 @@
+name: Pro Suite Form and PAdES Patch
+
+on:
+  push:
+    branches:
+      - pro-suite-ocr-editor-20260810
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[form-patched]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: pro-suite-ocr-editor-20260810
+          fetch-depth: 0
+
+      - name: Apply deterministic pro-suite fixes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+
+          form = Path('src/lib/pro-pdf-form.ts')
+          s = form.read_text()
+          s = s.replace('return { bytes: await pdf.save(), filename: `${safeBaseName(file)}-formulario.pdf` };', 'return { bytes: await pdf.save({ useObjectStreams: false }), filename: `${safeBaseName(file)}-formulario.pdf` };')
+          form.write_text(s)
+
+          nav = Path('src/components/ProNavigationWorkspace.tsx')
+          s = nav.read_text().replace('<span>Endereço</span>', '<span>URL do hyperlink</span>')
+          nav.write_text(s)
+
+          package_path = Path('package.json')
+          data = json.loads(package_path.read_text())
+          scripts = data['scripts']
+          scripts.setdefault('test:pro-navigation', 'tsx scripts/test-pro-navigation.ts')
+          scripts.setdefault('test:pades-verify', 'tsx scripts/test-pades-verify.ts')
+          scripts['test'] = 'npm run test:unit && npm run test:pdf && npm run test:experience && npm run test:matrix && npm run test:pro && npm run test:pro-navigation && npm run test:pades-verify'
+          package_path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n')
+          PY
+
+      - name: Validate form and cryptographic signature
+        run: |
+          npm ci --no-audit --no-fund
+          npm run lint
+          npm run test:pro-navigation
+          npm run test:pades-verify
+          npm run build
+
+      - name: Commit fixes
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "No patch required"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/lib/pro-pdf-form.ts src/components/ProNavigationWorkspace.tsx package.json
+          git commit -m "Valida campos PDF e assinatura PAdES [form-patched]"
+          git push origin HEAD:pro-suite-ocr-editor-20260810

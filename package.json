@@ -17,6 +17,7 @@
     "test:routes": "node scripts/smoke-routes.mjs",
     "test:e2e": "tsx scripts/e2e-browser.ts",
     "test:e2e:pro": "tsx scripts/e2e-pro-browser.ts",
+    "test:e2e:release": "tsx scripts/e2e-release-browser.ts",
     "test:telemetry-consent": "tsx scripts/test-telemetry-consent.ts",
     "test:visual": "tsx scripts/visual-audit.ts",
     "test:perf:build": "tsx scripts/performance-budget.ts build",

@@ -1,0 +1,44 @@
+.editor-mode-loading {
+  min-height: 230px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #e7e9ee;
+  border-radius: 18px;
+  background: linear-gradient(115deg, #fafbfc 20%, #f2f5f8 45%, #fafbfc 70%);
+  background-size: 220% 100%;
+  color: #667085;
+  font-size: 14px;
+  font-weight: 650;
+  animation: limpdf-loading-sheen 1.4s ease-in-out infinite;
+}
+
+.reference-tool-section {
+  content-visibility: auto;
+  contain-intrinsic-size: 520px;
+}
+
+.reference-catalog-tool,
+.process-button,
+.primary-button,
+.secondary-button,
+.editor-mode-tabs button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.reference-catalog-tool:focus-visible,
+.process-button:focus-visible,
+.primary-button:focus-visible,
+.secondary-button:focus-visible,
+.editor-mode-tabs button:focus-visible {
+  outline: 3px solid rgba(70, 92, 255, .24);
+  outline-offset: 3px;
+}
+
+@keyframes limpdf-loading-sheen {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editor-mode-loading { animation: none; }
+}

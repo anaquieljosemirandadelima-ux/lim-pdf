@@ -6,6 +6,8 @@ import { bytesBucket, measurementConsentGranted, sendToolMetric, timeBucket } fr
 
 type DownloadDetail = { bytes?: number; extension?: string };
 
+const PRIMARY_UPLOAD_ZONE = ".drop-zone,.studio-upload-card,.editor-upload-card";
+
 export function ToolTelemetryBridge({ toolSlug }: { toolSlug: AllToolSlug }) {
   const processStartedAt = useRef<number | null>(null);
   const inputSizeBucket = useRef("unknown");
@@ -23,12 +25,25 @@ export function ToolTelemetryBridge({ toolSlug }: { toolSlug: AllToolSlug }) {
     };
     sendViewAfterConsent();
 
+    const recordFiles = (files: FileList | File[]) => {
+      if (!files.length) return;
+      const list = Array.from(files);
+      const total = list.reduce((sum, file) => sum + file.size, 0);
+      inputSizeBucket.current = bytesBucket(total);
+      sendToolMetric({ event: "file_selected", tool: toolSlug, inputSizeBucket: inputSizeBucket.current, fileCount: list.length });
+    };
+
     const onChange = (event: Event) => {
       const input = event.target;
       if (!(input instanceof HTMLInputElement) || input.type !== "file" || !input.files?.length) return;
-      const total = Array.from(input.files).reduce((sum, file) => sum + file.size, 0);
-      inputSizeBucket.current = bytesBucket(total);
-      sendToolMetric({ event: "file_selected", tool: toolSlug, inputSizeBucket: inputSizeBucket.current, fileCount: input.files.length });
+      if (!input.closest(PRIMARY_UPLOAD_ZONE)) return;
+      recordFiles(input.files);
+    };
+
+    const onDrop = (event: DragEvent) => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target?.closest(PRIMARY_UPLOAD_ZONE) || !event.dataTransfer?.files.length) return;
+      recordFiles(event.dataTransfer.files);
     };
 
     const onClick = (event: MouseEvent) => {
@@ -73,11 +88,20 @@ export function ToolTelemetryBridge({ toolSlug }: { toolSlug: AllToolSlug }) {
       processStartedAt.current = null;
     };
 
-    const onError = () => sendToolMetric({ event: "process_error", tool: toolSlug, inputSizeBucket: inputSizeBucket.current, errorCode: "uncaught_error" });
-    const onRejection = () => sendToolMetric({ event: "process_error", tool: toolSlug, inputSizeBucket: inputSizeBucket.current, errorCode: "unhandled_rejection" });
+    const onError = () => {
+      if (processStartedAt.current === null) return;
+      sendToolMetric({ event: "process_error", tool: toolSlug, inputSizeBucket: inputSizeBucket.current, durationBucket: timeBucket(performance.now() - processStartedAt.current), errorCode: "uncaught_error" });
+      processStartedAt.current = null;
+    };
+    const onRejection = () => {
+      if (processStartedAt.current === null) return;
+      sendToolMetric({ event: "process_error", tool: toolSlug, inputSizeBucket: inputSizeBucket.current, durationBucket: timeBucket(performance.now() - processStartedAt.current), errorCode: "unhandled_rejection" });
+      processStartedAt.current = null;
+    };
     const observer = new MutationObserver(scanUiError);
     observer.observe(root, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["class", "data-status"] });
     root.addEventListener("change", onChange, true);
+    root.addEventListener("drop", onDrop, true);
     root.addEventListener("click", onClick, true);
     window.addEventListener("limpdf:download", onDownload as EventListener);
     window.addEventListener("limpdf:consent-change", sendViewAfterConsent);
@@ -87,6 +111,7 @@ export function ToolTelemetryBridge({ toolSlug }: { toolSlug: AllToolSlug }) {
     return () => {
       observer.disconnect();
       root.removeEventListener("change", onChange, true);
+      root.removeEventListener("drop", onDrop, true);
       root.removeEventListener("click", onClick, true);
       window.removeEventListener("limpdf:download", onDownload as EventListener);
       window.removeEventListener("limpdf:consent-change", sendViewAfterConsent);

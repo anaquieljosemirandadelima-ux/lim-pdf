@@ -77,7 +77,8 @@ export function ProPdfWorkspace({ tool }: { tool: ProToolDefinition }) {
   async function selectFiles(list: FileList | null) {
     if (!list) return;
     try {
-      const selected = validateSelection(Array.from(list));
+      const candidates = tool.slug === "processamento-lote-pdf" ? Array.from(list).filter((file) => file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) : Array.from(list);
+      const selected = validateSelection(candidates);
       setFiles(selected); setReport([]); setStatus({ type: "idle" });
       if (tool.slug === "editar-metadados-pdf" && selected[0]) setMetadata(await readMetadata(selected[0]));
     } catch (error) { setStatus({ type: "error", message: error instanceof Error ? error.message : "Arquivo inválido." }); }

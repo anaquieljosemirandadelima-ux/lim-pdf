@@ -13,7 +13,13 @@ function subscribe(callback: () => void) {
 }
 
 function getClientSnapshot(): LanguageCode {
-  return normalizeLanguage(window.localStorage.getItem("limpdf_language") ?? DEFAULT_LANGUAGE);
+  try {
+    const stored = window.localStorage.getItem("limpdf_language");
+    if (stored) return normalizeLanguage(stored);
+  } catch {
+    // O idioma do navegador continua disponível mesmo quando o storage é bloqueado.
+  }
+  return normalizeLanguage(window.navigator.language || DEFAULT_LANGUAGE);
 }
 
 function getServerSnapshot(): LanguageCode {

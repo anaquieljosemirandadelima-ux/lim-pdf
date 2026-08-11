@@ -7,10 +7,10 @@ import { FileOutput, FileStack, Grid2X2, PencilLine, SlidersHorizontal, ShieldCh
 const items = [
   { href: "/", label: "Início", icon: FileStack, match: (path: string) => path === "/" },
   { href: "/ferramentas", label: "Todas as ferramentas", icon: Grid2X2, match: (path: string) => path === "/ferramentas" },
-  { href: "/categorias/converter", label: "Converter", icon: FileOutput, match: (path: string) => path.includes("/categorias/converter") || /pdf-para-|word-para-pdf|excel-para-pdf|imagens-para-pdf|extrair-texto/.test(path) },
-  { href: "/categorias/seguranca", label: "Proteger", icon: ShieldCheck, match: (path: string) => path.includes("/categorias/seguranca") || /proteger-pdf|desbloquear-pdf|permissoes-pdf|remover-metadados|achatar-formulario/.test(path) },
-  { href: "/ferramentas/editar-pdf", label: "Editar PDF", icon: PencilLine, match: (path: string) => path.includes("editar-pdf") || /adicionar-texto|adicionar-imagem|assinar-pdf|marca-dagua|destacar-texto|marcar-confidencial/.test(path) },
-  { href: "/categorias/otimizar", label: "Otimizar", icon: SlidersHorizontal, match: (path: string) => path.includes("/categorias/otimizar") || /compactar-pdf|redimensionar|recortar|livreto|paginas-por-folha/.test(path) },
+  { href: "/categorias/converter", label: "Converter", icon: FileOutput, match: (path: string) => path.includes("/categorias/converter") || /pdf-para-|word-para-pdf|excel-para-pdf|powerpoint-para-pdf|imagens-para-pdf|extrair-texto|ocr-pdf|extrair-imagens/.test(path) },
+  { href: "/categorias/seguranca", label: "Proteger", icon: ShieldCheck, match: (path: string) => path.includes("/categorias/seguranca") || /proteger-pdf|desbloquear-pdf|permissoes-pdf|remover-metadados|achatar-formulario|assinatura-digital|pdf-a|reparar-pdf/.test(path) },
+  { href: "/ferramentas/editar-pdf", label: "Editar PDF", icon: PencilLine, match: (path: string) => path.includes("editar-pdf") || /adicionar-texto|adicionar-imagem|assinar-pdf|marca-dagua|destacar-texto|marcar-confidencial|links-pdf|anotacoes-pdf|editar-metadados/.test(path) },
+  { href: "/categorias/otimizar", label: "Otimizar", icon: SlidersHorizontal, match: (path: string) => path.includes("/categorias/otimizar") || /compactar-pdf|redimensionar|recortar|livreto|paginas-por-folha|otimizar-pdf-avancado|limpar-documento-digitalizado/.test(path) },
 ];
 
 export function AppSidebar() {
@@ -26,10 +26,10 @@ export function AppSidebar() {
             key={item.href}
             href={item.href}
             aria-label={item.label}
-            title={item.label}
             className={active ? "active" : ""}
           >
             <Icon size={21} strokeWidth={1.9} />
+            <span className="reference-sidebar-label" aria-hidden="true">{item.label}</span>
           </Link>
         );
       })}

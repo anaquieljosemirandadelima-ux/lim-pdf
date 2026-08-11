@@ -151,7 +151,7 @@ async function terminalErrorText(page: Page) {
       const text = status.textContent || "";
       return text.trim().length > 0 && !/processando/i.test(text);
     });
-  }, undefined, { timeout: 25_000 });
+  }, undefined, { timeout: 15_000 });
   const status = page.locator(".status-message.error,.status-message.status-error").filter({ hasNotText: /Processando/i }).first();
   return (await status.textContent()) || "";
 }
@@ -172,11 +172,11 @@ async function negativeCases(page: Page) {
   await page.locator("button.process-button").click();
   assert.match(await terminalErrorText(page), /informe|senha/i);
 
-  console.log("QA negativo PDF sem camada de texto");
-  await page.goto(`${baseUrl}/ferramentas/pdf-para-word`, { waitUntil: "networkidle" });
-  await page.locator('input[type="file"]').first().setInputFiles(fixture("image-only.pdf"));
+  console.log("QA negativo senha de proprietário obrigatória");
+  await page.goto(`${baseUrl}/ferramentas/permissoes-pdf`, { waitUntil: "networkidle" });
+  await page.locator('input[type="file"]').first().setInputFiles(fixture("basic.pdf"));
   await page.locator("button.process-button").click();
-  assert.match(await terminalErrorText(page), /OCR|texto/i);
+  assert.match(await terminalErrorText(page), /proprietário|senha/i);
 
   console.log("QA negativo destaque sem termo");
   await page.goto(`${baseUrl}/ferramentas/destacar-texto`, { waitUntil: "networkidle" });

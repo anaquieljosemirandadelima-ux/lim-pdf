@@ -5,13 +5,16 @@ import { MemorySafePdfWorkspace } from "@/components/MemorySafePdfWorkspace";
 import { PdfEditorExperienceSwitcher } from "@/components/PdfEditorExperienceSwitcher";
 import { PdfToolWorkspace } from "@/components/PdfToolWorkspace";
 import { PremiumToolExperience } from "@/components/PremiumToolExperience";
+import { ProPdfWorkspace } from "@/components/ProPdfWorkspace";
 import { ToolIcon } from "@/components/ToolIcon";
 import { ToolTelemetryBridge } from "@/components/ToolTelemetryBridge";
 import { allToolBySlug, allTools, isAdvancedToolSlug, type AllToolSlug } from "@/lib/all-tools";
+import { proTools, type ProToolSlug } from "@/lib/pro-tools";
 import type { ToolDefinition, ToolSlug } from "@/lib/tools";
 
 interface ToolPageProps { params: Promise<{ slug: string }> }
 
+const proToolBySlug = new Map<ProToolSlug, (typeof proTools)[number]>(proTools.map((tool) => [tool.slug as ProToolSlug, tool]));
 const memorySafeToolSlugs = new Set<ToolSlug>([
   "pdf-para-jpg",
   "pdf-para-png",
@@ -19,7 +22,7 @@ const memorySafeToolSlugs = new Set<ToolSlug>([
   "pdf-em-escala-de-cinza",
 ]);
 
-const pageDescriptions: Partial<Record<AllToolSlug, string>> = {
+const pageDescriptions: Partial<Record<AllToolSlug | ProToolSlug, string>> = {
   "editar-pdf": "Edite textos, imagens, páginas e anotações do seu PDF com rapidez e precisão.",
   "juntar-pdf": "Combine vários arquivos PDF em um só de forma rápida e organizada.",
   "dividir-pdf": "Separe páginas ou intervalos do seu PDF com rapidez e controle.",
@@ -37,15 +40,22 @@ const pageDescriptions: Partial<Record<AllToolSlug, string>> = {
   "desbloquear-pdf": "Remova a senha do PDF quando você possui a credencial correta.",
   "permissoes-pdf": "Controle impressão, cópia e modificação do documento.",
   "marcar-confidencial": "Aplique uma marca visual de confidencialidade ao documento.",
+  "ocr-pdf": "Reconheça texto em PDFs escaneados e gere uma cópia pesquisável com OCR real.",
+  "assinatura-digital-pdf": "Aplique assinatura criptográfica PAdES básica com certificado X.509 e chave RSA.",
+  "comparar-pdfs": "Compare duas versões de PDF e destaque visualmente todas as alterações.",
+  "reparar-pdf": "Normalize ou reconstrua PDFs com estrutura problemática diretamente no navegador.",
+  "pdf-a": "Prepare o documento para fluxo PDF/A-2B e gere um relatório de pré-validação.",
+  "pdf-para-powerpoint": "Transforme páginas PDF em slides PPTX com alta fidelidade visual.",
+  "powerpoint-para-pdf": "Converta apresentações PPTX em páginas PDF diretamente no navegador.",
 };
 
-export function generateStaticParams() { return allTools.map((tool) => ({ slug: tool.slug })); }
+export function generateStaticParams() { return [...allTools, ...proTools].map((tool) => ({ slug: tool.slug })); }
 
 export async function generateMetadata({ params }: ToolPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const tool = allToolBySlug.get(slug as AllToolSlug);
+  const tool = proToolBySlug.get(slug as ProToolSlug) || allToolBySlug.get(slug as AllToolSlug);
   if (!tool) return {};
-  const description = pageDescriptions[tool.slug] || tool.description;
+  const description = pageDescriptions[tool.slug as AllToolSlug | ProToolSlug] || tool.description;
   const canonical = `/ferramentas/${tool.slug}`;
   return {
     title: `${tool.name} grátis e online`,
@@ -53,28 +63,18 @@ export async function generateMetadata({ params }: ToolPageProps): Promise<Metad
     keywords: [tool.name, ...tool.keywords, "grátis", "online", "sem cadastro", "PDF no navegador"],
     alternates: { canonical },
     robots: { index: true, follow: true },
-    openGraph: {
-      type: "website",
-      title: `${tool.name} grátis e online | LIM PDF`,
-      description,
-      url: canonical,
-      siteName: "LIM PDF",
-      locale: "pt_BR",
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: `${tool.name} grátis e online | LIM PDF`,
-      description,
-    },
+    openGraph: { type: "website", title: `${tool.name} grátis e online | LIM PDF`, description, url: canonical, siteName: "LIM PDF", locale: "pt_BR" },
+    twitter: { card: "summary_large_image", title: `${tool.name} grátis e online | LIM PDF`, description },
   };
 }
 
 export default async function ToolPage({ params }: ToolPageProps) {
   const { slug } = await params;
-  const tool = allToolBySlug.get(slug as AllToolSlug);
+  const proTool = proToolBySlug.get(slug as ProToolSlug);
+  const tool = proTool || allToolBySlug.get(slug as AllToolSlug);
   if (!tool) notFound();
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://limpdf.com.br";
-  const description = pageDescriptions[tool.slug] || tool.description;
+  const description = pageDescriptions[tool.slug as AllToolSlug | ProToolSlug] || tool.description;
   const softwareSchema = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
@@ -89,13 +89,25 @@ export default async function ToolPage({ params }: ToolPageProps) {
     featureList: ["Gratuito", "Sem cadastro", "Processamento local", "Experiência guiada"],
   };
 
-  if (isAdvancedToolSlug(tool.slug)) {
+  if (proTool) {
+    const telemetrySlug = proTool.slug as unknown as AllToolSlug;
+    return <section className="reference-tool-page reference-pro-tool-page">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }} />
+      <ToolTelemetryBridge toolSlug={telemetrySlug} />
+      <div className="reference-tool-heading"><div><h1>{proTool.name}</h1><p>{description}</p></div><span className={`reference-heading-icon accent-${proTool.accent}`} aria-hidden="true"><ToolIcon icon={proTool.icon} /></span></div>
+      <PremiumToolExperience toolName={proTool.name} toolSlug={telemetrySlug} accent={proTool.accent} />
+      <div className="reference-workspace-wrap"><ProPdfWorkspace tool={{ ...proTool, slug: proTool.slug as ProToolSlug }} /></div>
+    </section>;
+  }
+
+  if (isAdvancedToolSlug(tool.slug as AllToolSlug)) {
+    const advancedTool = tool as (typeof allTools)[number];
     return <section className="reference-tool-page">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }} />
-      <ToolTelemetryBridge toolSlug={tool.slug} />
-      <div className="reference-tool-heading"><div><h1>{tool.name}</h1><p>{description}</p></div><span className={`reference-heading-icon accent-${tool.accent}`} aria-hidden="true"><ToolIcon icon={tool.icon} /></span></div>
-      <PremiumToolExperience toolName={tool.name} toolSlug={tool.slug} accent={tool.accent} />
-      <div className="reference-workspace-wrap"><AdvancedToolWorkspace tool={tool} /></div>
+      <ToolTelemetryBridge toolSlug={advancedTool.slug} />
+      <div className="reference-tool-heading"><div><h1>{advancedTool.name}</h1><p>{description}</p></div><span className={`reference-heading-icon accent-${advancedTool.accent}`} aria-hidden="true"><ToolIcon icon={advancedTool.icon} /></span></div>
+      <PremiumToolExperience toolName={advancedTool.name} toolSlug={advancedTool.slug} accent={advancedTool.accent} />
+      <div className="reference-workspace-wrap"><AdvancedToolWorkspace tool={advancedTool} /></div>
     </section>;
   }
 

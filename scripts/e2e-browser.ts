@@ -147,9 +147,17 @@ async function processTool(page: Page, slug: AllToolSlug) {
 
 async function negativeCases(page: Page) {
   await page.goto(`${baseUrl}/ferramentas/girar-pdf`, { waitUntil: "networkidle" });
-  await page.locator('input[type="file"]').first().setInputFiles(fixture("protected.pdf"));
+  await page.locator('input[type="file"]').first().setInputFiles(fixture("corrupt.pdf"));
   await page.locator("button.process-button").click();
   await page.locator(".status-message.error").waitFor({ state: "visible", timeout: 15_000 });
+  assert.match((await page.locator(".status-message.error").textContent()) || "", /abrir|corrompido|protegido/i);
+
+  await page.goto(`${baseUrl}/ferramentas/desbloquear-pdf`, { waitUntil: "networkidle" });
+  await page.locator('input[type="file"]').first().setInputFiles(fixture("protected.pdf"));
+  await page.locator('input[type="password"]').first().fill("senha-incorreta");
+  await page.locator("button.process-button").click();
+  await page.locator(".status-message.error").waitFor({ state: "visible", timeout: 15_000 });
+  assert.match((await page.locator(".status-message.error").textContent()) || "", /senha|desbloquear|criptograf/i);
 
   await page.goto(`${baseUrl}/ferramentas/pdf-para-word`, { waitUntil: "networkidle" });
   await page.locator('input[type="file"]').first().setInputFiles(fixture("image-only.pdf"));
@@ -160,6 +168,7 @@ async function negativeCases(page: Page) {
   await page.goto(`${baseUrl}/ferramentas/juntar-pdf`, { waitUntil: "networkidle" });
   await page.locator('input[type="file"]').first().setInputFiles({ name: "nao-pdf.txt", mimeType: "text/plain", buffer: Buffer.from("arquivo inválido") });
   await page.locator(".status-message.error").waitFor({ state: "visible", timeout: 10_000 });
+  assert.match((await page.locator(".status-message.error").textContent()) || "", /compatível|PDF/i);
 }
 
 async function main() {
@@ -183,7 +192,7 @@ async function main() {
     assert.deepEqual(pageErrors, [], `Erros de página: ${pageErrors.join(" | ")}`);
     const relevantConsoleErrors = consoleErrors.filter((line) => !/favicon|adsbygoogle|ERR_BLOCKED_BY_CLIENT/i.test(line));
     assert.deepEqual(relevantConsoleErrors, [], `Erros de console: ${relevantConsoleErrors.join(" | ")}`);
-    console.log(JSON.stringify({ ok: true, suite: "browser-e2e", processedTools: allTools.length, negativeCases: 3 }));
+    console.log(JSON.stringify({ ok: true, suite: "browser-e2e", processedTools: allTools.length, negativeCases: 4 }));
   } finally {
     await context.close();
     await browser.close();

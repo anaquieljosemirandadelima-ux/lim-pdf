@@ -1,0 +1,42 @@
+name: One Shot Linearization Note
+
+on:
+  push:
+    branches:
+      - pro-suite-ocr-editor-20260810
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: pro-suite-ocr-editor-20260810
+          fetch-depth: 0
+      - name: Add honest Fast Web View note
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/components/ProPdfWorkspace.tsx')
+          s = p.read_text()
+          anchor = '{tool.slug === "processamento-lote-pdf" ? <label>'
+          note = '{tool.slug === "otimizar-pdf-avancado" ? <Info title="Fast Web View"><>A saída é compactada e reorganizada localmente. Linearização PDF verdadeira (hint tables para streaming progressivo) exige um motor qpdf equivalente; o LIM PDF não marca o arquivo como linearizado quando isso não foi realmente produzido.</></Info> : null}\n      '
+          if anchor in s and 'title="Fast Web View"' not in s:
+            s = s.replace(anchor, note + anchor)
+          p.write_text(s)
+          PY
+          rm -f .github/workflows/one-shot-linearization-note.yml
+      - run: |
+          npm ci --no-audit --no-fund
+          npm run lint
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Evita alegação falsa de linearização PDF"
+          git push origin HEAD:pro-suite-ocr-editor-20260810

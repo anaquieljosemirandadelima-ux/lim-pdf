@@ -1,0 +1,50 @@
+name: One Shot Optimize Patch
+
+on:
+  push:
+    branches:
+      - pro-suite-ocr-editor-20260810
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: pro-suite-ocr-editor-20260810
+          fetch-depth: 0
+      - name: Route optimizer to enhanced engine
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          barrel = Path('src/lib/pro-pdf-engines.ts')
+          s = barrel.read_text().replace('  optimizePdfAdvanced,\n', '')
+          if 'optimizePdfAdvancedEnhanced as optimizePdfAdvanced' not in s:
+            s += '\nexport { optimizePdfAdvancedEnhanced as optimizePdfAdvanced } from "@/lib/pro-pdf-optimize";\n'
+          barrel.write_text(s)
+
+          workspace = Path('src/components/ProPdfWorkspace.tsx')
+          s = workspace.read_text()
+          old = 'downloadBytes(result.bytes, result.filename); setReport([`Modo aplicado: ${result.mode}.`]);'
+          new = 'downloadBytes(result.bytes, result.filename); setReport([`Modo aplicado: ${result.mode}.`, ...result.report]);'
+          if old in s:
+            s = s.replace(old, new)
+          workspace.write_text(s)
+          PY
+          rm -f .github/workflows/one-shot-optimize-patch.yml
+      - run: |
+          npm ci --no-audit --no-fund
+          npm run lint
+          npm test
+          npm run build
+      - name: Commit and self-remove
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Aprimora compactação estrutural e visual"
+          git push origin HEAD:pro-suite-ocr-editor-20260810

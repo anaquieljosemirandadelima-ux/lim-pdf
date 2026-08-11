@@ -1,7 +1,8 @@
 import { allToolBySlug, type AllToolSlug } from "@/lib/all-tools";
 import { proTools, type ProToolSlug } from "@/lib/pro-tools";
+import { releaseToolBySlug, type ReleaseToolSlug } from "@/lib/release-tools";
 
-export type NavigationToolSlug = AllToolSlug | ProToolSlug;
+export type NavigationToolSlug = AllToolSlug | ProToolSlug | ReleaseToolSlug;
 export type NavigationGroup = {
   slug: string;
   label: string;
@@ -19,11 +20,11 @@ export const navigationGroups: NavigationGroup[] = [
     slug: "organizar",
     label: "Organizar",
     title: "Organizar PDF",
-    description: "Junte, divida, reordene, compare, marque e processe documentos em lote.",
+    description: "Junte, divida, reordene, dimensione, compare, marque e processe documentos em lote.",
     icon: "organize",
     accent: "blue",
     tools: [
-      "juntar-pdf", "dividir-pdf", "extrair-paginas", "excluir-paginas", "organizar-paginas", "girar-pdf", "duplicar-paginas", "inserir-pagina-em-branco", "alternar-pdfs", "sobrepor-pdfs",
+      "normalizar-paginas-pdf", "juntar-pdf", "dividir-pdf", "extrair-paginas", "excluir-paginas", "organizar-paginas", "girar-pdf", "duplicar-paginas", "inserir-pagina-em-branco", "alternar-pdfs", "sobrepor-pdfs",
       "bookmarks-pdf", "comparar-pdfs", "processamento-lote-pdf", "numeracao-bates",
     ],
   },
@@ -42,11 +43,11 @@ export const navigationGroups: NavigationGroup[] = [
     slug: "converter",
     label: "Converter",
     title: "Converter PDF",
-    description: "Use OCR real e converta PDF, Word, Excel, PowerPoint, imagens e texto.",
+    description: "Envie o arquivo uma vez, escolha a saída e use OCR real para PDFs escaneados.",
     icon: "convert",
     accent: "teal",
     tools: [
-      "ocr-pdf", "pdf-para-word", "pdf-para-excel", "pdf-para-powerpoint", "pdf-para-jpg", "pdf-para-png", "extrair-imagens-pdf", "extrair-texto-pdf", "word-para-pdf", "excel-para-pdf", "powerpoint-para-pdf", "imagens-para-pdf",
+      "converter-pdf", "ocr-pdf", "pdf-para-word", "pdf-para-excel", "pdf-para-powerpoint", "pdf-para-jpg", "pdf-para-png", "extrair-imagens-pdf", "extrair-texto-pdf", "word-para-pdf", "excel-para-pdf", "powerpoint-para-pdf", "imagens-para-pdf",
     ],
   },
   {
@@ -70,21 +71,21 @@ export const navigationGroups: NavigationGroup[] = [
   {
     slug: "seguranca",
     label: "Segurança",
-    title: "Segurança PDF",
-    description: "Proteja, desbloqueie, controle permissões, repare e prepare documentos para arquivamento.",
+    title: "Segurança e revisão de PDF",
+    description: "Revise, proteja, desbloqueie, controle permissões, repare e prepare documentos para arquivamento.",
     icon: "security",
     accent: "blue",
-    tools: ["proteger-pdf", "desbloquear-pdf", "permissoes-pdf", "assinatura-digital-pdf", "marcar-confidencial", "remover-metadados", "reparar-pdf", "pdf-a"],
+    tools: ["preflight-pdf", "proteger-pdf", "desbloquear-pdf", "permissoes-pdf", "assinatura-digital-pdf", "marcar-confidencial", "remover-metadados", "reparar-pdf", "pdf-a"],
   },
   {
     slug: "otimizar",
     label: "Otimizar",
     title: "Otimizar PDF",
-    description: "Comprima, limpe digitalizações, recorte, redimensione e prepare PDFs para uso ou impressão.",
+    description: "Comprima, limpe digitalizações, dimensione, recorte e prepare PDFs para uso ou impressão.",
     icon: "optimize",
     accent: "orange",
     tools: [
-      "otimizar-pdf-avancado", "limpar-documento-digitalizado", "compactar-pdf", "pdf-em-escala-de-cinza", "recortar-pdf", "redimensionar-pdf", "criar-livreto-pdf", "paginas-por-folha",
+      "normalizar-paginas-pdf", "preflight-pdf", "otimizar-pdf-avancado", "limpar-documento-digitalizado", "compactar-pdf", "pdf-em-escala-de-cinza", "recortar-pdf", "redimensionar-pdf", "criar-livreto-pdf", "paginas-por-folha",
     ],
   },
 ];
@@ -93,6 +94,6 @@ export const navigationGroupBySlug = new Map(navigationGroups.map((group) => [gr
 
 export function getGroupTools(group: NavigationGroup) {
   return group.tools
-    .map((slug) => proToolBySlug.get(slug as ProToolSlug) || allToolBySlug.get(slug as AllToolSlug))
+    .map((slug) => releaseToolBySlug.get(slug as ReleaseToolSlug) || proToolBySlug.get(slug as ProToolSlug) || allToolBySlug.get(slug as AllToolSlug))
     .filter((tool) => tool !== undefined);
 }

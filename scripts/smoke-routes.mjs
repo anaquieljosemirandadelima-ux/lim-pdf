@@ -30,7 +30,10 @@ for (const route of routes) {
     }
   }
   if (route === "/ferramentas/compactar-pdf" && !text.includes("Fluxo guiado")) throw new Error("premium guided flow missing from standard tool");
-  if (route === "/sitemap.xml" && (text.includes("/faq") || text.includes("/sobre"))) throw new Error("sitemap still exposes removed legacy routes");
+  if (route === "/sitemap.xml") {
+    const legacyUrls = [`<loc>${base}/faq</loc>`, `<loc>${base}/sobre</loc>`];
+    if (legacyUrls.some((url) => text.includes(url))) throw new Error("sitemap still exposes removed legacy routes");
+  }
 }
 
 for (const route of ["/faq", "/sobre", "/api/colorcopia-guia"]) {

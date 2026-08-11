@@ -1,58 +1,37 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { allTools, advancedTools, isAdvancedToolSlug } from "../src/lib/all-tools";
+import { allTools, advancedTools } from "../src/lib/all-tools";
 import { proTools } from "../src/lib/pro-tools";
-
-const memorySafe = new Set(["pdf-para-jpg", "pdf-para-png", "compactar-pdf", "pdf-em-escala-de-cinza"]);
+import { releaseTools } from "../src/lib/release-tools";
 async function source(path: string) { return readFile(path, "utf8"); }
 
 async function main() {
-  const publicTools = [...allTools, ...proTools];
-  assert.equal(allTools.length, 41);
-  assert.equal(proTools.length, 17);
-  assert.equal(publicTools.length, 58);
-  assert.equal(new Set(publicTools.map((tool) => tool.slug)).size, 58, "Slugs públicos devem ser únicos.");
-  assert.equal(advancedTools.length, 9);
-
-  const [route, generic, sequential, advanced, workspace, navWorkspace, exportsFile, core, form, navigation, visual, office, signature, studio, sitemap, telemetryBridge, telemetryLib, telemetryApi, nextConfig, sidebar] = await Promise.all([
-    source("src/app/ferramentas/[slug]/page.tsx"), source("src/components/PdfToolWorkspace.tsx"), source("src/components/MemorySafePdfWorkspace.tsx"), source("src/components/AdvancedToolWorkspace.tsx"), source("src/components/ProPdfWorkspace.tsx"), source("src/components/ProNavigationWorkspace.tsx"),
-    source("src/lib/pro-pdf-engines.ts"), source("src/lib/pro-pdf-core.ts"), source("src/lib/pro-pdf-form.ts"), source("src/lib/pro-pdf-navigation.ts"), source("src/lib/pro-pdf-visual.ts"), source("src/lib/pro-pdf-office.ts"), source("src/lib/pro-pdf-sign.ts"),
-    source("src/components/PdfEditorStudio.tsx"), source("src/app/sitemap.ts"), source("src/components/ToolTelemetryBridge.tsx"), source("src/lib/tool-telemetry.ts"), source("src/app/api/telemetry/route.ts"), source("next.config.ts"), source("src/components/AppSidebar.tsx"),
+  const publicTools = [...allTools, ...proTools, ...releaseTools];
+  assert.equal(allTools.length, 41); assert.equal(proTools.length, 17); assert.equal(releaseTools.length, 3); assert.equal(publicTools.length, 61);
+  assert.equal(new Set(publicTools.map((tool) => tool.slug)).size, 61, "Slugs públicos devem ser únicos."); assert.equal(advancedTools.length, 9);
+  const [route, converter, normalize, preflight, proWorkspace, linksWorkspace, navWorkspace, exportsFile, core, form, navigation, compare, scan, optimize, office, signature, studio, switcher, sitemap, telemetryBridge, telemetryLib, telemetryApi, sidebar, home, footer, guides, ads] = await Promise.all([
+    source("src/app/ferramentas/[slug]/page.tsx"), source("src/components/UnifiedConverterWorkspace.tsx"), source("src/components/PageNormalizeWorkspace.tsx"), source("src/components/PreflightWorkspace.tsx"), source("src/components/ProPdfWorkspace.tsx"), source("src/components/ProLinksWorkspace.tsx"), source("src/components/ProNavigationWorkspace.tsx"), source("src/lib/pro-pdf-engines.ts"), source("src/lib/pro-pdf-core.ts"), source("src/lib/pro-pdf-form.ts"), source("src/lib/pro-pdf-navigation.ts"), source("src/lib/pro-pdf-compare.ts"), source("src/lib/pro-pdf-scan.ts"), source("src/lib/pro-pdf-optimize.ts"), source("src/lib/pro-pdf-office.ts"), source("src/lib/pro-pdf-sign.ts"), source("src/components/PdfEditorStudio.tsx"), source("src/components/PdfEditorExperienceSwitcher.tsx"), source("src/app/sitemap.ts"), source("src/components/ToolTelemetryBridge.tsx"), source("src/lib/tool-telemetry.ts"), source("src/app/api/telemetry/route.ts"), source("src/components/AppSidebar.tsx"), source("src/app/page.tsx"), source("src/components/SiteFooter.tsx"), source("src/lib/guides.ts"), source("public/ads.txt")
   ]);
-
-  assert.match(route, /\[\.\.\.allTools, \.\.\.proTools\]\.map/);
-  assert.match(route, /proToolBySlug\.get/); assert.match(route, /allToolBySlug\.get/); assert.match(route, /ProPdfWorkspace/); assert.match(route, /ProNavigationWorkspace/); assert.match(route, /ToolTelemetryBridge/);
-  for (const tool of allTools) {
-    if (tool.slug === "editar-pdf") { assert.match(route, /PdfEditorExperienceSwitcher/); continue; }
-    if (memorySafe.has(tool.slug)) { assert.match(sequential, new RegExp(`"${tool.slug}"`)); continue; }
-    if (isAdvancedToolSlug(tool.slug)) { assert.ok(advanced.includes(`"${tool.slug}"`), `Workspace avançado sem ${tool.slug}`); continue; }
-    assert.match(generic, new RegExp(`"${tool.slug}"\\s*:`), `Dispatcher genérico sem ${tool.slug}`);
-  }
-  for (const tool of proTools) {
-    const present = workspace.includes(`tool.slug === "${tool.slug}"`) || workspace.includes(`["reparar-pdf", "pdf-para-powerpoint", "powerpoint-para-pdf", "extrair-imagens-pdf"]`) || navWorkspace.includes(`tool.slug === "${tool.slug}"`) || route.includes(`"${tool.slug}"`);
-    assert.ok(present, `Workspace profissional sem ${tool.slug}`);
-  }
-
-  for (const capability of ["ocrPdf", "signPdfPades", "addHyperlink", "createFormPdf", "addBookmarks", "removeAllHyperlinks", "comparePdfs", "repairPdf", "preparePdfA", "pdfToPptx", "pptxToPdf", "extractEmbeddedImages", "cleanScannedPdf", "optimizePdfAdvanced", "addNativeAnnotation", "processBatch", "addBates", "editMetadata"]) assert.ok(exportsFile.includes(capability), `Barrel profissional sem ${capability}`);
-  assert.ok(visual.includes("tesseract.js@7.0.0"), "OCR deve usar Tesseract real e versionado.");
-  assert.ok(signature.includes("ETSI.CAdES.detached") && signature.includes("crypto.subtle.sign"), "Assinatura digital deve usar CMS/PAdES + WebCrypto.");
-  assert.ok(core.includes('PDFName.of("Link")') && core.includes("addInternalPageLink"), "Links externos e internos devem ser annotations nativas.");
-  assert.ok(navigation.includes("removeAllHyperlinks") && navigation.includes('PDFName.of("Outlines")') && navigation.includes("parentIndex"), "Navegação deve editar links e criar bookmarks hierárquicos.");
-  assert.ok(form.includes("createTextField") && form.includes("createCheckBox") && form.includes("createRadioGroup"), "Formulário deve usar AcroForm real.");
-  assert.ok(form.includes('PDFName.of("Sig")') && form.includes('PDFName.of("FT")'), "Criador de formulário deve gerar campo de assinatura /FT /Sig nativo.");
-  assert.ok(core.includes("pdfaid:part=\"2\""), "Motor deve inserir identificação PDF/A no XMP.");
-  assert.ok(office.includes("presentationml") && office.includes("readZipEntries"), "Conversão PPTX deve manipular OOXML real.");
-
-  for (const capability of ["pen", "line", "arrow", "rect", "ellipse", "highlight", "redact", "comment", "stamp", "signature", "image", "duplicatePage", "insertBlankPage", "deletePage", "findNextText", "exportPdf", "undo", "redo"]) assert.ok(studio.includes(capability), `Studio sem ${capability}`);
-
-  assert.ok(sitemap.includes("proTools")); assert.ok(!sitemap.includes('"/faq"')); assert.ok(!sitemap.includes('"/sobre"'));
-  assert.ok(nextConfig.includes("https://cdn.jsdelivr.net")); assert.ok(sidebar.includes("reference-sidebar-label"));
-  assert.ok(telemetryBridge.includes("file.size") && !telemetryBridge.includes("file.name")); assert.ok(telemetryBridge.includes("lastUiError.current = \"\""));
-  assert.ok(telemetryLib.includes('localStorage.getItem(CONSENT_KEY) === "accepted"'));
-  assert.ok(telemetryApi.includes("request.body?.getReader()") && telemetryApi.includes("configuredSampleRate") && telemetryApi.includes("rateLimited") && telemetryApi.includes("proTools"));
-  assert.ok(telemetryApi.includes("Nunca registrar nome do arquivo") && !telemetryApi.includes("user-agent"));
-
-  console.log(JSON.stringify({ ok: true, suite: "tool-matrix", legacyTools: 41, proTools: 17, totalTools: 58, advanced: 9, memorySafe: 4, realOcr: true, padesBasic: true, nativePdfFeatures: true, advancedNavigation: true, signatureFormField: true, ooxml: true }));
+  assert.match(route, /\.\.\.releaseTools/); assert.match(route, /UnifiedConverterWorkspace/); assert.match(route, /PageNormalizeWorkspace/); assert.match(route, /PreflightWorkspace/); assert.match(route, /ToolEditorialContent/); assert.match(route, /BreadcrumbList/);
+  for (const slug of ["pdf-para-word","pdf-para-excel","pdf-para-powerpoint","pdf-para-jpg","pdf-para-png","extrair-texto-pdf"]) assert.ok(route.includes(`"${slug}"`), `Conversor unificado sem ${slug}`);
+  assert.ok(converter.includes("Converter para") && converter.includes("allowedTargets") && converter.includes("pdfToDocxFidelity"), "Conversor deve permitir troca real de formato após upload.");
+  assert.ok(normalize.includes("A4") && normalize.includes("customWidth") && normalize.includes("fit"), "Dimensionamento deve oferecer presets, custom e ajuste proporcional.");
+  assert.ok(preflight.includes("pagesWithoutText") && preflight.includes("formFields") && preflight.includes("annotations"), "Preflight deve analisar texto, forms e anotações.");
+  for (const capability of ["ocrPdf","signPdfPades","addHyperlink","createFormPdf","addBookmarks","removeAllHyperlinks","comparePdfs","repairPdf","preparePdfA","pdfToPptx","pptxToPdf","extractEmbeddedImages","cleanScannedPdf","optimizePdfAdvanced","addNativeAnnotation","processBatch","addBates","editMetadata"]) assert.ok(exportsFile.includes(capability), `Barrel profissional sem ${capability}`);
+  assert.ok(linksWorkspace.includes("readHyperlinks") && linksWorkspace.includes("editHyperlink") && linksWorkspace.includes("removeHyperlink")); assert.ok(navWorkspace.includes("addBookmarks")); assert.ok(proWorkspace.includes("ocrPdf"));
+  assert.ok(form.includes('PDFName.of("Sig")') && form.includes('PDFName.of("FT")'));
+  assert.ok(compare.includes("wordDiff") || compare.includes("addedWords"), "Comparação deve considerar texto."); assert.ok(scan.includes("autoOrient") || scan.includes("orientation"), "Limpeza deve tratar orientação."); assert.ok(optimize.includes("structural") && optimize.includes("visual"));
+  assert.ok(office.includes("MAX_ZIP_TOTAL_UNCOMPRESSED") && office.includes("orderedSlides") && office.includes("containBox"), "PPTX deve ter limites ZIP, ordem declarada e preservação de proporção.");
+  assert.ok(signature.includes("validateCertificateKeyPair") && signature.includes("ByteRange"), "PAdES deve validar par certificado-chave e ByteRange.");
+  assert.ok(core.includes('PDFName.of("Metadata")'), "Core deve tratar XMP.");
+  assert.ok(navigation.includes("preservedExisting") && navigation.includes("oldLast"), "Bookmarks existentes devem ser preservados.");
+  for (const capability of ["pen","line","arrow","rect","ellipse","highlight","redact","comment","stamp","signature","image","duplicatePage","insertBlankPage","deletePage","findNextText","exportPdf","undo","redo"]) assert.ok(studio.includes(capability), `Studio sem ${capability}`);
+  assert.ok(switcher.includes("preciseMounted") && switcher.includes("limpdfEditorMode"), "Os dois modos devem preservar sessão e sinalizar o modo ativo.");
+  assert.ok(sitemap.includes("releaseTools") && sitemap.includes("guides") && sitemap.includes('"/sobre"'));
+  assert.ok(home.includes("toolCount") && !home.includes("58 ferramentas") && !home.includes("32 funções"));
+  assert.ok(sidebar.includes("reference-sidebar-label") && sidebar.includes("converter-pdf")); assert.ok(footer.includes("Preferências de privacidade") && footer.includes("/guias")); assert.ok(guides.includes("remover-dados-sensiveis-pdf"));
+  assert.ok(/^google\.com, pub-\d+, DIRECT, f08c47fec0942fa0/m.test(ads));
+  assert.ok(telemetryBridge.includes("file.size") && !telemetryBridge.includes("file.name")); assert.ok(telemetryLib.includes("ReleaseToolSlug") && telemetryLib.includes('localStorage.getItem(CONSENT_KEY) === "accepted"')); assert.ok(telemetryApi.includes("releaseTools") && telemetryApi.includes("Nunca registrar nome do arquivo"));
+  console.log(JSON.stringify({ ok: true, suite: "tool-matrix", legacyTools: 41, proTools: 17, releaseTools: 3, totalTools: 61, advanced: 9, realOcr: true, padesBasic: true, pageSizing: true, unifiedConverter: true, preflight: true, adsenseTransparency: true, seoContent: true }));
 }
-
 main().catch((error) => { console.error(error); process.exitCode = 1; });

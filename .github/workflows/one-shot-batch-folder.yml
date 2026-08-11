@@ -1,0 +1,45 @@
+name: One Shot Batch Folder
+
+on:
+  push:
+    branches:
+      - pro-suite-ocr-editor-20260810
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: pro-suite-ocr-editor-20260810
+          fetch-depth: 0
+      - name: Add folder selection to batch workspace
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/components/ProPdfWorkspace.tsx')
+          s = p.read_text()
+          if 'folderInputRef' not in s:
+            s = s.replace('const fileInputRef = useRef<HTMLInputElement>(null);', 'const fileInputRef = useRef<HTMLInputElement>(null);\n  const folderInputRef = useRef<HTMLInputElement>(null);')
+          anchor = '<input ref={fileInputRef} type="file" accept={tool.accept} multiple={multiple} hidden onChange={(event) => void selectFiles(event.target.files)} />'
+          replacement = anchor + '{tool.slug === "processamento-lote-pdf" ? <><button className="secondary-button pro-folder-button" type="button" onClick={() => folderInputRef.current?.click()}><FilePlus2 size={16} /> Selecionar pasta</button><input ref={(node) => { folderInputRef.current = node; if (node) node.setAttribute("webkitdirectory", ""); }} type="file" accept="application/pdf,.pdf" multiple hidden onChange={(event) => void selectFiles(event.target.files)} /></> : null}'
+          if anchor in s and 'pro-folder-button' not in s:
+            s = s.replace(anchor, replacement)
+          p.write_text(s)
+          PY
+          rm -f .github/workflows/one-shot-batch-folder.yml
+      - run: |
+          npm ci --no-audit --no-fund
+          npm run lint
+          npm run build
+      - name: Commit and self-remove
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Permite selecionar pasta no processamento em lote"
+          git push origin HEAD:pro-suite-ocr-editor-20260810

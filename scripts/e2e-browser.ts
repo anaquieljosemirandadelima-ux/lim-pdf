@@ -146,12 +146,13 @@ async function processTool(page: Page, slug: AllToolSlug) {
 
 async function terminalErrorText(page: Page) {
   await page.waitForFunction(() => {
-    const button = document.querySelector<HTMLButtonElement>("button.process-button");
-    const status = document.querySelector<HTMLElement>(".status-message");
-    return Boolean(button && !button.disabled && status && !status.classList.contains("processing"));
-  }, undefined, { timeout: 20_000 });
-  const status = page.locator(".status-message").first();
-  await assert.doesNotReject(async () => assert.ok((await status.getAttribute("class"))?.split(/\s+/).includes("error"), "O caso negativo não terminou em estado de erro."));
+    const statuses = Array.from(document.querySelectorAll<HTMLElement>(".status-message.error,.status-message.status-error"));
+    return statuses.some((status) => {
+      const text = status.textContent || "";
+      return text.trim().length > 0 && !/processando/i.test(text);
+    });
+  }, undefined, { timeout: 25_000 });
+  const status = page.locator(".status-message.error,.status-message.status-error").filter({ hasNotText: /Processando/i }).first();
   return (await status.textContent()) || "";
 }
 

@@ -8,7 +8,7 @@ import { MemorySafePdfWorkspace } from "@/components/MemorySafePdfWorkspace";
 import { PdfToolWorkspace } from "@/components/PdfToolWorkspace";
 import { allToolBySlug, type AllToolSlug } from "@/lib/all-tools";
 import { humanSize } from "@/lib/browser-files";
-import { clearTemporaryFiles } from "@/lib/temporary-file-cache";
+import { clearTemporaryFiles } from "@/lib/temporary-cache";
 import type { ToolDefinition } from "@/lib/tools";
 
 export const converterOutputSlugs = ["pdf-para-word", "pdf-para-excel", "pdf-para-jpg", "pdf-para-png", "extrair-texto-pdf"] as const;
@@ -21,7 +21,7 @@ const outputOptions: Array<{ slug: ConverterOutputSlug; label: string; detail: s
   { slug: "pdf-para-png", label: "PNG", detail: "imagens nítidas", icon: Image },
   { slug: "extrair-texto-pdf", label: "Texto", detail: "conteúdo extraído", icon: FileText },
 ];
-const childCacheKeys = ["pdf-para-jpg", "pdf-para-png", "extrair-texto-pdf"] as const;
+const childCacheKeys = ["tool:pdf-para-jpg", "tool:pdf-para-png", "tool:extrair-texto-pdf"] as const;
 
 function isMemorySafe(slug: ConverterOutputSlug) { return slug === "pdf-para-jpg" || slug === "pdf-para-png"; }
 function normalizePdfFile(file: File) {

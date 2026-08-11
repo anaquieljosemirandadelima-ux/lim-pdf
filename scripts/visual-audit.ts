@@ -28,6 +28,7 @@ async function main() {
   try {
     for (const viewport of viewports) {
       const context = await browser.newContext({ viewport: { width: viewport.width, height: viewport.height }, deviceScaleFactor: 1 });
+      await context.addInitScript(() => localStorage.setItem("limpdf-consent-v1", "essential"));
       const page = await context.newPage();
       page.on("pageerror", (error) => issues.push(`${viewport.name}:pageerror:${error.message}`));
       page.on("console", (message) => { if (message.type() === "error" && !/adsbygoogle|ERR_BLOCKED_BY_CLIENT/i.test(message.text())) issues.push(`${viewport.name}:console:${message.text()}`); });
@@ -53,6 +54,7 @@ async function main() {
     }
 
     const reducedContext = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: "reduce" });
+    await reducedContext.addInitScript(() => localStorage.setItem("limpdf-consent-v1", "essential"));
     const reducedPage = await reducedContext.newPage();
     await reducedPage.goto(`${baseUrl}/ferramentas/editar-pdf`, { waitUntil: "networkidle" });
     const loadingAnimation = await reducedPage.evaluate(() => getComputedStyle(document.querySelector(".editor-mode-loading") || document.body).animationName);

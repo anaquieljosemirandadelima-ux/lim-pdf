@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { AllToolSlug } from "@/lib/all-tools";
-import { bytesBucket, measurementConsentGranted, sendToolMetric, timeBucket } from "@/lib/tool-telemetry";
+import { bytesBucket, measurementConsentGranted, sendToolMetric, timeBucket, type ToolMetricSlug } from "@/lib/tool-telemetry";
 
 type DownloadDetail = { bytes?: number; extension?: string };
 
 const PRIMARY_UPLOAD_ZONE = ".drop-zone,.studio-upload-card,.editor-upload-card";
 
-export function ToolTelemetryBridge({ toolSlug }: { toolSlug: AllToolSlug }) {
+export function ToolTelemetryBridge({ toolSlug }: { toolSlug: ToolMetricSlug }) {
   const processStartedAt = useRef<number | null>(null);
   const inputSizeBucket = useRef("unknown");
   const lastUiError = useRef("");

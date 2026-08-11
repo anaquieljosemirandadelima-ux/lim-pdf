@@ -1,0 +1,57 @@
+name: Office Fidelity Patch
+
+on:
+  push:
+    branches:
+      - pro-suite-ocr-editor-20260810
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[office-fidelity-patched]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: pro-suite-ocr-editor-20260810
+          fetch-depth: 0
+      - name: Route Office tools to fidelity workspace
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/app/ferramentas/[slug]/page.tsx')
+          s = p.read_text()
+          if 'OfficeFidelityWorkspace' not in s:
+              anchor = 'import { MemorySafePdfWorkspace } from "@/components/MemorySafePdfWorkspace";'
+              if anchor not in s:
+                  raise SystemExit('route import anchor missing')
+              s = s.replace(anchor, anchor + '\nimport { OfficeFidelityWorkspace } from "@/components/OfficeFidelityWorkspace";')
+          if 'officeFidelityToolSlugs' not in s:
+              anchor = 'const memorySafeToolSlugs = new Set<ToolSlug>(["pdf-para-jpg", "pdf-para-png", "compactar-pdf", "pdf-em-escala-de-cinza"]);'
+              if anchor not in s:
+                  raise SystemExit('memory-safe anchor missing')
+              s = s.replace(anchor, anchor + '\nconst officeFidelityToolSlugs = new Set<AllToolSlug>(["pdf-para-word", "pdf-para-excel", "word-para-pdf", "excel-para-pdf"]);')
+          old = '<div className="reference-workspace-wrap"><AdvancedToolWorkspace tool={advancedTool} /></div>'
+          new = '<div className="reference-workspace-wrap">{officeFidelityToolSlugs.has(advancedTool.slug) ? <OfficeFidelityWorkspace tool={advancedTool} /> : <AdvancedToolWorkspace tool={advancedTool} />}</div>'
+          if old in s:
+              s = s.replace(old, new)
+          elif 'OfficeFidelityWorkspace tool={advancedTool}' not in s:
+              raise SystemExit('advanced workspace anchor missing')
+          p.write_text(s)
+          PY
+      - run: |
+          npm ci --no-audit --no-fund
+          npm run lint
+          npm test
+          npm run build
+      - name: Commit
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/app/ferramentas/[slug]/page.tsx
+          git commit -m "Ativa conversões Office com fidelidade avançada [office-fidelity-patched]"
+          git push origin HEAD:pro-suite-ocr-editor-20260810

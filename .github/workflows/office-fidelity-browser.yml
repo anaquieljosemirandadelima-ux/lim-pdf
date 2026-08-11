@@ -1,0 +1,41 @@
+name: Office Fidelity Browser QA
+
+on:
+  push:
+    branches:
+      - pro-suite-ocr-editor-20260810
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: office-fidelity-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  office-fidelity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright-core install --with-deps chromium
+      - run: npm run qa:fixtures
+      - run: npm run build
+      - name: Browser Office round trips
+        run: |
+          npm run start > /tmp/limpdf-office.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID || true' EXIT
+          for i in $(seq 1 35); do
+            curl -fsS http://127.0.0.1:3000/ferramentas/pdf-para-word >/dev/null && break
+            sleep 1
+          done
+          npx tsx scripts/test-office-fidelity-browser.ts

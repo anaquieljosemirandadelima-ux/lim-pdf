@@ -27,7 +27,11 @@ function validOrigin(request: NextRequest) {
   const origin = request.headers.get("origin");
   if (!origin) return true;
   try {
-    return new URL(origin).host === request.nextUrl.host;
+    const originHost = new URL(origin).host;
+    const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+    const directHost = request.headers.get("host")?.trim();
+    const allowedHosts = new Set([request.nextUrl.host, forwardedHost, directHost].filter((value): value is string => Boolean(value)));
+    return allowedHosts.has(originHost);
   } catch {
     return false;
   }

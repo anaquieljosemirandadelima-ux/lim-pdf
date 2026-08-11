@@ -20,7 +20,7 @@ async function main() {
     await page.getByRole("button", { name: /Studio Pro/ }).click();
     assert.ok(await page.locator(".studio-pro-panel").isVisible(), "Dock Studio Pro deve abrir");
 
-    const pageCanvas = page.locator(".studio-canvas-stage,.studio-canvas-area,.studio-page-wrap,.studio-page").filter({ visible: true }).last();
+    const pageCanvas = page.locator(".studio-canvas-stage:visible,.studio-canvas-area:visible,.studio-page-wrap:visible,.studio-page:visible").last();
     const box = await pageCanvas.boundingBox();
     assert.ok(box && box.width > 200 && box.height > 200, "Canvas do Studio deve estar visível");
 

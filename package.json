@@ -21,7 +21,9 @@
     "test:visual": "tsx scripts/visual-audit.ts",
     "test:perf:build": "tsx scripts/performance-budget.ts build",
     "test:perf:browser": "tsx scripts/performance-budget.ts browser",
-    "check": "npm run lint && npm test && npm run build && npm run test:perf:build"
+    "check": "npm run lint && npm test && npm run build && npm run test:perf:build",
+    "test:pades-verify": "tsx scripts/test-pades-verify.ts",
+    "test:pro-navigation": "tsx scripts/test-pro-navigation.ts"
   },
   "dependencies": {
     "@pdfsmaller/pdf-decrypt": "^1.0.1",

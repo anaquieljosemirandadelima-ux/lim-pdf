@@ -4,13 +4,10 @@ import { safeBaseName, type Progress } from "@/lib/pro-pdf-core";
 
 type PdfJsDocument = Awaited<ReturnType<typeof loadPdfJsDocument>>;
 type TextItem = { str?: string };
+type PageTextDiff = { page: number; added: string[]; removed: string[]; sameWords: number };
 
-type PageTextDiff = {
-  page: number;
-  added: string[];
-  removed: string[];
-  sameWords: number;
-};
+const MAX_COMPARE_PAGES = 120;
+const MAX_COMPARE_RASTER_PIXELS = 180_000_000;
 
 function tokens(value: string) {
   return value.toLocaleLowerCase("pt-BR").normalize("NFKC").match(/[\p{L}\p{N}]+/gu) || [];
@@ -75,16 +72,32 @@ export async function comparePdfs(fileA: File, fileB: File, threshold = 32, onPr
   const bold = await output.embedFont(StandardFonts.HelveticaBold);
   const total = Math.max(a.numPages, b.numPages);
   const textDiffs: PageTextDiff[] = [];
-  const visualPages: Array<{ left: Uint8Array; right: Uint8Array; diff: Uint8Array; width: number; height: number; changed: number }> = [];
+  let rasterPixels = 0;
+
   try {
+    if (total > MAX_COMPARE_PAGES) throw new Error(`A comparação aceita até ${MAX_COMPARE_PAGES} páginas por execução. Divida documentos maiores em partes.`);
+
+    const summary = output.addPage([595, 842]);
+    summary.drawText("Relatório de comparação — LIM PDF", { x: 42, y: 790, size: 20, font: bold, color: rgb(.08, .1, .15) });
+    summary.drawText(`Documento A: ${safeText(fileA.name).slice(0, 70)}`, { x: 42, y: 758, size: 9, font: regular, color: rgb(.35, .39, .45) });
+    summary.drawText(`Documento B: ${safeText(fileB.name).slice(0, 70)}`, { x: 42, y: 743, size: 9, font: regular, color: rgb(.35, .39, .45) });
+
     for (let pageNumber = 1; pageNumber <= total; pageNumber += 1) {
       onProgress?.(`Comparando conteúdo da página ${pageNumber} de ${total}`, Math.round((pageNumber - 1) / total * 82));
       const [leftText, rightText] = await Promise.all([pageText(a, pageNumber), pageText(b, pageNumber)]);
       const textDiff = multisetDiff(tokens(leftText), tokens(rightText));
-      textDiffs.push({ page: pageNumber, added: textDiff.added, removed: textDiff.removed, sameWords: textDiff.same });
+      const pageDiff = { page: pageNumber, added: textDiff.added, removed: textDiff.removed, sameWords: textDiff.same };
+      textDiffs.push(pageDiff);
 
       const left = await renderPage(a, pageNumber);
       const right = await renderPage(b, pageNumber, left.canvas.width, left.canvas.height);
+      const pagePixels = left.canvas.width * left.canvas.height;
+      rasterPixels += pagePixels * 3;
+      if (rasterPixels > MAX_COMPARE_RASTER_PIXELS) {
+        left.canvas.width = 1; right.canvas.width = 1;
+        throw new Error("Os documentos exigiriam memória demais para comparação em uma única execução. Divida-os em partes menores.");
+      }
+
       const diffCanvas = window.document.createElement("canvas"); diffCanvas.width = left.canvas.width; diffCanvas.height = left.canvas.height;
       const diffCtx = diffCanvas.getContext("2d")!;
       const leftData = left.canvas.getContext("2d")!.getImageData(0, 0, diffCanvas.width, diffCanvas.height);
@@ -96,15 +109,31 @@ export async function comparePdfs(fileA: File, fileB: File, threshold = 32, onPr
         if (delta > threshold * 3) { out.data[index] = 239; out.data[index + 1] = 16; out.data[index + 2] = 16; out.data[index + 3] = 135; changed += 1; }
       }
       diffCtx.putImageData(out, 0, 0);
-      const [leftBlob, rightBlob, diffBlob] = await Promise.all([canvasToBlob(left.canvas, "image/jpeg", .84), canvasToBlob(right.canvas, "image/jpeg", .84), canvasToBlob(diffCanvas, "image/png")]);
-      visualPages.push({ left: new Uint8Array(await leftBlob.arrayBuffer()), right: new Uint8Array(await rightBlob.arrayBuffer()), diff: new Uint8Array(await diffBlob.arrayBuffer()), width: left.baseWidth, height: left.baseHeight, changed });
-      left.canvas.width = 1; right.canvas.width = 1; diffCanvas.width = 1;
+
+      const [leftBlob, rightBlob, diffBlob] = await Promise.all([
+        canvasToBlob(left.canvas, "image/jpeg", .84),
+        canvasToBlob(right.canvas, "image/jpeg", .84),
+        canvasToBlob(diffCanvas, "image/png"),
+      ]);
+      const [leftImg, rightImg, diffImg] = await Promise.all([
+        output.embedJpg(await leftBlob.arrayBuffer()),
+        output.embedJpg(await rightBlob.arrayBuffer()),
+        output.embedPng(await diffBlob.arrayBuffer()),
+      ]);
+      const gap = 18; const header = 42;
+      const page = output.addPage([left.baseWidth * 2 + gap, left.baseHeight + header]);
+      page.drawText(`A — página ${pageNumber}`, { x: 8, y: left.baseHeight + 23, size: 9, font: bold, color: rgb(.2, .25, .32) });
+      page.drawText("B + mapa de diferenças", { x: left.baseWidth + gap + 8, y: left.baseHeight + 23, size: 9, font: bold, color: rgb(.7, .08, .08) });
+      page.drawText(`${changed.toLocaleString("pt-BR")} pixels alterados · texto +${pageDiff.added.length}/-${pageDiff.removed.length}`, { x: left.baseWidth + gap + 8, y: left.baseHeight + 9, size: 7, font: regular, color: rgb(.45, .48, .53) });
+      page.drawImage(leftImg, { x: 0, y: 0, width: left.baseWidth, height: left.baseHeight });
+      page.drawImage(rightImg, { x: left.baseWidth + gap, y: 0, width: left.baseWidth, height: left.baseHeight });
+      page.drawImage(diffImg, { x: left.baseWidth + gap, y: 0, width: left.baseWidth, height: left.baseHeight });
+
+      left.canvas.width = 1; left.canvas.height = 1;
+      right.canvas.width = 1; right.canvas.height = 1;
+      diffCanvas.width = 1; diffCanvas.height = 1;
     }
 
-    const summary = output.addPage([595, 842]);
-    summary.drawText("Relatório de comparação — LIM PDF", { x: 42, y: 790, size: 20, font: bold, color: rgb(.08, .1, .15) });
-    summary.drawText(`Documento A: ${safeText(fileA.name).slice(0, 70)}`, { x: 42, y: 758, size: 9, font: regular, color: rgb(.35, .39, .45) });
-    summary.drawText(`Documento B: ${safeText(fileB.name).slice(0, 70)}`, { x: 42, y: 743, size: 9, font: regular, color: rgb(.35, .39, .45) });
     let y = 710;
     for (const diff of textDiffs) {
       if (y < 85) break;
@@ -113,18 +142,6 @@ export async function comparePdfs(fileA: File, fileB: File, threshold = 32, onPr
       if (diff.added.length) { summary.drawText(`Adicionado: ${safeText(diff.added.slice(0, 14).join(", ")).slice(0, 105)}`, { x: 54, y, size: 8, font: regular, color: rgb(.2, .42, .22) }); y -= 13; }
       if (diff.removed.length) { summary.drawText(`Removido: ${safeText(diff.removed.slice(0, 14).join(", ")).slice(0, 105)}`, { x: 54, y, size: 8, font: regular, color: rgb(.64, .16, .16) }); y -= 13; }
       y -= 8;
-    }
-
-    for (let index = 0; index < visualPages.length; index += 1) {
-      const visual = visualPages[index]; const text = textDiffs[index];
-      const [leftImg, rightImg, diffImg] = await Promise.all([output.embedJpg(visual.left), output.embedJpg(visual.right), output.embedPng(visual.diff)]);
-      const gap = 18; const header = 42; const page = output.addPage([visual.width * 2 + gap, visual.height + header]);
-      page.drawText(`A — página ${index + 1}`, { x: 8, y: visual.height + 23, size: 9, font: bold, color: rgb(.2, .25, .32) });
-      page.drawText(`B + mapa de diferenças`, { x: visual.width + gap + 8, y: visual.height + 23, size: 9, font: bold, color: rgb(.7, .08, .08) });
-      page.drawText(`${visual.changed.toLocaleString("pt-BR")} pixels alterados · texto +${text.added.length}/-${text.removed.length}`, { x: visual.width + gap + 8, y: visual.height + 9, size: 7, font: regular, color: rgb(.45, .48, .53) });
-      page.drawImage(leftImg, { x: 0, y: 0, width: visual.width, height: visual.height });
-      page.drawImage(rightImg, { x: visual.width + gap, y: 0, width: visual.width, height: visual.height });
-      page.drawImage(diffImg, { x: visual.width + gap, y: 0, width: visual.width, height: visual.height });
     }
 
     return {

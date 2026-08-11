@@ -51,7 +51,7 @@ jobs:
       - name: Build performance budget
         run: npm run test:perf:build
 
-      - name: Browser QA, route smoke, visual audit and runtime performance
+      - name: Browser QA, consent, route smoke, visual audit and runtime performance
         run: |
           npm run start > /tmp/limpdf-next.log 2>&1 &
           SERVER_PID=$!
@@ -69,6 +69,7 @@ jobs:
             exit 1
           fi
           npm run test:routes
+          npm run test:telemetry-consent
           npm run test:e2e
           npm run test:visual
           npm run test:perf:browser

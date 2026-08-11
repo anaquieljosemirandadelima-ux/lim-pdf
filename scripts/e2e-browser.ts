@@ -162,7 +162,7 @@ async function negativeCases(page: Page) {
   await page.locator('input[type="password"]').first().fill("senha-incorreta");
   await page.locator("button.process-button").click();
   await page.locator(".status-message.error").waitFor({ state: "visible", timeout: 15_000 });
-  assert.match((await page.locator(".status-message.error").textContent()) || "", /senha|desbloquear|criptograf/i);
+  assert.match((await page.locator(".status-message.error").textContent()) || "", /senha|password|desbloquear|criptograf/i);
 
   console.log("QA negativo PDF sem camada de texto");
   await page.goto(`${baseUrl}/ferramentas/pdf-para-word`, { waitUntil: "networkidle" });

@@ -60,5 +60,17 @@ const foreignOriginMetric = await fetch(`${base}/api/telemetry`, {
   body: metricPayload,
 });
 if (foreignOriginMetric.status !== 403) throw new Error(`telemetry foreign origin returned ${foreignOriginMetric.status}`);
+const oversizedMetric = await fetch(`${base}/api/telemetry`, {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({ v: 1, event: "tool_view", tool: "compactar-pdf", browser: "chrome", padding: "x".repeat(5000) }),
+});
+if (oversizedMetric.status !== 413) throw new Error(`telemetry oversized payload returned ${oversizedMetric.status}`);
+const wrongContentType = await fetch(`${base}/api/telemetry`, {
+  method: "POST",
+  headers: { "content-type": "text/plain" },
+  body: metricPayload,
+});
+if (wrongContentType.status !== 415) throw new Error(`telemetry wrong content-type returned ${wrongContentType.status}`);
 
-console.log(JSON.stringify({ ok: true, suite: "routes", checked: routes.length, removed: 3, telemetry: true, base, premiumEditor: true }));
+console.log(JSON.stringify({ ok: true, suite: "routes", checked: routes.length, removed: 3, telemetry: true, telemetryBodyLimit: true, base, premiumEditor: true }));

@@ -3,18 +3,14 @@
 import { ChevronDown, Globe2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Logo } from "@/components/Logo";
-import { DEFAULT_LANGUAGE, getLanguage, normalizeLanguage, supportedLanguages, type LanguageCode } from "@/lib/i18n";
+import { getLanguage, supportedLanguages, type LanguageCode } from "@/lib/i18n";
+import { useLanguage } from "@/lib/use-language";
 
 export function Header() {
   const [languageOpen, setLanguageOpen] = useState(false);
-  const [selectedLanguage, setSelectedLanguage] = useState<LanguageCode>(DEFAULT_LANGUAGE);
+  const selectedLanguage = useLanguage();
   const headerRef = useRef<HTMLElement>(null);
   const currentLanguage = getLanguage(selectedLanguage);
-
-  useEffect(() => {
-    const persisted = normalizeLanguage(window.localStorage.getItem("limpdf_language") ?? window.navigator.language);
-    setSelectedLanguage(persisted);
-  }, []);
 
   useEffect(() => {
     const onPointer = (event: MouseEvent) => {
@@ -35,12 +31,11 @@ export function Header() {
     const language = getLanguage(selectedLanguage);
     document.documentElement.setAttribute("lang", selectedLanguage);
     document.documentElement.setAttribute("dir", language.dir ?? "ltr");
-    window.localStorage.setItem("limpdf_language", selectedLanguage);
-    window.dispatchEvent(new CustomEvent("limpdf:languagechange", { detail: { language: selectedLanguage } }));
   }, [selectedLanguage]);
 
   function selectLanguage(code: LanguageCode) {
-    setSelectedLanguage(code);
+    window.localStorage.setItem("limpdf_language", code);
+    window.dispatchEvent(new CustomEvent("limpdf:languagechange", { detail: { language: code } }));
     setLanguageOpen(false);
   }
 

@@ -147,7 +147,7 @@ async function processTool(page: Page, slug: AllToolSlug) {
 
 async function negativeCases(page: Page) {
   await page.goto(`${baseUrl}/ferramentas/girar-pdf`, { waitUntil: "networkidle" });
-  await page.locator('input[type="file"]').first().setInputFiles(fixture("corrupt.pdf"));
+  await page.locator('input[type="file"]').first().setInputFiles({ name: "corrompido.pdf", mimeType: "application/pdf", buffer: Buffer.from("isto definitivamente não é um PDF válido") });
   await page.locator("button.process-button").click();
   await page.locator(".status-message.error").waitFor({ state: "visible", timeout: 15_000 });
   assert.match((await page.locator(".status-message.error").textContent()) || "", /abrir|corrompido|protegido/i);

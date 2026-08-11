@@ -1,10 +1,12 @@
 import type { AllToolSlug } from "@/lib/all-tools";
+import type { ProToolSlug } from "@/lib/pro-tools";
 
+export type TelemetryToolSlug = AllToolSlug | ProToolSlug;
 export type ToolMetricEvent = "tool_view" | "file_selected" | "process_started" | "process_success" | "process_error";
 
 type MetricPayload = {
   event: ToolMetricEvent;
-  tool: AllToolSlug;
+  tool: TelemetryToolSlug;
   inputSizeBucket?: string;
   outputSizeBucket?: string;
   durationBucket?: string;
@@ -70,12 +72,7 @@ export function sendToolMetric(payload: MetricPayload) {
   if (!measurementConsentGranted()) return;
   const sample = shouldSample(payload.event);
   if (!sample.send) return;
-  const body = JSON.stringify({
-    v: 1,
-    ...payload,
-    browser: browserFamily(),
-    sampleRate: sample.rate,
-  });
+  const body = JSON.stringify({ v: 1, ...payload, browser: browserFamily(), sampleRate: sample.rate });
   try {
     if (navigator.sendBeacon) {
       const blob = new Blob([body], { type: "application/json" });
@@ -89,6 +86,6 @@ export function sendToolMetric(payload: MetricPayload) {
       credentials: "same-origin",
     }).catch(() => undefined);
   } catch {
-    // Telemetria nunca pode interromper uma ferramenta.
+    // Telemetria opcional nunca interrompe uma ferramenta.
   }
 }

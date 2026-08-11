@@ -38,6 +38,7 @@ export function ProPdfWorkspace({ tool }: { tool: ProToolDefinition }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const certificateRef = useRef<HTMLInputElement>(null);
   const privateKeyRef = useRef<HTMLInputElement>(null);
+  const selectionVersionRef = useRef(0);
   const [files, setFiles] = useState<File[]>([]);
   const [status, setStatus] = useState<Status>({ type: "idle" });
   const [report, setReport] = useState<string[]>([]);
@@ -79,13 +80,35 @@ export function ProPdfWorkspace({ tool }: { tool: ProToolDefinition }) {
 
   async function selectFiles(list: FileList | null) {
     if (!list || processing) return;
+    const selectionVersion = ++selectionVersionRef.current;
     try {
       const selected = validateSelection(Array.from(list));
       setFiles(selected); setReport([]); setStatus({ type: "idle" });
-      if (tool.slug === "editar-metadados-pdf" && selected[0]) setMetadata(await readMetadata(selected[0]));
+      if (tool.slug === "editar-metadados-pdf" && selected[0]) {
+        const nextMetadata = await readMetadata(selected[0]);
+        if (selectionVersionRef.current === selectionVersion) setMetadata(nextMetadata);
+      }
     } catch (error) {
-      setStatus({ type: "error", message: error instanceof Error ? error.message : "Arquivo inválido." });
+      if (selectionVersionRef.current === selectionVersion) setStatus({ type: "error", message: error instanceof Error ? error.message : "Arquivo inválido." });
     }
+  }
+
+  function openFilePicker() {
+    if (processing || !fileInputRef.current) return;
+    fileInputRef.current.value = "";
+    fileInputRef.current.click();
+  }
+
+  function removeFile(index: number) {
+    if (processing) return;
+    selectionVersionRef.current += 1;
+    setFiles((current) => {
+      const next = current.filter((_, itemIndex) => itemIndex !== index);
+      if (!next.length && fileInputRef.current) fileInputRef.current.value = "";
+      return next;
+    });
+    setReport([]);
+    setStatus({ type: "idle" });
   }
 
   async function readTextFile(list: FileList | null, kind: "certificate" | "key") {
@@ -157,11 +180,11 @@ export function ProPdfWorkspace({ tool }: { tool: ProToolDefinition }) {
   return <section className="workspace pro-pdf-workspace">
     <div className="drop-zone" onDragOver={(event) => { if (!processing) event.preventDefault(); }} onDrop={(event) => { event.preventDefault(); if (!processing) void selectFiles(event.dataTransfer.files); }}>
       <span className="drop-icon"><UploadCloud size={31} /></span><strong>{multiple ? (tool.slug === "comparar-pdfs" ? "Selecione dois PDFs" : "Selecione seus PDFs") : `Selecione seu ${acceptedLabel}`}</strong><span>Arraste para esta área ou escolha no dispositivo.</span>
-      <button className="primary-button" type="button" disabled={processing} onClick={() => fileInputRef.current?.click()}><FileText size={18} /> Escolher {acceptedLabel}</button>
+      <button className="primary-button" type="button" disabled={processing} onClick={openFilePicker}><FileText size={18} /> Escolher {acceptedLabel}</button>
       <input ref={fileInputRef} type="file" accept={tool.accept} multiple={multiple} hidden disabled={processing} onChange={(event) => void selectFiles(event.target.files)} /><small>Até 80 MB por arquivo · processamento local</small>
     </div>
 
-    {files.length ? <div className="selected-files pro-selected-files"><div className="selected-files-head"><strong>{files.length} arquivo(s)</strong><span>{tool.name}</span></div>{files.map((file, index) => <div className="selected-file-row" key={`${file.name}-${index}`}><FileText size={17} /><span><strong>{file.name}</strong><small>{humanSize(file.size)}</small></span><button type="button" disabled={processing} aria-label={`Remover ${file.name}`} onClick={() => setFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))}><Trash2 size={15} /></button></div>)}</div> : null}
+    {files.length ? <div className="selected-files pro-selected-files"><div className="selected-files-head"><strong>{files.length} arquivo(s)</strong><span>{tool.name}</span></div>{files.map((file, index) => <div className="selected-file-row" key={`${file.name}-${index}`}><FileText size={17} /><span><strong>{file.name}</strong><small>{humanSize(file.size)}</small></span><button type="button" disabled={processing} aria-label={`Remover ${file.name}`} onClick={() => removeFile(index)}><Trash2 size={15} /></button></div>)}</div> : null}
 
     <div className="tool-options pro-tool-options">
       {tool.slug === "comparar-pdfs" ? <label><span>Sensibilidade visual</span><input type="range" min={8} max={96} value={compareThreshold} onChange={(event) => setCompareThreshold(Number(event.target.value))} /><small>{compareThreshold}</small></label> : null}

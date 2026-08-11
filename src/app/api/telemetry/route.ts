@@ -10,6 +10,7 @@ const BROWSERS = new Set(["chrome", "edge", "firefox", "safari", "opera", "other
 const SIZE_BUCKETS = new Set(["unknown", "lt_512kb", "512kb_2mb", "2mb_10mb", "10mb_30mb", "gte_30mb"]);
 const DURATION_BUCKETS = new Set(["unknown", "lt_500ms", "500ms_2s", "2s_5s", "5s_15s", "gte_15s"]);
 const ERROR_CODES = new Set(["ui_error", "uncaught_error", "unhandled_rejection"]);
+const STANDALONE_TOOLS = new Set(["converter-pdf", "ocr-pdf", "dimensionar-pdf", "preflight-pdf"]);
 
 type IncomingMetric = {
   v?: unknown;
@@ -71,9 +72,13 @@ async function readJsonBodyWithLimit(request: Request): Promise<BodyReadResult> 
   }
 }
 
+function knownToolSlug(value: string) {
+  return allToolBySlug.has(value as AllToolSlug) || STANDALONE_TOOLS.has(value);
+}
+
 function normalizedMetric(body: IncomingMetric) {
   if (body.v !== 1 || typeof body.event !== "string" || !EVENTS.has(body.event)) return null;
-  if (typeof body.tool !== "string" || !allToolBySlug.has(body.tool as AllToolSlug)) return null;
+  if (typeof body.tool !== "string" || !knownToolSlug(body.tool)) return null;
   if (typeof body.browser !== "string" || !BROWSERS.has(body.browser)) return null;
   const sampleRate = typeof body.sampleRate === "number" && body.sampleRate > 0 && body.sampleRate <= 1 ? body.sampleRate : 1;
   const metric: Record<string, string | number> = {

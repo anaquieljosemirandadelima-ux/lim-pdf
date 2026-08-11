@@ -30,6 +30,19 @@ export function OcrWorkspace() {
     setStatus({ type: "idle" });
   }
 
+  function clearFile() {
+    setFile(null);
+    setReport(null);
+    setStatus({ type: "idle" });
+    if (inputRef.current) inputRef.current.value = "";
+  }
+
+  function openPicker() {
+    if (!inputRef.current) return;
+    inputRef.current.value = "";
+    inputRef.current.click();
+  }
+
   async function process() {
     if (!file || status.type === "processing") return;
     setStatus({ type: "processing", message: "Preparando OCR…", progress: 1 });
@@ -49,12 +62,12 @@ export function OcrWorkspace() {
         <span className="drop-icon"><UploadCloud size={31} /></span>
         <strong>Selecione um PDF escaneado</strong>
         <span>O LIM PDF reconhece o texto e cria uma camada pesquisável sem mudar a aparência das páginas.</span>
-        <button className="primary-button" type="button" onClick={() => inputRef.current?.click()}><FileText size={18} /> Escolher PDF</button>
+        <button className="primary-button" type="button" onClick={openPicker}><FileText size={18} /> Escolher PDF</button>
         <input ref={inputRef} hidden type="file" accept="application/pdf,.pdf" onChange={(event) => selectFile(event.target.files?.[0] || null)} />
         <small>Até 60 MB · OCR executado no navegador</small>
       </div>
 
-      {file ? <div className="selected-files"><div className="selected-file-row"><FileText size={17} /><span><strong>{file.name}</strong><small>{humanSize(file.size)}</small></span><button type="button" aria-label="Remover arquivo" onClick={() => { setFile(null); setReport(null); setStatus({ type: "idle" }); }}><Trash2 size={15} /></button></div></div> : null}
+      {file ? <div className="selected-files"><div className="selected-file-row"><FileText size={17} /><span><strong>{file.name}</strong><small>{humanSize(file.size)}</small></span><button type="button" aria-label="Remover arquivo" onClick={clearFile}><Trash2 size={15} /></button></div></div> : null}
 
       <div className="tool-options ocr-options">
         <label><span>Idiomas do reconhecimento</span><select value={languages} onChange={(event) => setLanguages(event.target.value)}><option value="por">Português</option><option value="eng">Inglês</option><option value="spa">Espanhol</option><option value="por+eng">Português + Inglês</option><option value="por+spa">Português + Espanhol</option><option value="por+eng+spa">Português + Inglês + Espanhol</option></select></label>

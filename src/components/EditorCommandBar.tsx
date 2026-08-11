@@ -32,7 +32,7 @@ export function EditorCommandBar({ mode }: { mode: EditorMode }) {
         <small>Revisar</small>
         <button type="button" onClick={() => run("Destacar")}><PencilLine size={15} />Destacar</button>
         <button type="button" onClick={() => run("Redigir")}><ShieldCheck size={15} />Redigir</button>
-        <button type="button" onClick={() => run("Localizar")}><Search size={15} />Localizar</button>
+        {mode === "studio" ? <button type="button" onClick={() => run("Localizar")}><Search size={15} />Localizar</button> : null}
         <Link href="/ferramentas/ocr-pdf"><FileText size={15} />OCR</Link>
       </div>
       <div className="editor-command-group">

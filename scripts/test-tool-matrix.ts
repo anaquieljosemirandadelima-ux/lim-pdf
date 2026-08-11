@@ -24,8 +24,11 @@ async function main() {
     source("src/app/api/telemetry/route.ts"),
   ]);
 
+  assert.match(route, /generateStaticParams\(\).*allTools\.map/s, "A rota dinâmica deve gerar parâmetros a partir do registro das 41 ferramentas.");
+  assert.match(route, /allToolBySlug\.get/, "A rota dinâmica deve resolver a ferramenta pelo registro central.");
+  assert.match(route, /ToolTelemetryBridge/, "Todas as variantes da rota precisam manter a ponte de telemetria sanitizada.");
+
   for (const tool of allTools) {
-    assert.match(route, new RegExp(tool.slug.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `Rota deve conhecer ${tool.slug}`);
     if (tool.slug === "editar-pdf") {
       assert.match(route, /PdfEditorExperienceSwitcher/);
       continue;
@@ -35,7 +38,7 @@ async function main() {
       continue;
     }
     if (isAdvancedToolSlug(tool.slug)) {
-      assert.match(advanced, new RegExp(`slug === "${tool.slug}"|slug === \\"${tool.slug}\\"|"${tool.slug}"`), `Workspace avançado sem ${tool.slug}`);
+      assert.ok(advanced.includes(`"${tool.slug}"`), `Workspace avançado sem ${tool.slug}`);
       continue;
     }
     assert.match(generic, new RegExp(`"${tool.slug}"\\s*:`), `Dispatcher genérico sem ${tool.slug}`);

@@ -29,3 +29,21 @@ jobs:
         run: npm test
       - name: Production build
         run: npm run build
+      - name: Route smoke tests
+        run: |
+          npm run start > /tmp/limpdf-next.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID || true' EXIT
+          READY=0
+          for i in $(seq 1 25); do
+            if curl -fsS http://127.0.0.1:3000/ferramentas/editar-pdf > /dev/null; then
+              READY=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$READY" -ne 1 ]; then
+            cat /tmp/limpdf-next.log
+            exit 1
+          fi
+          npm run test:routes

@@ -1,0 +1,86 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+import type { AllToolSlug } from "@/lib/all-tools";
+import { bytesBucket, sendToolMetric, timeBucket } from "@/lib/tool-telemetry";
+
+type DownloadDetail = { bytes?: number; extension?: string };
+
+export function ToolTelemetryBridge({ toolSlug }: { toolSlug: AllToolSlug }) {
+  const processStartedAt = useRef<number | null>(null);
+  const inputSizeBucket = useRef("unknown");
+  const lastUiError = useRef("");
+
+  useEffect(() => {
+    const root = document.querySelector<HTMLElement>(".reference-tool-page");
+    if (!root) return;
+    sendToolMetric({ event: "tool_view", tool: toolSlug });
+
+    const onChange = (event: Event) => {
+      const input = event.target;
+      if (!(input instanceof HTMLInputElement) || input.type !== "file" || !input.files?.length) return;
+      const total = Array.from(input.files).reduce((sum, file) => sum + file.size, 0);
+      inputSizeBucket.current = bytesBucket(total);
+      sendToolMetric({ event: "file_selected", tool: toolSlug, inputSizeBucket: inputSizeBucket.current, fileCount: input.files.length });
+    };
+
+    const onClick = (event: MouseEvent) => {
+      const target = event.target instanceof Element ? event.target.closest<HTMLButtonElement>("button") : null;
+      if (!target || target.disabled) return;
+      if (target.matches(".process-button,.studio-top-actions .primary-button,.editor-top-actions .primary-button") || /baixar pdf|processar agora|agora$/i.test(target.textContent || "")) {
+        processStartedAt.current = performance.now();
+        sendToolMetric({ event: "process_started", tool: toolSlug, inputSizeBucket: inputSizeBucket.current });
+      }
+    };
+
+    const onDownload = (event: Event) => {
+      const detail = (event as CustomEvent<DownloadDetail>).detail || {};
+      const duration = processStartedAt.current === null ? undefined : performance.now() - processStartedAt.current;
+      sendToolMetric({
+        event: "process_success",
+        tool: toolSlug,
+        inputSizeBucket: inputSizeBucket.current,
+        outputSizeBucket: bytesBucket(Number(detail.bytes || 0)),
+        durationBucket: duration === undefined ? "unknown" : timeBucket(duration),
+      });
+      processStartedAt.current = null;
+    };
+
+    const scanUiError = () => {
+      const node = root.querySelector<HTMLElement>(".status-message.error,.status-message.status-error,.advanced-status.error,.editor-status.error,.studio-status.error,[data-status='error']");
+      const fingerprint = node ? `${node.className}:${node.textContent?.slice(0, 48) || ""}` : "";
+      if (!fingerprint || fingerprint === lastUiError.current) return;
+      lastUiError.current = fingerprint;
+      const duration = processStartedAt.current === null ? undefined : performance.now() - processStartedAt.current;
+      sendToolMetric({
+        event: "process_error",
+        tool: toolSlug,
+        inputSizeBucket: inputSizeBucket.current,
+        durationBucket: duration === undefined ? "unknown" : timeBucket(duration),
+        errorCode: "ui_error",
+      });
+      processStartedAt.current = null;
+    };
+
+    const onError = () => sendToolMetric({ event: "process_error", tool: toolSlug, inputSizeBucket: inputSizeBucket.current, errorCode: "uncaught_error" });
+    const onRejection = () => sendToolMetric({ event: "process_error", tool: toolSlug, inputSizeBucket: inputSizeBucket.current, errorCode: "unhandled_rejection" });
+    const observer = new MutationObserver(scanUiError);
+    observer.observe(root, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["class", "data-status"] });
+    root.addEventListener("change", onChange, true);
+    root.addEventListener("click", onClick, true);
+    window.addEventListener("limpdf:download", onDownload as EventListener);
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onRejection);
+
+    return () => {
+      observer.disconnect();
+      root.removeEventListener("change", onChange, true);
+      root.removeEventListener("click", onClick, true);
+      window.removeEventListener("limpdf:download", onDownload as EventListener);
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onRejection);
+    };
+  }, [toolSlug]);
+
+  return null;
+}

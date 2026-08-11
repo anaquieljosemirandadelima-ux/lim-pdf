@@ -17,6 +17,29 @@
   contain-intrinsic-size: 520px;
 }
 
+.reference-catalog,
+.reference-catalog-sections,
+.reference-tool-section,
+.reference-catalog-grid,
+.reference-personal-grid,
+.reference-catalog-tool-wrap,
+.reference-catalog-tool,
+.reference-catalog-copy {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.reference-catalog-tool-wrap,
+.reference-catalog-tool {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.reference-catalog-copy strong,
+.reference-catalog-copy small {
+  overflow-wrap: anywhere;
+}
+
 .reference-catalog-tool,
 .process-button,
 .primary-button,
@@ -37,6 +60,23 @@
 @keyframes limpdf-loading-sheen {
   0% { background-position: 100% 0; }
   100% { background-position: -100% 0; }
+}
+
+@media (max-width: 560px) {
+  .reference-catalog-grid,
+  .reference-personal-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .reference-tool-section > header,
+  .reference-catalog-head {
+    min-width: 0;
+  }
+
+  .reference-tool-section > header > div,
+  .reference-catalog-head > div {
+    min-width: 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

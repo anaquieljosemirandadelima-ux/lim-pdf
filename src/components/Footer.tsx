@@ -23,15 +23,13 @@ const columns = [
     title: "Recursos",
     links: [
       ["Segurança dos arquivos", "/seguranca"],
-      ["Perguntas frequentes", "/faq"],
       ["Acessibilidade", "/acessibilidade"],
       ["Contato", "/contato"],
     ],
   },
   {
-    title: "Institucional",
+    title: "Legal",
     links: [
-      ["Sobre o LIM PDF", "/sobre"],
       ["Termos de uso", "/termos"],
       ["Política de privacidade", "/privacidade"],
       ["Política de cookies", "/cookies"],
@@ -46,7 +44,7 @@ export function Footer() {
   const localizedColumns = language === "pt-BR" ? columns : [
     { title: language === "en" ? "Tools" : "Herramientas", links: columns[0].links },
     { title: language === "en" ? "Resources" : "Recursos", links: columns[1].links },
-    { title: language === "en" ? "Company" : "Institucional", links: columns[2].links },
+    { title: language === "en" ? "Legal" : "Legal", links: columns[2].links },
   ];
   return (
     <footer className="site-footer">

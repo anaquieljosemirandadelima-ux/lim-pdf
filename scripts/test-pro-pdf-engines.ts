@@ -30,11 +30,8 @@ async function main() {
   const annots = externalPdf.getPages()[0].node.lookupMaybe(PDFName.of("Annots"), PDFArray);
   assert.ok(annots && annots.size() >= 1, "Hyperlink externo deve criar annotation.");
 
-  const internal = await addInternalPageLink(input, { sourcePage: 1, targetPage: 3, x: 72, y: 650, width: 180, height: 24 });
-  await assertLoadable(internal.bytes);
-
-  const annotated = await addNativeAnnotation(input, { type: "highlight", page: 1, x: 72, y: 600, width: 220, height: 20, text: "QA highlight" });
-  await assertLoadable(annotated.bytes);
+  await assertLoadable((await addInternalPageLink(input, { sourcePage: 1, targetPage: 3, x: 72, y: 650, width: 180, height: 24 })).bytes);
+  await assertLoadable((await addNativeAnnotation(input, { type: "highlight", page: 1, x: 72, y: 600, width: 220, height: 20, text: "QA highlight" })).bytes);
 
   const formResult = await createFormPdf(input, [
     { type: "text", name: "nome", page: 1, x: 72, y: 550, width: 220, height: 28 },
@@ -46,34 +43,29 @@ async function main() {
   const formPdf = await assertLoadable(formResult.bytes);
   assert.ok(formPdf.getForm().getFields().length >= 5, "AcroForm deve manter campos reais.");
 
-  const bookmarked = await addBookmarks(input, [{ title: "Início", page: 1 }, { title: "Final", page: 3 }]);
-  const bookmarkPdf = await assertLoadable(bookmarked.bytes);
+  const bookmarkPdf = await assertLoadable((await addBookmarks(input, [{ title: "Início", page: 1 }, { title: "Final", page: 3 }])).bytes);
   assert.ok(bookmarkPdf.catalog.lookupMaybe(PDFName.of("Outlines"), PDFDict), "Outline deve existir no catálogo.");
 
   await assertLoadable((await addBates(input, { prefix: "QA-", start: 500, digits: 6, position: "bottom-right" })).bytes);
 
-  const metadataResult = await editMetadata(input, { title: "LIM PDF QA", author: "LIM PDF", subject: "PRO", keywords: "pdf,qa" });
-  const metadataPdf = await assertLoadable(metadataResult.bytes);
-  assert.equal(metadataPdf.getTitle(), "LIM PDF QA");
-  assert.equal(metadataPdf.getAuthor(), "LIM PDF");
+  const metadataPdf = await assertLoadable((await editMetadata(input, { title: "LIM PDF QA", author: "LIM PDF", subject: "PRO", keywords: "pdf,qa" })).bytes);
+  assert.equal(metadataPdf.getTitle(), "LIM PDF QA"); assert.equal(metadataPdf.getAuthor(), "LIM PDF");
 
   const pdfaResult = await preparePdfA(input);
   const pdfaPdf = await assertLoadable(pdfaResult.bytes);
-  assert.ok(pdfaPdf.catalog.lookupMaybe(PDFName.of("Metadata")), "Preparação PDF/A precisa inserir XMP Metadata.");
+  assert.ok(pdfaPdf.catalog.get(PDFName.of("Metadata")), "Preparação PDF/A precisa inserir XMP Metadata.");
   assert.ok(pdfaResult.report.some((item) => item.includes("ICC")), "Relatório deve manter ressalva de conformidade estrita.");
 
   const batch = await processBatch([input, input], "metadata");
-  assert.ok(batch.blob.size > 100, "Lote precisa produzir ZIP não vazio.");
-  assert.equal(batch.count, 2);
+  assert.ok(batch.blob.size > 100); assert.equal(batch.count, 2);
 
   const temp = mkdtempSync(join(tmpdir(), "limpdf-sign-"));
   try {
-    const keyPath = join(temp, "key.pem");
-    const certPath = join(temp, "cert.pem");
+    const keyPath = join(temp, "key.pem"); const certPath = join(temp, "cert.pem"); const pkcs8Path = join(temp, "pkcs8.pem");
     execFileSync("openssl", ["req", "-x509", "-newkey", "rsa:2048", "-keyout", keyPath, "-out", certPath, "-sha256", "-days", "1", "-nodes", "-subj", "/CN=LIM PDF QA"], { stdio: "ignore" });
-    execFileSync("openssl", ["pkcs8", "-topk8", "-inform", "PEM", "-outform", "PEM", "-nocrypt", "-in", keyPath, "-out", join(temp, "pkcs8.pem")], { stdio: "ignore" });
-    const signed = await signPdfPades(input, readFileSync(certPath, "utf8"), readFileSync(join(temp, "pkcs8.pem"), "utf8"), { name: "LIM PDF QA", reason: "Teste automatizado", visible: true });
-    assert.ok(new TextDecoder("latin1").decode(signed.bytes).includes("/ETSI.CAdES.detached"), "Assinatura PAdES deve declarar ETSI.CAdES.detached.");
+    execFileSync("openssl", ["pkcs8", "-topk8", "-inform", "PEM", "-outform", "PEM", "-nocrypt", "-in", keyPath, "-out", pkcs8Path], { stdio: "ignore" });
+    const signed = await signPdfPades(input, readFileSync(certPath, "utf8"), readFileSync(pkcs8Path, "utf8"), { name: "LIM PDF QA", reason: "Teste automatizado", visible: true });
+    assert.ok(new TextDecoder("latin1").decode(signed.bytes).includes("/ETSI.CAdES.detached"));
     await assertLoadable(signed.bytes);
   } finally { rmSync(temp, { recursive: true, force: true }); }
 

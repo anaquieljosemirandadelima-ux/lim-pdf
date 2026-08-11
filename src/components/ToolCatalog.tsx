@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowRight, Grid2X2, PencilLine, Repeat2, Search, ShieldCheck, Sparkles } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ToolIcon } from "@/components/ToolIcon";
 import { allToolBySlug, type AllToolSlug, type AnyToolDefinition } from "@/lib/all-tools";
 import {
@@ -56,10 +56,15 @@ function ToolItem({ tool, favorite, onFavorite }: { tool: AnyToolDefinition; fav
 export function ToolCatalog() {
   const [active, setActive] = useState<"todas" | "converter" | "editar" | "organizar" | "proteger" | "outros">("todas");
   const [query, setQuery] = useState("");
-  const [favorites, setFavorites] = useState<AllToolSlug[]>(() => readStoredToolSlugs(TOOL_EXPERIENCE_FAVORITES_KEY));
-  const [recents] = useState<AllToolSlug[]>(() => readStoredToolSlugs(TOOL_EXPERIENCE_RECENTS_KEY));
+  const [favorites, setFavorites] = useState<AllToolSlug[]>([]);
+  const [recents, setRecents] = useState<AllToolSlug[]>([]);
   const normalizedQuery = normalize(query.trim());
   const handleFavorite = (slug: AllToolSlug) => setFavorites(toggleFavoriteTool(slug));
+
+  useEffect(() => {
+    setFavorites(readStoredToolSlugs(TOOL_EXPERIENCE_FAVORITES_KEY));
+    setRecents(readStoredToolSlugs(TOOL_EXPERIENCE_RECENTS_KEY));
+  }, []);
 
   const filteredSections = useMemo(() => sections
     .filter((section) => active === "todas" || section.id === active)

@@ -1,6 +1,5 @@
 export {
   addBates,
-  addBookmarks,
   addHyperlink,
   addInternalPageLink,
   addNativeAnnotation,
@@ -15,6 +14,11 @@ export {
   type MetadataDraft,
   type Progress,
 } from "@/lib/pro-pdf-core";
+
+export {
+  addBookmarksAdvanced as addBookmarks,
+  removeAllHyperlinks,
+} from "@/lib/pro-pdf-navigation";
 
 export {
   cleanScannedPdf,

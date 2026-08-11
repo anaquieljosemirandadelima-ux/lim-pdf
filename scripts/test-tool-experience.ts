@@ -1,15 +1,22 @@
 import assert from "node:assert/strict";
-import { allTools, type AllToolSlug } from "../src/lib/all-tools";
-import { getNextToolSlugs } from "../src/lib/tool-experience";
+import { allTools } from "../src/lib/all-tools";
+import { proTools } from "../src/lib/pro-tools";
+import { getNextToolSlugs, type ExperienceToolSlug } from "../src/lib/tool-experience";
 
-const valid = new Set<AllToolSlug>(allTools.map((tool) => tool.slug));
+const tools = [...allTools, ...proTools];
+const valid = new Set<ExperienceToolSlug>(tools.map((tool) => tool.slug as ExperienceToolSlug));
 
-for (const tool of allTools) {
-  const next = getNextToolSlugs(tool.slug);
-  assert.ok(next.length >= 1 && next.length <= 3, `${tool.slug}: deve sugerir de 1 a 3 próximas ações`);
-  assert.equal(new Set(next).size, next.length, `${tool.slug}: sugestões duplicadas`);
-  assert.ok(!next.includes(tool.slug), `${tool.slug}: não deve sugerir a própria ferramenta`);
-  next.forEach((slug) => assert.ok(valid.has(slug), `${tool.slug}: sugestão inexistente ${slug}`));
+for (const tool of tools) {
+  const slug = tool.slug as ExperienceToolSlug;
+  const next = getNextToolSlugs(slug);
+  assert.ok(next.length >= 1 && next.length <= 3, `${slug}: deve sugerir de 1 a 3 próximas ações`);
+  assert.equal(new Set(next).size, next.length, `${slug}: sugestões duplicadas`);
+  assert.ok(!next.includes(slug), `${slug}: não deve sugerir a própria ferramenta`);
+  next.forEach((nextSlug) => assert.ok(valid.has(nextSlug), `${slug}: sugestão inexistente ${nextSlug}`));
 }
 
-console.log(`tool-experience: ${allTools.length} ferramentas validadas`);
+assert.deepEqual(getNextToolSlugs("ocr-pdf"), ["pdf-para-word", "pdf-para-excel", "limpar-documento-digitalizado"]);
+assert.deepEqual(getNextToolSlugs("assinatura-digital-pdf"), ["proteger-pdf", "pdf-a", "remover-metadados"]);
+assert.deepEqual(getNextToolSlugs("editar-pdf"), ["compactar-pdf", "proteger-pdf", "assinar-pdf"]);
+
+console.log(`tool-experience: ${tools.length} ferramentas validadas`);

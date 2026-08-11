@@ -1,0 +1,57 @@
+name: Production Pro Suite Smoke
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: production-pro-smoke
+  cancel-in-progress: true
+
+jobs:
+  production:
+    if: ${{ contains(github.event.head_commit.message, 'suíte profissional') || contains(github.event.head_commit.message, 'suite profissional') || contains(github.event.head_commit.message, 'OCR') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Wait for Vercel production and verify new routes
+        shell: bash
+        run: |
+          READY=0
+          for i in $(seq 1 60); do
+            OCR=$(curl -LfsS --max-time 15 https://limpdf.com.br/ferramentas/ocr-pdf || true)
+            EDITOR=$(curl -LfsS --max-time 15 https://limpdf.com.br/ferramentas/editar-pdf || true)
+            CATALOG=$(curl -LfsS --max-time 15 https://limpdf.com.br/ferramentas || true)
+            LINKS=$(curl -LfsS --max-time 15 https://limpdf.com.br/ferramentas/links-pdf || true)
+            OFFICE=$(curl -LfsS --max-time 15 https://limpdf.com.br/ferramentas/pdf-para-word || true)
+            if grep -Fq 'OCR' <<<"$OCR" && grep -Fq 'Studio Pro' <<<"$EDITOR" && grep -Fq '58 ferramentas' <<<"$CATALOG" && grep -Fq 'Hyperlink' <<<"$LINKS" && grep -Fq 'Modo de conversão' <<<"$OFFICE"; then
+              READY=1
+              break
+            fi
+            echo "Waiting for production deployment ($i/60)..."
+            sleep 10
+          done
+          if [ "$READY" -ne 1 ]; then
+            echo "Production did not expose the complete pro suite within the timeout."
+            exit 1
+          fi
+
+      - name: Verify removed legacy routes stay removed
+        shell: bash
+        run: |
+          test "$(curl -Lso /dev/null -w '%{http_code}' https://limpdf.com.br/faq)" = "404"
+          test "$(curl -Lso /dev/null -w '%{http_code}' https://limpdf.com.br/sobre)" = "404"
+
+      - name: Mark verified production commit
+        shell: bash
+        run: |
+          git tag -f pro-suite-production-ready "$GITHUB_SHA"
+          git push -f origin refs/tags/pro-suite-production-ready

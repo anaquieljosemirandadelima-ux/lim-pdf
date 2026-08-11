@@ -133,7 +133,6 @@ async function processTool(page: Page, slug: AllToolSlug) {
 
   const processButton = page.locator("button.process-button");
   await processButton.waitFor({ state: "visible" });
-  await assert.doesNotReject(async () => processButton.waitFor({ state: "attached" }));
   const [download] = await Promise.all([
     page.waitForEvent("download", { timeout: 75_000 }),
     processButton.click(),
@@ -145,6 +144,17 @@ async function processTool(page: Page, slug: AllToolSlug) {
   assert.equal(await error.count(), 0, `${slug}: terminou com erro visível`);
 }
 
+async function terminalErrorText(page: Page) {
+  await page.waitForFunction(() => {
+    const button = document.querySelector<HTMLButtonElement>("button.process-button");
+    const status = document.querySelector<HTMLElement>(".status-message");
+    return Boolean(button && !button.disabled && status && !status.classList.contains("processing"));
+  }, undefined, { timeout: 20_000 });
+  const status = page.locator(".status-message").first();
+  await assert.doesNotReject(async () => assert.ok((await status.getAttribute("class"))?.split(/\s+/).includes("error"), "O caso negativo não terminou em estado de erro."));
+  return (await status.textContent()) || "";
+}
+
 async function negativeCases(page: Page) {
   console.log("QA negativo confirmação de senha divergente");
   await page.goto(`${baseUrl}/ferramentas/proteger-pdf`, { waitUntil: "networkidle" });
@@ -153,35 +163,31 @@ async function negativeCases(page: Page) {
   await protectPasswords.nth(0).fill("qa1234");
   await protectPasswords.nth(1).fill("qa5678");
   await page.locator("button.process-button").click();
-  await page.locator(".status-message.error").waitFor({ state: "visible", timeout: 10_000 });
-  assert.match((await page.locator(".status-message.error").textContent()) || "", /confirmação|senha/i);
+  assert.match(await terminalErrorText(page), /confirmação|senha/i);
 
   console.log("QA negativo senha incorreta");
   await page.goto(`${baseUrl}/ferramentas/desbloquear-pdf`, { waitUntil: "networkidle" });
   await page.locator('input[type="file"]').first().setInputFiles(fixture("protected.pdf"));
   await page.locator('input[type="password"]').first().fill("senha-incorreta");
   await page.locator("button.process-button").click();
-  await page.locator(".status-message.error").waitFor({ state: "visible", timeout: 15_000 });
-  assert.match((await page.locator(".status-message.error").textContent()) || "", /senha|password|desbloquear|criptograf/i);
+  assert.match(await terminalErrorText(page), /senha|password|desbloquear|criptograf/i);
 
   console.log("QA negativo PDF sem camada de texto");
   await page.goto(`${baseUrl}/ferramentas/pdf-para-word`, { waitUntil: "networkidle" });
   await page.locator('input[type="file"]').first().setInputFiles(fixture("image-only.pdf"));
   await page.locator("button.process-button").click();
-  await page.locator(".status-message.error").waitFor({ state: "visible", timeout: 20_000 });
-  assert.match((await page.locator(".status-message.error").textContent()) || "", /OCR|texto/i);
+  assert.match(await terminalErrorText(page), /OCR|texto/i);
 
   console.log("QA negativo destaque sem termo");
   await page.goto(`${baseUrl}/ferramentas/destacar-texto`, { waitUntil: "networkidle" });
   await page.locator('input[type="file"]').first().setInputFiles(fixture("basic.pdf"));
   await page.locator("button.process-button").click();
-  await page.locator(".status-message.error").waitFor({ state: "visible", timeout: 10_000 });
-  assert.match((await page.locator(".status-message.error").textContent()) || "", /texto|destacar|informe/i);
+  assert.match(await terminalErrorText(page), /texto|destacar|informe/i);
 }
 
 function captureErrors(page: Page, consoleErrors: string[], pageErrors: string[]) {
-  page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
-  page.on("pageerror", (error) => pageErrors.push(error.message));
+  page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(`${page.url()}: ${message.text()}`); });
+  page.on("pageerror", (error) => pageErrors.push(`${page.url()}: ${error.message}`));
 }
 
 async function main() {

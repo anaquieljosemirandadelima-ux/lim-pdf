@@ -45,6 +45,7 @@ async function buildBudget() {
 async function browserBudget() {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  await context.addInitScript(() => localStorage.setItem("limpdf-consent-v1", "essential"));
   const page = await context.newPage();
   const routes = ["/", "/ferramentas", "/ferramentas/editar-pdf", "/ferramentas/compactar-pdf"];
   const results = [];

@@ -4,6 +4,7 @@ const isDevelopment = process.env.NODE_ENV === "development";
 const scriptSources = [
   "'self'",
   "'unsafe-inline'",
+  "'wasm-unsafe-eval'",
   ...(isDevelopment ? ["'unsafe-eval'"] : []),
   "https://pagead2.googlesyndication.com",
   "https://www.googletagservices.com",

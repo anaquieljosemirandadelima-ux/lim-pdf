@@ -3,7 +3,6 @@ export {
   addHyperlink,
   addInternalPageLink,
   addNativeAnnotation,
-  createFormPdf,
   editMetadata,
   preparePdfA,
   processBatch,
@@ -14,6 +13,8 @@ export {
   type MetadataDraft,
   type Progress,
 } from "@/lib/pro-pdf-core";
+
+export { createFormPdfAdvanced as createFormPdf } from "@/lib/pro-pdf-form";
 
 export {
   addBookmarksAdvanced as addBookmarks,

@@ -1,21 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { DEFAULT_LANGUAGE, normalizeLanguage, type LanguageCode } from "@/lib/i18n";
 
+function subscribe(callback: () => void) {
+  window.addEventListener("limpdf:languagechange", callback);
+  window.addEventListener("storage", callback);
+  return () => {
+    window.removeEventListener("limpdf:languagechange", callback);
+    window.removeEventListener("storage", callback);
+  };
+}
+
+function getClientSnapshot(): LanguageCode {
+  return normalizeLanguage(window.localStorage.getItem("limpdf_language") ?? window.navigator.language);
+}
+
+function getServerSnapshot(): LanguageCode {
+  return DEFAULT_LANGUAGE;
+}
+
 export function useLanguage() {
-  const [language, setLanguage] = useState<LanguageCode>(DEFAULT_LANGUAGE);
-
-  useEffect(() => {
-    const sync = () => setLanguage(normalizeLanguage(window.localStorage.getItem("limpdf_language") ?? window.navigator.language));
-    sync();
-    window.addEventListener("limpdf:languagechange", sync);
-    window.addEventListener("storage", sync);
-    return () => {
-      window.removeEventListener("limpdf:languagechange", sync);
-      window.removeEventListener("storage", sync);
-    };
-  }, []);
-
-  return language;
+  return useSyncExternalStore(subscribe, getClientSnapshot, getServerSnapshot);
 }

@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Grid2X2, PencilLine, Repeat2, Search, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, Grid2X2, ListChecks, PencilLine, Repeat2, Search, ShieldCheck, Sparkles } from "lucide-react";
 import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { ToolIcon } from "@/components/ToolIcon";
 import { allToolBySlug, type AllToolSlug, type AnyToolDefinition } from "@/lib/all-tools";
+import { proTools, type ProToolSlug } from "@/lib/pro-tools";
 import {
   recordRecentTool,
   toggleFavoriteTool,
@@ -13,17 +14,21 @@ import {
   TOOL_EXPERIENCE_RECENTS_KEY,
 } from "@/lib/tool-experience";
 
+type CatalogSlug = AllToolSlug | ProToolSlug;
+const proToolBySlug = new Map<CatalogSlug, AnyToolDefinition>(proTools.map((tool) => [tool.slug as ProToolSlug, tool]));
+
 const sections: Array<{
-  id: "converter" | "editar" | "organizar" | "proteger" | "outros";
+  id: "converter" | "editar" | "organizar" | "formularios" | "proteger" | "outros";
   title: string;
   accent: string;
   icon: typeof Repeat2;
-  tools: AllToolSlug[];
+  tools: CatalogSlug[];
 }> = [
-  { id: "converter", title: "Converter", accent: "blue", icon: Repeat2, tools: ["pdf-para-word", "pdf-para-excel", "pdf-para-jpg", "pdf-para-png", "word-para-pdf", "excel-para-pdf", "imagens-para-pdf", "extrair-texto-pdf", "pdf-em-escala-de-cinza"] },
-  { id: "editar", title: "Editar", accent: "purple", icon: PencilLine, tools: ["editar-pdf", "assinar-pdf", "adicionar-texto-pdf", "adicionar-imagem-pdf", "destacar-texto", "marca-dagua-pdf", "marcar-confidencial", "cabecalho-rodape-pdf"] },
-  { id: "organizar", title: "Organizar", accent: "orange", icon: Grid2X2, tools: ["juntar-pdf", "dividir-pdf", "extrair-paginas", "organizar-paginas", "excluir-paginas", "girar-pdf", "duplicar-paginas", "inserir-pagina-em-branco", "alternar-pdfs", "sobrepor-pdfs"] },
-  { id: "proteger", title: "Proteger e otimizar", accent: "green", icon: ShieldCheck, tools: ["proteger-pdf", "desbloquear-pdf", "permissoes-pdf", "compactar-pdf", "remover-metadados", "achatar-formulario-pdf", "recortar-pdf", "redimensionar-pdf", "preencher-formulario-pdf"] },
+  { id: "converter", title: "Converter", accent: "blue", icon: Repeat2, tools: ["ocr-pdf", "pdf-para-word", "pdf-para-excel", "pdf-para-powerpoint", "pdf-para-jpg", "pdf-para-png", "extrair-imagens-pdf", "word-para-pdf", "excel-para-pdf", "powerpoint-para-pdf", "imagens-para-pdf", "extrair-texto-pdf", "pdf-em-escala-de-cinza"] },
+  { id: "editar", title: "Editar", accent: "purple", icon: PencilLine, tools: ["editar-pdf", "links-pdf", "anotacoes-pdf", "editar-metadados-pdf", "assinar-pdf", "adicionar-texto-pdf", "adicionar-imagem-pdf", "destacar-texto", "marca-dagua-pdf", "marcar-confidencial", "cabecalho-rodape-pdf"] },
+  { id: "organizar", title: "Organizar", accent: "orange", icon: Grid2X2, tools: ["juntar-pdf", "dividir-pdf", "extrair-paginas", "organizar-paginas", "excluir-paginas", "girar-pdf", "duplicar-paginas", "inserir-pagina-em-branco", "alternar-pdfs", "sobrepor-pdfs", "bookmarks-pdf", "comparar-pdfs", "processamento-lote-pdf", "numeracao-bates"] },
+  { id: "formularios", title: "Formulários", accent: "teal", icon: ListChecks, tools: ["criar-formulario-pdf", "preencher-formulario-pdf", "achatar-formulario-pdf"] },
+  { id: "proteger", title: "Proteger e otimizar", accent: "green", icon: ShieldCheck, tools: ["assinatura-digital-pdf", "proteger-pdf", "desbloquear-pdf", "permissoes-pdf", "reparar-pdf", "pdf-a", "limpar-documento-digitalizado", "otimizar-pdf-avancado", "compactar-pdf", "remover-metadados", "recortar-pdf", "redimensionar-pdf"] },
   { id: "outros", title: "Outros", accent: "teal", icon: Sparkles, tools: ["numerar-paginas", "adicionar-fundo-pdf", "espelhar-pdf", "criar-livreto-pdf", "paginas-por-folha"] },
 ];
 
@@ -31,17 +36,21 @@ function normalize(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
-function resolveTools(slugs: AllToolSlug[]) {
+function toolBySlug(slug: CatalogSlug) {
+  return proToolBySlug.get(slug) || allToolBySlug.get(slug as AllToolSlug);
+}
+
+function resolveTools(slugs: CatalogSlug[]) {
   return slugs.flatMap((slug) => {
-    const tool = allToolBySlug.get(slug);
+    const tool = toolBySlug(slug);
     return tool ? [tool] : [];
   });
 }
 
-function parseStoredToolSlugs(raw: string): AllToolSlug[] {
+function parseStoredToolSlugs(raw: string): CatalogSlug[] {
   try {
     const parsed = JSON.parse(raw) as unknown;
-    return Array.isArray(parsed) ? parsed.filter((value): value is AllToolSlug => typeof value === "string") : [];
+    return Array.isArray(parsed) ? parsed.filter((value): value is CatalogSlug => typeof value === "string" && Boolean(toolBySlug(value as CatalogSlug))) : [];
   } catch {
     return [];
   }
@@ -56,20 +65,23 @@ function useToolStorage(key: string) {
       window.removeEventListener("storage", callback);
     };
   }, []);
-  const getSnapshot = useCallback(() => window.localStorage.getItem(key) || "[]", [key]);
+  const getSnapshot = useCallback(() => {
+    try { return window.localStorage.getItem(key) || "[]"; } catch { return "[]"; }
+  }, [key]);
   const raw = useSyncExternalStore(subscribe, getSnapshot, () => "[]");
   return useMemo(() => parseStoredToolSlugs(raw), [raw]);
 }
 
-function ToolItem({ tool, favorite, onFavorite }: { tool: AnyToolDefinition; favorite: boolean; onFavorite: (slug: AllToolSlug) => void }) {
+function ToolItem({ tool, favorite, onFavorite }: { tool: AnyToolDefinition; favorite: boolean; onFavorite: (slug: CatalogSlug) => void }) {
+  const slug = tool.slug as CatalogSlug;
   return (
     <div className={`reference-catalog-tool-wrap ${favorite ? "favorite" : ""}`}>
-      <Link href={`/ferramentas/${tool.slug}`} className="reference-catalog-tool" onClick={() => recordRecentTool(tool.slug)}>
+      <Link href={`/ferramentas/${slug}`} className="reference-catalog-tool" onClick={() => recordRecentTool(slug as unknown as AllToolSlug)}>
         <span className={`reference-catalog-icon accent-${tool.accent}`}><ToolIcon icon={tool.icon} /></span>
         <span className="reference-catalog-copy"><strong>{tool.name}</strong><small>{tool.shortDescription}</small></span>
         <ArrowRight size={17} />
       </Link>
-      <button className="reference-favorite-button" type="button" aria-label={favorite ? `Remover ${tool.name} dos favoritos` : `Adicionar ${tool.name} aos favoritos`} aria-pressed={favorite} title={favorite ? "Remover dos favoritos" : "Adicionar aos favoritos"} onClick={() => onFavorite(tool.slug)}>
+      <button className="reference-favorite-button" type="button" aria-label={favorite ? `Remover ${tool.name} dos favoritos` : `Adicionar ${tool.name} aos favoritos`} aria-pressed={favorite} title={favorite ? "Remover dos favoritos" : "Adicionar aos favoritos"} onClick={() => onFavorite(slug)}>
         <Sparkles size={15} />
       </button>
     </div>
@@ -77,12 +89,12 @@ function ToolItem({ tool, favorite, onFavorite }: { tool: AnyToolDefinition; fav
 }
 
 export function ToolCatalog() {
-  const [active, setActive] = useState<"todas" | "converter" | "editar" | "organizar" | "proteger" | "outros">("todas");
+  const [active, setActive] = useState<"todas" | "converter" | "editar" | "organizar" | "formularios" | "proteger" | "outros">("todas");
   const [query, setQuery] = useState("");
   const favorites = useToolStorage(TOOL_EXPERIENCE_FAVORITES_KEY);
   const recents = useToolStorage(TOOL_EXPERIENCE_RECENTS_KEY);
   const normalizedQuery = normalize(query.trim());
-  const handleFavorite = (slug: AllToolSlug) => { toggleFavoriteTool(slug); };
+  const handleFavorite = (slug: CatalogSlug) => { toggleFavoriteTool(slug as unknown as AllToolSlug); };
 
   const filteredSections = useMemo(() => sections
     .filter((section) => active === "todas" || section.id === active)
@@ -97,6 +109,7 @@ export function ToolCatalog() {
     ["converter", "Converter", Repeat2],
     ["editar", "Editar", PencilLine],
     ["organizar", "Organizar", Grid2X2],
+    ["formularios", "Formulários", ListChecks],
     ["proteger", "Proteger", ShieldCheck],
     ["outros", "Outros", Sparkles],
   ] as const;
@@ -125,7 +138,7 @@ export function ToolCatalog() {
           const Icon = section.icon;
           return <section className={`reference-tool-section accent-${section.accent}`} key={section.id}>
             <header><div><Icon size={21} /><h2>{section.title}</h2></div><button type="button" onClick={() => setActive(section.id)}>Ver todas <ArrowRight size={15} /></button></header>
-            <div className="reference-catalog-grid">{section.resolved.map((tool) => <ToolItem key={tool.slug} tool={tool} favorite={favorites.includes(tool.slug)} onFavorite={handleFavorite} />)}</div>
+            <div className="reference-catalog-grid">{section.resolved.map((tool) => <ToolItem key={tool.slug} tool={tool} favorite={favorites.includes(tool.slug as CatalogSlug)} onFavorite={handleFavorite} />)}</div>
           </section>;
         })}
         {!filteredSections.length ? <div className="reference-empty-search">Nenhuma ferramenta encontrada.</div> : null}

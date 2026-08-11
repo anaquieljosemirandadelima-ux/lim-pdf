@@ -18,6 +18,8 @@ declare global {
 }
 
 const MAX_RASTER_PIXELS = 18_000_000;
+const MAX_CANVAS_SIDE = 8_192;
+const MIN_USEFUL_SCALE = 0.1;
 const TESSERACT_SRC = "https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js";
 
 function safeBaseName(file: File) {
@@ -75,6 +77,17 @@ function parseTsvWords(tsv: string) {
   return words;
 }
 
+function safeOcrScale(width: number, height: number) {
+  const basePixels = Math.max(1, width * height);
+  const pixelScale = Math.sqrt(MAX_RASTER_PIXELS / basePixels);
+  const sideScale = Math.min(MAX_CANVAS_SIDE / Math.max(1, width), MAX_CANVAS_SIDE / Math.max(1, height));
+  const scale = Math.min(2.2, pixelScale, sideScale);
+  if (!Number.isFinite(scale) || scale < MIN_USEFUL_SCALE) {
+    throw new Error("Uma das páginas é grande demais para OCR seguro neste navegador. Redimensione a página e tente novamente.");
+  }
+  return scale;
+}
+
 export async function createSearchablePdf(file: File, languages: string, progress?: OcrProgress) {
   const worker = await createWorker(languages, progress);
   const output = await PDFDocument.create();
@@ -88,11 +101,14 @@ export async function createSearchablePdf(file: File, languages: string, progres
       const sourcePage = await source.getPage(pageNumber);
       try {
         const base = sourcePage.getViewport({ scale: 1 });
-        const scale = Math.min(2.2, Math.max(1.4, Math.sqrt(MAX_RASTER_PIXELS / Math.max(1, base.width * base.height))));
+        const scale = safeOcrScale(base.width, base.height);
         const viewport = sourcePage.getViewport({ scale });
         const canvas = document.createElement("canvas");
         canvas.width = Math.ceil(viewport.width);
         canvas.height = Math.ceil(viewport.height);
+        if (canvas.width * canvas.height > MAX_RASTER_PIXELS + Math.max(canvas.width, canvas.height)) {
+          throw new Error("A página ultrapassa o limite seguro de pixels para OCR.");
+        }
         const context = canvas.getContext("2d", { alpha: false });
         if (!context) throw new Error("Não foi possível renderizar a página para OCR.");
         await sourcePage.render({ canvas, canvasContext: context, viewport }).promise;

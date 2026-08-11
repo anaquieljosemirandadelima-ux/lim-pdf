@@ -167,6 +167,7 @@ async function main() {
   await mkdir(downloadDir, { recursive: true });
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ acceptDownloads: true, viewport: { width: 1440, height: 900 } });
+  await context.addInitScript(() => localStorage.setItem("limpdf-consent-v1", "essential"));
   const page = await context.newPage();
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];

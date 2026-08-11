@@ -42,7 +42,9 @@ async function fillInput(page: Page, labelText: string, value: string) {
 
 async function runDeterministic(page: Page) {
   await openTool(page, "links-pdf", fixture("basic.pdf"));
-  await fillInput(page, "URL", "https://limpdf.com.br/ferramentas");
+  const linkUrlInput = page.locator('.pro-links-workspace input[placeholder="https://exemplo.com"]');
+  await linkUrlInput.waitFor({ state: "visible", timeout: 20_000 });
+  await linkUrlInput.fill("https://limpdf.com.br/ferramentas");
   const linkPdf = (await validatePdf(await outputFor(page, "links-pdf"))).pdf;
   assert.ok(linkPdf.getPages()[0].node.lookupMaybe(PDFName.of("Annots"), PDFArray)?.size(), "Link E2E não criou annotation");
 

@@ -10,20 +10,24 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { TrustStrip } from "@/components/TrustStrip";
 import { ADSENSE_CLIENT } from "@/lib/adsense";
 import { allTools } from "@/lib/all-tools";
+import { proTools } from "@/lib/pro-tools";
 import "./globals.css";
 import "./reference-ui-v2.css";
 import "./premium-ui.css";
 import "./premium-suite-v2.css";
 import "./premium-suite-v2-fixes.css";
 import "./launch-hardening.css";
+import "./pro-suite.css";
 import "./release-clean.css";
 import "./release-clean-home.css";
 import "./release-clean-fixes.css";
+import "./release-pro.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://limpdf.com.br";
 const adsenseClient = ADSENSE_CLIENT;
 const googleVerification = process.env.GOOGLE_SITE_VERIFICATION;
-const toolCount = allTools.length + 3;
+const standaloneFlows = ["Converter PDF", "OCR PDF", "Dimensionar página PDF", "Preflight PDF"];
+const toolCount = allTools.length + proTools.length + standaloneFlows.length;
 const structuredData = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
@@ -34,22 +38,22 @@ const structuredData = {
   inLanguage: ["pt-BR", "en", "es"],
   isAccessibleForFree: true,
   offers: { "@type": "Offer", price: "0", priceCurrency: "BRL" },
-  featureList: [...allTools.map((tool) => tool.name), "Converter PDF", "OCR PDF", "Dimensionar página PDF"],
+  featureList: [...allTools.map((tool) => tool.name), ...proTools.map((tool) => tool.name), ...standaloneFlows],
   publisher: { "@type": "Organization", name: "LIM PDF", url: siteUrl, logo: `${siteUrl}/brand/lim-pdf-icon-192.png` },
 };
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: { default: "LIM PDF — editar, converter e organizar PDF grátis", template: "%s | LIM PDF" },
-  description: "Edite, converta, organize, reconheça texto com OCR, proteja e compacte PDFs gratuitamente no navegador.",
+  description: "Edite, converta, organize, reconheça texto com OCR, assine, proteja, compare e prepare PDFs gratuitamente no navegador.",
   applicationName: "LIM PDF",
-  keywords: ["PDF grátis", "editar PDF", "converter PDF", "OCR PDF", "juntar PDF", "compactar PDF", "PDF para Word", "PDF online"],
+  keywords: ["PDF grátis", "editar PDF", "converter PDF", "OCR PDF", "juntar PDF", "compactar PDF", "PDF para Word", "assinar PDF", "PDF online"],
   authors: [{ name: "LIM PDF" }],
   creator: "LIM PDF",
   publisher: "LIM PDF",
   alternates: { canonical: "/" },
   icons: { icon: [{ url: "/brand/lim-pdf-icon-32.png", sizes: "32x32", type: "image/png" }, { url: "/brand/lim-pdf-icon-192.png", sizes: "192x192", type: "image/png" }], apple: [{ url: "/brand/lim-pdf-icon-192.png", sizes: "192x192", type: "image/png" }] },
-  openGraph: { type: "website", locale: "pt_BR", url: siteUrl, siteName: "LIM PDF", title: "LIM PDF — ferramentas PDF gratuitas", description: `${toolCount} fluxos para editar, converter, organizar, reconhecer, proteger e otimizar PDFs.`, images: [{ url: "/brand/lim-pdf-og.png", width: 1200, height: 630, alt: "LIM PDF" }] },
+  openGraph: { type: "website", locale: "pt_BR", url: siteUrl, siteName: "LIM PDF", title: "LIM PDF — ferramentas PDF gratuitas", description: `${toolCount} fluxos para editar, converter, organizar, reconhecer, assinar, proteger e otimizar PDFs.`, images: [{ url: "/brand/lim-pdf-og.png", width: 1200, height: 630, alt: "LIM PDF" }] },
   twitter: { card: "summary_large_image", title: "LIM PDF — ferramentas PDF gratuitas", description: "Edite, converta e trabalhe com PDF no navegador.", images: ["/brand/lim-pdf-og.png"] },
   robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 } },
   verification: googleVerification ? { google: googleVerification } : undefined,

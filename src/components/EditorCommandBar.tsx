@@ -41,12 +41,21 @@ export function EditorCommandBar({ mode }: { mode: EditorMode }) {
         <Link href="/ferramentas/recortar-pdf"><Grid2X2 size={15} />Recortar</Link>
         <Link href="/ferramentas/girar-pdf"><Grid2X2 size={15} />Girar</Link>
         <Link href="/ferramentas/organizar-paginas"><Grid2X2 size={15} />Organizar</Link>
+        <Link href="/ferramentas/numeracao-bates"><FileText size={15} />Bates</Link>
+      </div>
+      <div className="editor-command-group">
+        <small>Interativo</small>
+        <Link href="/ferramentas/links-pdf"><FileText size={15} />Links</Link>
+        <Link href="/ferramentas/criar-formulario-pdf"><FileText size={15} />Formulário</Link>
+        <Link href="/ferramentas/bookmarks-pdf"><FileText size={15} />Marcadores</Link>
       </div>
       <div className="editor-command-group">
         <small>Documento</small>
+        <Link href="/ferramentas/preflight-pdf"><ShieldCheck size={15} />Preflight</Link>
+        <Link href="/ferramentas/assinatura-digital-pdf"><Signature size={15} />Assinatura digital</Link>
         <Link href="/ferramentas/proteger-pdf"><ShieldCheck size={15} />Proteger</Link>
         <Link href="/ferramentas/compactar-pdf"><SlidersHorizontal size={15} />Compactar</Link>
-        <Link href="/ferramentas/remover-metadados"><FileText size={15} />Metadados</Link>
+        <Link href="/ferramentas/editar-metadados-pdf"><FileText size={15} />Metadados</Link>
       </div>
     </nav>
   );

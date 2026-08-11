@@ -1,7 +1,15 @@
 import Link from "next/link";
-import type { AnyToolDefinition } from "@/lib/all-tools";
 
-export function ToolEditorialPanel({ tool }: { tool: AnyToolDefinition }) {
+type EditorialTool = {
+  name: string;
+  intro: string;
+  description: string;
+  useCases: string[];
+  limitations: string[];
+  faq?: { question: string; answer: string }[];
+};
+
+export function ToolEditorialPanel({ tool }: { tool: EditorialTool }) {
   const faq = tool.faq?.slice(0, 2) || [];
   return <section className="tool-editorial-panel" aria-label={`Informações sobre ${tool.name}`}>
     <div className="tool-editorial-intro"><span>Sobre a ferramenta</span><h2>{tool.intro}</h2><p>{tool.description}</p></div>

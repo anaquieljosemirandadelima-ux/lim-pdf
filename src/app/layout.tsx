@@ -18,6 +18,7 @@ import "./premium-suite-v2-fixes.css";
 import "./launch-hardening.css";
 import "./release-clean.css";
 import "./release-clean-home.css";
+import "./release-clean-fixes.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://limpdf.com.br";
 const adsenseClient = ADSENSE_CLIENT;

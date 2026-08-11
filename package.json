@@ -15,6 +15,7 @@
     "qa:fixtures": "tsx scripts/generate-qa-fixtures.ts",
     "test:routes": "node scripts/smoke-routes.mjs",
     "test:e2e": "tsx scripts/e2e-browser.ts",
+    "test:telemetry-consent": "tsx scripts/test-telemetry-consent.ts",
     "test:visual": "tsx scripts/visual-audit.ts",
     "test:perf:build": "tsx scripts/performance-budget.ts build",
     "test:perf:browser": "tsx scripts/performance-budget.ts browser",

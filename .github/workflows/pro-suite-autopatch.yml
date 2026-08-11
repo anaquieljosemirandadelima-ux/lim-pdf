@@ -1,0 +1,128 @@
+name: Pro Suite Editor Patch
+
+on:
+  push:
+    branches:
+      - pro-suite-ocr-editor-20260810
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[editor-patched]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: pro-suite-ocr-editor-20260810
+          fetch-depth: 0
+
+      - name: Keep both editor modes mounted and gate inactive shortcuts
+        shell: bash
+        run: |
+          cat > src/components/PdfEditorExperienceSwitcher.tsx <<'EOF'
+          "use client";
+
+          import dynamic from "next/dynamic";
+          import { ShieldCheck, Sparkles } from "lucide-react";
+          import { useEffect, useState } from "react";
+
+          const PdfEditorStudio = dynamic(() => import("@/components/PdfEditorStudio").then((module) => module.PdfEditorStudio), {
+            loading: () => <div className="editor-mode-loading" role="status">Preparando o Studio…</div>,
+          });
+          const PdfEditorWorkspaceHardened = dynamic(() => import("@/components/PdfEditorWorkspaceHardened").then((module) => module.PdfEditorWorkspaceHardened), {
+            loading: () => <div className="editor-mode-loading" role="status">Preparando o modo preciso…</div>,
+          });
+
+          type EditorMode = "studio" | "precise";
+
+          export function PdfEditorExperienceSwitcher() {
+            const [mode, setMode] = useState<EditorMode>("studio");
+            const [preciseMounted, setPreciseMounted] = useState(false);
+
+            useEffect(() => {
+              document.documentElement.dataset.limpdfEditorMode = mode;
+              return () => { delete document.documentElement.dataset.limpdfEditorMode; };
+            }, [mode]);
+
+            function selectMode(next: EditorMode) {
+              if (next === "precise") setPreciseMounted(true);
+              setMode(next);
+            }
+
+            return (
+              <section className="editor-experience-switcher">
+                <div className="editor-mode-tabs" role="tablist" aria-label="Modo de edição">
+                  <button type="button" role="tab" aria-selected={mode === "studio"} className={mode === "studio" ? "active" : ""} onClick={() => selectMode("studio")}>
+                    <Sparkles size={16} /><span><strong>Studio</strong><small>Desenho, formas, carimbos e tipografia</small></span>
+                  </button>
+                  <button type="button" role="tab" aria-selected={mode === "precise"} className={mode === "precise" ? "active" : ""} onClick={() => selectMode("precise")}>
+                    <ShieldCheck size={16} /><span><strong>Modo preciso</strong><small>Texto detectado, camadas e rascunhos</small></span>
+                  </button>
+                </div>
+                <div className="editor-mode-note">
+                  {mode === "studio" ? "Studio é ideal para criar, desenhar e anotar. O Modo preciso permanece montado depois do primeiro acesso para não perder a sessão." : "Modo preciso preserva substituição sanitizada de texto, seleção múltipla, camadas, histórico em memória e rascunhos ao alternar de modo."}
+                </div>
+                <div data-editor-mode="studio" hidden={mode !== "studio"} aria-hidden={mode !== "studio"}><PdfEditorStudio /></div>
+                {preciseMounted ? <div data-editor-mode="precise" hidden={mode !== "precise"} aria-hidden={mode !== "precise"}><PdfEditorWorkspaceHardened /></div> : null}
+              </section>
+            );
+          }
+          EOF
+
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          def gate(path, mode):
+              p = Path(path)
+              s = p.read_text()
+              marker = f'document.documentElement.dataset.limpdfEditorMode !== "{mode}"'
+              if marker in s:
+                  return
+              pattern = re.compile(r'window\.addEventListener\("keydown",\s*([A-Za-z_$][\w$]*)\);\s*\n\s*return \(\) => window\.removeEventListener\("keydown",\s*\1\);')
+              matches = list(pattern.finditer(s))
+              if not matches:
+                  raise SystemExit(f'keydown listener pattern not found in {path}')
+              def repl(m):
+                  name = m.group(1)
+                  gated = f'gated{name[:1].upper() + name[1:]}'
+                  return f'''const {gated} = (event: KeyboardEvent) => {{\n      if (document.documentElement.dataset.limpdfEditorMode !== "{mode}") return;\n      {name}(event);\n    }};\n    window.addEventListener("keydown", {gated});\n    return () => window.removeEventListener("keydown", {gated});'''
+              s = pattern.sub(repl, s, count=1)
+              p.write_text(s)
+
+          gate('src/components/PdfEditorWorkspaceHardened.tsx', 'precise')
+          gate('src/components/PdfEditorStudio.tsx', 'studio')
+
+          p = Path('src/components/ProNavigationWorkspace.tsx')
+          s = p.read_text().replace('<span>Endereço</span>', '<span>URL do hyperlink</span>')
+          p.write_text(s)
+
+          p = Path('package.json')
+          s = p.read_text()
+          if '"test:pro-navigation"' not in s:
+              s = s.replace('"test:pro": "tsx scripts/test-pro-pdf-engines.ts",', '"test:pro": "tsx scripts/test-pro-pdf-engines.ts",\n    "test:pro-navigation": "tsx scripts/test-pro-navigation.ts",')
+              s = s.replace('npm run test:matrix && npm run test:pro"', 'npm run test:matrix && npm run test:pro && npm run test:pro-navigation"')
+              p.write_text(s)
+          PY
+
+      - name: Verify patch compiles before committing
+        run: |
+          npm ci --no-audit --no-fund
+          npm run lint
+          npm test
+          npm run build
+
+      - name: Commit patch
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "No patch required"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/PdfEditorExperienceSwitcher.tsx src/components/PdfEditorWorkspaceHardened.tsx src/components/PdfEditorStudio.tsx src/components/ProNavigationWorkspace.tsx package.json
+          git commit -m "Preserva sessões dos editores e corrige QA [editor-patched]"
+          git push origin HEAD:pro-suite-ocr-editor-20260810

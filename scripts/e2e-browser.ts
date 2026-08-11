@@ -146,12 +146,15 @@ async function processTool(page: Page, slug: AllToolSlug) {
 }
 
 async function negativeCases(page: Page) {
-  console.log("QA negativo PDF corrompido");
-  await page.goto(`${baseUrl}/ferramentas/girar-pdf`, { waitUntil: "networkidle" });
-  await page.locator('input[type="file"]').first().setInputFiles({ name: "corrompido.pdf", mimeType: "application/pdf", buffer: Buffer.from("isto definitivamente não é um PDF válido") });
+  console.log("QA negativo confirmação de senha divergente");
+  await page.goto(`${baseUrl}/ferramentas/proteger-pdf`, { waitUntil: "networkidle" });
+  await page.locator('input[type="file"]').first().setInputFiles(fixture("basic.pdf"));
+  const protectPasswords = page.locator('input[type="password"]');
+  await protectPasswords.nth(0).fill("qa1234");
+  await protectPasswords.nth(1).fill("qa5678");
   await page.locator("button.process-button").click();
-  await page.locator(".status-message.error").waitFor({ state: "visible", timeout: 15_000 });
-  assert.match((await page.locator(".status-message.error").textContent()) || "", /abrir|corrompido|protegido/i);
+  await page.locator(".status-message.error").waitFor({ state: "visible", timeout: 10_000 });
+  assert.match((await page.locator(".status-message.error").textContent()) || "", /confirmação|senha/i);
 
   console.log("QA negativo senha incorreta");
   await page.goto(`${baseUrl}/ferramentas/desbloquear-pdf`, { waitUntil: "networkidle" });

@@ -13,7 +13,7 @@ async function main() {
   assert.equal(new Set(allTools.map((tool) => tool.slug)).size, allTools.length, "Slugs devem ser únicos.");
   assert.equal(advancedTools.length, 9, "As nove ferramentas avançadas precisam permanecer registradas.");
 
-  const [route, generic, sequential, advanced, studio, sitemap, telemetry, telemetryApi] = await Promise.all([
+  const [route, generic, sequential, advanced, studio, sitemap, telemetryBridge, telemetryLib, telemetryApi] = await Promise.all([
     source("src/app/ferramentas/[slug]/page.tsx"),
     source("src/components/PdfToolWorkspace.tsx"),
     source("src/components/MemorySafePdfWorkspace.tsx"),
@@ -21,6 +21,7 @@ async function main() {
     source("src/components/PdfEditorStudio.tsx"),
     source("src/app/sitemap.ts"),
     source("src/components/ToolTelemetryBridge.tsx"),
+    source("src/lib/tool-telemetry.ts"),
     source("src/app/api/telemetry/route.ts"),
   ]);
 
@@ -52,11 +53,16 @@ async function main() {
   assert.ok(sitemap.includes("allTools"), "Sitemap deve derivar URLs das ferramentas reais.");
   assert.ok(!sitemap.includes('"/faq"'), "FAQ antiga não deve voltar ao sitemap.");
   assert.ok(!sitemap.includes('"/sobre"'), "Sobre antigo não deve voltar ao sitemap.");
-  assert.ok(telemetry.includes("file.size") && !telemetry.includes("file.name"), "Telemetria cliente não pode coletar nome de arquivo.");
+  assert.ok(telemetryBridge.includes("file.size") && !telemetryBridge.includes("file.name"), "Telemetria cliente não pode coletar nome de arquivo.");
+  assert.ok(telemetryBridge.includes("lastUiError.current = \"\""), "Falhas repetidas precisam voltar a ser contadas depois que o erro some.");
+  assert.ok(telemetryLib.includes('localStorage.getItem(CONSENT_KEY) === "accepted"'), "Medição só pode ser enviada após consentimento opcional explícito.");
+  assert.ok(telemetryLib.includes("measurementConsentGranted"), "A biblioteca de telemetria deve centralizar o gate de consentimento.");
+  assert.ok(telemetryApi.includes("request.body?.getReader()"), "O endpoint deve limitar o corpo enquanto lê o stream, não só pelo Content-Length.");
+  assert.ok(telemetryApi.includes("MAX_REQUEST_BYTES"), "O endpoint deve ter limite explícito de bytes.");
   assert.ok(telemetryApi.includes("Nunca registrar nome do arquivo"), "Endpoint deve documentar a restrição de privacidade.");
   assert.ok(!telemetryApi.includes("user-agent"), "User-Agent bruto não deve ser lido pelo endpoint.");
 
-  console.log(JSON.stringify({ ok: true, suite: "tool-matrix", tools: allTools.length, advanced: advancedTools.length, memorySafe: memorySafe.size }));
+  console.log(JSON.stringify({ ok: true, suite: "tool-matrix", tools: allTools.length, advanced: advancedTools.length, memorySafe: memorySafe.size, consentGatedTelemetry: true, boundedTelemetryBody: true }));
 }
 
 main().catch((error) => { console.error(error); process.exitCode = 1; });

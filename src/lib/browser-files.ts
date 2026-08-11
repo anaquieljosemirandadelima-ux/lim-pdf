@@ -3,7 +3,14 @@ export function humanSize(size: number) {
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function announceDownload(blob: Blob, filename: string) {
+  if (typeof window === "undefined") return;
+  const extension = filename.includes(".") ? filename.split(".").pop()?.toLowerCase() || "unknown" : "unknown";
+  window.dispatchEvent(new CustomEvent("limpdf:download", { detail: { bytes: blob.size, extension } }));
+}
+
 export function downloadBlob(blob: Blob, filename: string) {
+  announceDownload(blob, filename);
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;

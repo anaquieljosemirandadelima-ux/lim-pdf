@@ -1,0 +1,31 @@
+name: Validate LIM PDF
+
+on:
+  push:
+    branches:
+      - main
+      - premium-suite-v2-20260810
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Unit and PDF tests
+        run: npm test
+      - name: Production build
+        run: npm run build

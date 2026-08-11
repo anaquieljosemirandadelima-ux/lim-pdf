@@ -1,0 +1,138 @@
+name: Finalize Pro Suite
+
+on:
+  push:
+    branches:
+      - pro-suite-ocr-editor-20260810
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pro-suite-finalize
+  cancel-in-progress: true
+
+jobs:
+  finalize:
+    if: ${{ !contains(github.event.head_commit.message, '[pro-suite-final]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: pro-suite-ocr-editor-20260810
+          fetch-depth: 0
+
+      - name: Check all patch integrations landed
+        id: readiness
+        shell: bash
+        run: |
+          READY=1
+          require() { grep -Fq "$1" "$2" || { echo "WAITING: $2 -> $1"; READY=0; }; }
+          require 'OfficeFidelityWorkspace' 'src/app/ferramentas/[slug]/page.tsx'
+          require 'ProLinksWorkspace' 'src/app/ferramentas/[slug]/page.tsx'
+          require 'from "@/lib/pro-pdf-compare"' 'src/lib/pro-pdf-engines.ts'
+          require 'from "@/lib/pro-pdf-scan"' 'src/lib/pro-pdf-engines.ts'
+          require 'from "@/lib/pro-pdf-links"' 'src/lib/pro-pdf-engines.ts'
+          require 'StudioProDock' 'src/components/PdfEditorStudio.tsx'
+          require 'limpdf:studio-pro' 'src/components/PdfEditorStudio.tsx'
+          require 'dataset.limpdfEditorMode !== "studio"' 'src/components/PdfEditorStudio.tsx'
+          require 'dataset.limpdfEditorMode !== "precise"' 'src/components/PdfEditorWorkspaceHardened.tsx'
+          require 'preciseMounted' 'src/components/PdfEditorExperienceSwitcher.tsx'
+          require 'ResizeObserver' 'src/components/StudioProDock.tsx'
+          require 'useObjectStreams: false' 'src/lib/pro-pdf-form.ts'
+          require 'URL do hyperlink' 'src/components/ProLinksWorkspace.tsx'
+          require 'test:pades-verify' 'package.json'
+          echo "ready=$READY" >> "$GITHUB_OUTPUT"
+          if [ "$READY" -ne 1 ]; then
+            echo "Other deterministic patch workflows are still converging; a later push will retry finalization."
+          fi
+
+      - name: Install
+        if: steps.readiness.outputs.ready == '1'
+        run: npm ci --no-audit --no-fund
+
+      - name: Install Chromium
+        if: steps.readiness.outputs.ready == '1'
+        run: npx playwright-core install --with-deps chromium
+
+      - name: Generate fixtures
+        if: steps.readiness.outputs.ready == '1'
+        run: npm run qa:fixtures
+
+      - name: Static and engine QA
+        if: steps.readiness.outputs.ready == '1'
+        run: |
+          npm run lint
+          npm test
+          npx tsx scripts/test-studio-source.ts
+          npx tsx scripts/test-pades-verify.ts
+          npx tsx scripts/test-pro-navigation.ts
+          npm run build
+          npm run test:perf:build
+
+      - name: Full browser QA
+        if: steps.readiness.outputs.ready == '1'
+        shell: bash
+        run: |
+          npm run start > /tmp/limpdf-final.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID || true' EXIT
+          READY_SERVER=0
+          for i in $(seq 1 45); do
+            if curl -fsS http://127.0.0.1:3000/ferramentas/ocr-pdf >/dev/null; then
+              READY_SERVER=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$READY_SERVER" -ne 1 ]; then cat /tmp/limpdf-final.log; exit 1; fi
+          npm run test:routes
+          npm run test:telemetry-consent
+          npm run test:e2e
+          npm run test:e2e:pro
+          npx tsx scripts/test-studio-pro-browser.ts
+          npx tsx scripts/test-office-fidelity-browser.ts
+          npm run test:visual
+          npm run test:perf:browser
+
+      - name: Fold permanent QA into Validate workflow and remove temporary patch workflows
+        if: steps.readiness.outputs.ready == '1'
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('.github/workflows/validate.yml')
+          s = p.read_text()
+          s = s.replace('      - name: Unit, PDF, experience, matrix and professional engine tests\n        run: npm test', '      - name: Unit, PDF, experience, matrix and professional engine tests\n        run: |\n          npm test\n          npx tsx scripts/test-studio-source.ts\n          npx tsx scripts/test-pades-verify.ts\n          npx tsx scripts/test-pro-navigation.ts')
+          s = s.replace('          npm run test:e2e:pro\n          npm run test:visual', '          npm run test:e2e:pro\n          npx tsx scripts/test-studio-pro-browser.ts\n          npx tsx scripts/test-office-fidelity-browser.ts\n          npm run test:visual')
+          p.write_text(s)
+          PY
+          rm -f \
+            .github/workflows/pro-suite-autopatch.yml \
+            .github/workflows/pro-suite-form-patch.yml \
+            .github/workflows/studio-pro-integration.yml \
+            .github/workflows/studio-pro-test-patch.yml \
+            .github/workflows/studio-pro-dock-patch.yml \
+            .github/workflows/pro-compare-patch.yml \
+            .github/workflows/pro-links-patch.yml \
+            .github/workflows/office-fidelity-patch.yml \
+            .github/workflows/scan-orientation-patch.yml \
+            .github/workflows/studio-source-check.yml \
+            .github/workflows/studio-pro-browser.yml \
+            .github/workflows/office-fidelity-browser.yml \
+            .github/workflows/pro-suite-finalize.yml
+
+      - name: Commit final validated suite
+        if: steps.readiness.outputs.ready == '1'
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            git commit --allow-empty -m "Finaliza suíte profissional validada [pro-suite-final]"
+          else
+            git commit -m "Finaliza suíte profissional validada [pro-suite-final]"
+          fi
+          git push origin HEAD:pro-suite-ocr-editor-20260810

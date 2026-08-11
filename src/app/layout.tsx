@@ -21,16 +21,14 @@ import "./launch-hardening.css";
 import "./pro-suite.css";
 import "./pro-suite-motion.css";
 import "./release-top.css";
+import "./editor-release.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://limpdf.com.br";
 const adsenseClient = ADSENSE_CLIENT;
 const googleVerification = process.env.GOOGLE_SITE_VERIFICATION;
 const publicTools = [...allTools, ...proTools, ...releaseTools];
 const toolCount = publicTools.length;
-const structuredData = {
-  "@context": "https://schema.org", "@type": "WebApplication", name: "LIM PDF", url: siteUrl, applicationCategory: "BusinessApplication", operatingSystem: "Web", inLanguage: ["pt-BR", "en", "es"], isAccessibleForFree: true,
-  offers: { "@type": "Offer", price: "0", priceCurrency: "BRL" }, featureList: publicTools.map((tool) => tool.name), publisher: { "@type": "Organization", name: "LIM PDF", url: siteUrl, logo: `${siteUrl}/brand/lim-pdf-icon-192.png` },
-};
+const structuredData = { "@context": "https://schema.org", "@type": "WebApplication", name: "LIM PDF", url: siteUrl, applicationCategory: "BusinessApplication", operatingSystem: "Web", inLanguage: ["pt-BR", "en", "es"], isAccessibleForFree: true, offers: { "@type": "Offer", price: "0", priceCurrency: "BRL" }, featureList: publicTools.map((tool) => tool.name), publisher: { "@type": "Organization", name: "LIM PDF", url: siteUrl, logo: `${siteUrl}/brand/lim-pdf-icon-192.png` } };
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

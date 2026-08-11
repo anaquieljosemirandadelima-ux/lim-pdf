@@ -1,0 +1,54 @@
+name: Scan Orientation Patch
+
+on:
+  push:
+    branches:
+      - pro-suite-ocr-editor-20260810
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[scan-orientation-patched]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: pro-suite-ocr-editor-20260810
+          fetch-depth: 0
+      - name: Enable auto orientation engine
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          barrel = Path('src/lib/pro-pdf-engines.ts')
+          s = barrel.read_text()
+          s = s.replace('  cleanScannedPdf,\n', '')
+          if 'cleanScannedPdfEnhanced as cleanScannedPdf' not in s:
+              s += '\nexport { cleanScannedPdfEnhanced as cleanScannedPdf, type ScanRotation } from "@/lib/pro-pdf-scan";\n'
+          barrel.write_text(s)
+
+          workspace = Path('src/components/ProPdfWorkspace.tsx')
+          s = workspace.read_text()
+          s = s.replace('const [cleanDeskew, setCleanDeskew] = useState(true); const [cleanBlank, setCleanBlank] = useState(true); const [cleanStrength, setCleanStrength] = useState(1); const [cleanRotate, setCleanRotate] = useState(0);', 'const [cleanDeskew, setCleanDeskew] = useState(true); const [cleanBlank, setCleanBlank] = useState(true); const [cleanStrength, setCleanStrength] = useState(1); const [cleanRotate, setCleanRotate] = useState<"auto" | 0 | 90 | -90 | 180>("auto");')
+          s = s.replace('setReport([`${result.removed} página(s) em branco removida(s).`]);', 'setReport([`${result.correctedOrientation} página(s) com orientação corrigida automaticamente.`, `${result.fineDeskewed} página(s) com inclinação fina corrigida.`, `${result.removed} página(s) em branco removida(s).`]);')
+          old = '<label><span>Rotação adicional</span><select value={cleanRotate} onChange={(event) => setCleanRotate(Number(event.target.value))}><option value={0}>Nenhuma</option><option value={90}>90°</option><option value={-90}>-90°</option><option value={180}>180°</option></select></label>'
+          new = '<label><span>Orientação</span><select value={cleanRotate} onChange={(event) => { const value = event.target.value; setCleanRotate(value === "auto" ? "auto" : Number(value) as 0 | 90 | -90 | 180); }}><option value="auto">Automática</option><option value={0}>Manter orientação</option><option value={90}>90°</option><option value={-90}>-90°</option><option value={180}>180°</option></select></label>'
+          if old in s:
+              s = s.replace(old, new)
+          workspace.write_text(s)
+          PY
+      - run: |
+          npm ci --no-audit --no-fund
+          npm run lint
+          npm test
+          npm run build
+      - name: Commit
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/lib/pro-pdf-engines.ts src/components/ProPdfWorkspace.tsx
+          git commit -m "Detecta e corrige orientação de digitalizações [scan-orientation-patched]"
+          git push origin HEAD:pro-suite-ocr-editor-20260810

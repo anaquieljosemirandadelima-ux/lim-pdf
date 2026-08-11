@@ -171,11 +171,12 @@ async function negativeCases(page: Page) {
   await page.locator(".status-message.error").waitFor({ state: "visible", timeout: 20_000 });
   assert.match((await page.locator(".status-message.error").textContent()) || "", /OCR|texto/i);
 
-  console.log("QA negativo tipo de arquivo inválido");
-  await page.goto(`${baseUrl}/ferramentas/juntar-pdf`, { waitUntil: "networkidle" });
-  await page.locator('input[type="file"]').first().setInputFiles({ name: "nao-pdf.txt", mimeType: "text/plain", buffer: Buffer.from("arquivo inválido") });
+  console.log("QA negativo destaque sem termo");
+  await page.goto(`${baseUrl}/ferramentas/destacar-texto`, { waitUntil: "networkidle" });
+  await page.locator('input[type="file"]').first().setInputFiles(fixture("basic.pdf"));
+  await page.locator("button.process-button").click();
   await page.locator(".status-message.error").waitFor({ state: "visible", timeout: 10_000 });
-  assert.match((await page.locator(".status-message.error").textContent()) || "", /compatível|PDF/i);
+  assert.match((await page.locator(".status-message.error").textContent()) || "", /texto|destacar|informe/i);
 }
 
 function captureErrors(page: Page, consoleErrors: string[], pageErrors: string[]) {

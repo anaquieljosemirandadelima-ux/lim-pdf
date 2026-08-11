@@ -1,15 +1,15 @@
 import { Globe2, Repeat2, ShieldCheck, Sparkles } from "lucide-react";
 
 const items = [
-  { icon: ShieldCheck, accent: "red", title: "100% Seguro", text: "Seus arquivos são protegidos durante o processamento." },
-  { icon: Sparkles, accent: "purple", title: "Rápido", text: "Processamento otimizado direto no navegador." },
-  { icon: Globe2, accent: "blue", title: "Sem instalação", text: "Use de qualquer dispositivo, onde estiver." },
-  { icon: Repeat2, accent: "green", title: "Sem limites", text: "Ferramentas gratuitas e sem cadastro." },
+  { icon: ShieldCheck, accent: "red", title: "Processamento local", text: "Quando indicado, o documento é processado no próprio navegador." },
+  { icon: Sparkles, accent: "purple", title: "Sem cadastro", text: "As ferramentas principais podem ser usadas diretamente." },
+  { icon: Globe2, accent: "blue", title: "Privacidade clara", text: "O LIM PDF não usa o conteúdo do documento para publicidade." },
+  { icon: Repeat2, accent: "green", title: "Fluxos conectados", text: "Continue para OCR, edição, conversão ou proteção sem procurar do zero." },
 ];
 
 export function TrustStrip() {
   return (
-    <section className="reference-trust-wrap" aria-label="Benefícios do LIM PDF">
+    <section className="reference-trust-wrap" aria-label="Como o LIM PDF funciona">
       <div className="reference-trust-strip">
         {items.map((item) => {
           const Icon = item.icon;

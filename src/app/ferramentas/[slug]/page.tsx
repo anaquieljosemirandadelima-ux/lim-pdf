@@ -5,8 +5,10 @@ import { MemorySafePdfWorkspace } from "@/components/MemorySafePdfWorkspace";
 import { PdfEditorExperienceSwitcher } from "@/components/PdfEditorExperienceSwitcher";
 import { PdfToolWorkspace } from "@/components/PdfToolWorkspace";
 import { PremiumToolExperience } from "@/components/PremiumToolExperience";
+import { ToolEditorialPanel } from "@/components/ToolEditorialPanel";
 import { ToolIcon } from "@/components/ToolIcon";
 import { ToolTelemetryBridge } from "@/components/ToolTelemetryBridge";
+import { UnifiedConverterWorkspace, converterOutputSlugs, type ConverterOutputSlug } from "@/components/UnifiedConverterWorkspace";
 import { allToolBySlug, allTools, isAdvancedToolSlug, type AllToolSlug } from "@/lib/all-tools";
 import type { ToolDefinition, ToolSlug } from "@/lib/tools";
 
@@ -18,6 +20,7 @@ const memorySafeToolSlugs = new Set<ToolSlug>([
   "compactar-pdf",
   "pdf-em-escala-de-cinza",
 ]);
+const converterOutputSet = new Set<AllToolSlug>(converterOutputSlugs as readonly AllToolSlug[]);
 
 const pageDescriptions: Partial<Record<AllToolSlug, string>> = {
   "editar-pdf": "Edite textos, imagens, páginas e anotações do seu PDF com rapidez e precisão.",
@@ -53,19 +56,8 @@ export async function generateMetadata({ params }: ToolPageProps): Promise<Metad
     keywords: [tool.name, ...tool.keywords, "grátis", "online", "sem cadastro", "PDF no navegador"],
     alternates: { canonical },
     robots: { index: true, follow: true },
-    openGraph: {
-      type: "website",
-      title: `${tool.name} grátis e online | LIM PDF`,
-      description,
-      url: canonical,
-      siteName: "LIM PDF",
-      locale: "pt_BR",
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: `${tool.name} grátis e online | LIM PDF`,
-      description,
-    },
+    openGraph: { type: "website", title: `${tool.name} grátis e online | LIM PDF`, description, url: canonical, siteName: "LIM PDF", locale: "pt_BR" },
+    twitter: { card: "summary_large_image", title: `${tool.name} grátis e online | LIM PDF`, description },
   };
 }
 
@@ -89,6 +81,17 @@ export default async function ToolPage({ params }: ToolPageProps) {
     featureList: ["Gratuito", "Sem cadastro", "Processamento local", "Experiência guiada"],
   };
 
+  if (converterOutputSet.has(tool.slug)) {
+    return <section className="reference-tool-page converter-output-page">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }} />
+      <ToolTelemetryBridge toolSlug={tool.slug} />
+      <div className="reference-tool-heading"><div><h1>{tool.name}</h1><p>{description}</p></div><span className={`reference-heading-icon accent-${tool.accent}`} aria-hidden="true"><ToolIcon icon={tool.icon} /></span></div>
+      <PremiumToolExperience toolName={tool.name} toolSlug={tool.slug} accent={tool.accent} />
+      <div className="reference-workspace-wrap"><UnifiedConverterWorkspace initialOutput={tool.slug as ConverterOutputSlug} /></div>
+      <ToolEditorialPanel tool={tool} />
+    </section>;
+  }
+
   if (isAdvancedToolSlug(tool.slug)) {
     return <section className="reference-tool-page">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }} />
@@ -96,6 +99,7 @@ export default async function ToolPage({ params }: ToolPageProps) {
       <div className="reference-tool-heading"><div><h1>{tool.name}</h1><p>{description}</p></div><span className={`reference-heading-icon accent-${tool.accent}`} aria-hidden="true"><ToolIcon icon={tool.icon} /></span></div>
       <PremiumToolExperience toolName={tool.name} toolSlug={tool.slug} accent={tool.accent} />
       <div className="reference-workspace-wrap"><AdvancedToolWorkspace tool={tool} /></div>
+      <ToolEditorialPanel tool={tool} />
     </section>;
   }
 
@@ -107,6 +111,7 @@ export default async function ToolPage({ params }: ToolPageProps) {
       <div className="reference-tool-heading"><div><h1>{baseTool.name}</h1><p>{description}</p></div></div>
       <PremiumToolExperience toolName={baseTool.name} toolSlug={baseTool.slug} accent={baseTool.accent} editor />
       <div className="reference-editor-wrap"><PdfEditorExperienceSwitcher /></div>
+      <ToolEditorialPanel tool={tool} />
     </section>;
   }
 
@@ -116,5 +121,6 @@ export default async function ToolPage({ params }: ToolPageProps) {
     <div className="reference-tool-heading"><div><h1>{baseTool.name}</h1><p>{description}</p></div><span className={`reference-heading-icon accent-${baseTool.accent}`} aria-hidden="true"><ToolIcon icon={baseTool.icon} /></span></div>
     <PremiumToolExperience toolName={baseTool.name} toolSlug={baseTool.slug} accent={baseTool.accent} />
     <div className="reference-workspace-wrap">{memorySafeToolSlugs.has(baseTool.slug) ? <MemorySafePdfWorkspace tool={baseTool} /> : <PdfToolWorkspace tool={baseTool} />}</div>
+    <ToolEditorialPanel tool={tool} />
   </section>;
 }

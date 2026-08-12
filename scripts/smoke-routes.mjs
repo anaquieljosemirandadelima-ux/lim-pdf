@@ -39,7 +39,10 @@ for (const route of routes) {
   if (professionalRoutes.includes(route) && !text.includes("pro-pdf-workspace")) throw new Error(`${route} missing professional workspace`);
   if (route === "/sitemap.xml") {
     for (const marker of ["/ferramentas/converter-pdf", "/ferramentas/ocr-pdf", "/ferramentas/dimensionar-pdf", "/ferramentas/preflight-pdf", "/ferramentas/assinatura-digital-pdf", "/ferramentas/links-pdf", "/ferramentas/comparar-pdfs"]) if (!text.includes(marker)) throw new Error(`sitemap missing ${marker}`);
-    for (const removed of ["/sobre", "/guias", "/contato"]) if (text.includes(removed)) throw new Error(`sitemap still contains removed route ${removed}`);
+    for (const removed of ["/sobre", "/guias", "/contato"]) {
+      const exactLoc = `<loc>${base}${removed}</loc>`;
+      if (text.includes(exactLoc)) throw new Error(`sitemap still contains removed route ${removed}`);
+    }
   }
 }
 

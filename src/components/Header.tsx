@@ -1,17 +1,24 @@
 "use client";
 
-import { ChevronDown, Globe2 } from "lucide-react";
+import Link from "next/link";
+import { ChevronDown, Globe2, HelpCircle, Moon, Sun } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { HeaderToolSearch } from "@/components/HeaderToolSearch";
-import { Logo } from "@/components/Logo";
 import { getLanguage, supportedLanguages, type LanguageCode } from "@/lib/i18n";
 import { useLanguage } from "@/lib/use-language";
 
 export function Header() {
   const [languageOpen, setLanguageOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
   const selectedLanguage = useLanguage();
   const headerRef = useRef<HTMLElement>(null);
   const currentLanguage = getLanguage(selectedLanguage);
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem("limpdf_theme");
+    const nextDark = stored === "dark";
+    setDarkMode(nextDark);
+    document.documentElement.dataset.limpdfTheme = nextDark ? "dark" : "light";
+  }, []);
 
   useEffect(() => {
     const onPointer = (event: MouseEvent) => {
@@ -40,11 +47,22 @@ export function Header() {
     setLanguageOpen(false);
   }
 
+  function toggleTheme() {
+    const nextDark = !darkMode;
+    setDarkMode(nextDark);
+    window.localStorage.setItem("limpdf_theme", nextDark ? "dark" : "light");
+    document.documentElement.dataset.limpdfTheme = nextDark ? "dark" : "light";
+  }
+
   return (
     <header className="site-header reference-header" ref={headerRef}>
       <div className="reference-header-inner">
-        <Logo />
-        <HeaderToolSearch />
+        <Link className="header-utility-button" href="/ferramentas" aria-label="Ajuda e ferramentas" title="Ajuda">
+          <HelpCircle size={18} />
+        </Link>
+        <button className="header-utility-button" type="button" aria-label={darkMode ? "Usar tema claro" : "Usar tema escuro"} title="Aparência" onClick={toggleTheme}>
+          {darkMode ? <Moon size={18} /> : <Sun size={18} />}
+        </button>
         <div className={`reference-language ${languageOpen ? "open" : ""}`}>
           <button type="button" aria-label="Selecionar idioma" aria-expanded={languageOpen} onClick={() => setLanguageOpen((value) => !value)}>
             <Globe2 size={18} />

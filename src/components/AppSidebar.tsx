@@ -1,50 +1,96 @@
 "use client";
 
 import Link from "next/link";
-import { FileOutput, FileStack, FileText, Grid2X2, PencilLine, Search, ShieldCheck, Signature, SlidersHorizontal } from "lucide-react";
+import {
+  FileOutput,
+  Files,
+  Grid2X2,
+  Home,
+  Layers3,
+  Minimize2,
+  PencilLine,
+  ScanText,
+  ShieldCheck,
+  Signature,
+} from "lucide-react";
 import { usePathname } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { HeaderToolSearch } from "@/components/HeaderToolSearch";
+import { Logo } from "@/components/Logo";
 
 type SidebarItem = {
   href: string;
   label: string;
-  icon: typeof FileStack;
+  icon: typeof Files;
   match: (path: string) => boolean;
-  section?: "main" | "workflow" | "special";
 };
 
 const items: SidebarItem[] = [
-  { href: "/", label: "Início", icon: FileStack, section: "main", match: (path) => path === "/" },
-  { href: "/ferramentas", label: "Todas as ferramentas", icon: Grid2X2, section: "main", match: (path) => path === "/ferramentas" },
-  { href: "/ferramentas/editar-pdf", label: "Editar PDF", icon: PencilLine, section: "workflow", match: (path) => path.includes("editar-pdf") || /adicionar-texto|adicionar-imagem|destacar-texto|marca-dagua|marcar-confidencial|cabecalho-rodape|adicionar-fundo|anotacoes-pdf|links-pdf|editar-metadados/.test(path) },
-  { href: "/categorias/organizar", label: "Organizar PDF", icon: Grid2X2, section: "workflow", match: (path) => path.includes("/categorias/organizar") || /juntar-pdf|dividir-pdf|extrair-paginas|excluir-paginas|organizar-paginas|girar-pdf|duplicar-paginas|inserir-pagina|alternar-pdfs|sobrepor-pdfs|bookmarks-pdf|numeracao-bates/.test(path) },
-  { href: "/ferramentas/converter-pdf", label: "Converter PDF", icon: FileOutput, section: "workflow", match: (path) => path.includes("/ferramentas/converter-pdf") || path.includes("/categorias/converter") || /pdf-para-|word-para-pdf|excel-para-pdf|imagens-para-pdf|powerpoint-para-pdf|extrair-texto/.test(path) },
-  { href: "/ferramentas/ocr-pdf", label: "OCR e digitalização", icon: Search, section: "workflow", match: (path) => /ocr-pdf|limpar-documento-digitalizado/.test(path) },
-  { href: "/categorias/otimizar", label: "Otimizar PDF", icon: SlidersHorizontal, section: "workflow", match: (path) => path.includes("/categorias/otimizar") || /compactar-pdf|redimensionar|dimensionar-pdf|recortar|livreto|paginas-por-folha|reparar-pdf|pdf-a|otimizar-pdf-avancado/.test(path) },
-  { href: "/categorias/assinar", label: "Assinar PDF", icon: Signature, section: "special", match: (path) => path.includes("/categorias/assinar") || /assinar-pdf|assinatura-digital-pdf/.test(path) },
-  { href: "/categorias/formularios", label: "Formulários PDF", icon: FileText, section: "special", match: (path) => path.includes("/categorias/formularios") || /formulario-pdf|preencher-formulario|achatar-formulario/.test(path) },
-  { href: "/categorias/seguranca", label: "Segurança PDF", icon: ShieldCheck, section: "special", match: (path) => path.includes("/categorias/seguranca") || /proteger-pdf|desbloquear-pdf|permissoes-pdf|remover-metadados|marcar-confidencial/.test(path) },
+  { href: "/", label: "Início", icon: Home, match: (path) => path === "/" },
+  { href: "/ferramentas/editar-pdf", label: "Editor de PDF", icon: PencilLine, match: (path) => path.includes("editar-pdf") || /adicionar-texto|adicionar-imagem|destacar-texto|marca-dagua|marcar-confidencial|cabecalho-rodape|adicionar-fundo|anotacoes-pdf|links-pdf|editar-metadados/.test(path) },
+  { href: "/ferramentas/juntar-pdf", label: "Juntar PDF", icon: Files, match: (path) => path.includes("juntar-pdf") },
+  { href: "/ferramentas/compactar-pdf", label: "Comprimir PDF", icon: Minimize2, match: (path) => path.includes("compactar-pdf") },
+  { href: "/ferramentas/converter-pdf", label: "Converter PDF", icon: FileOutput, match: (path) => path.includes("/ferramentas/converter-pdf") || path.includes("/categorias/converter") || /pdf-para-|word-para-pdf|excel-para-pdf|imagens-para-pdf|powerpoint-para-pdf|extrair-texto/.test(path) },
+  { href: "/ferramentas/organizar-paginas", label: "Organizar PDF", icon: Layers3, match: (path) => path.includes("/categorias/organizar") || /dividir-pdf|extrair-paginas|excluir-paginas|organizar-paginas|girar-pdf|duplicar-paginas|inserir-pagina|alternar-pdfs|sobrepor-pdfs|bookmarks-pdf|numeracao-bates/.test(path) },
+  { href: "/ferramentas/assinar-pdf", label: "Assinar PDF", icon: Signature, match: (path) => /assinar-pdf|assinatura-digital-pdf/.test(path) },
+  { href: "/ferramentas/proteger-pdf", label: "Proteger PDF", icon: ShieldCheck, match: (path) => /proteger-pdf|desbloquear-pdf|permissoes-pdf|remover-metadados|marcar-confidencial/.test(path) },
+  { href: "/ferramentas/ocr-pdf", label: "OCR PDF", icon: ScanText, match: (path) => /ocr-pdf|limpar-documento-digitalizado/.test(path) },
+  { href: "/ferramentas", label: "Todas as ferramentas", icon: Grid2X2, match: (path) => path === "/ferramentas" },
 ];
+
+const recommendations = [
+  { title: "Converter PDF em Word", description: "Transforme seu arquivo em documento editável", href: "/ferramentas/pdf-para-word", icon: FileOutput },
+  { title: "Assinar PDF", description: "Adicione sua assinatura rapidamente", href: "/ferramentas/assinar-pdf", icon: Signature },
+  { title: "Organizar páginas", description: "Reordene, duplique ou remova páginas", href: "/ferramentas/organizar-paginas", icon: Layers3 },
+  { title: "Comprimir PDF", description: "Reduza o tamanho sem perder praticidade", href: "/ferramentas/compactar-pdf", icon: Minimize2 },
+  { title: "Proteger PDF", description: "Adicione senha e proteja seu documento", href: "/ferramentas/proteger-pdf", icon: ShieldCheck },
+] as const;
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const [recommendationIndex, setRecommendationIndex] = useState(0);
+  const recommendation = useMemo(() => recommendations[recommendationIndex % recommendations.length], [recommendationIndex]);
+  const RecommendationIcon = recommendation.icon;
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setRecommendationIndex((index) => (index + 1) % recommendations.length), 7000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   return (
     <aside className="reference-sidebar" aria-label="Navegação principal">
-      {items.map((item, index) => {
-        const Icon = item.icon;
-        const active = item.match(pathname);
-        const previous = items[index - 1];
-        const divider = previous && previous.section !== item.section;
-        return (
-          <div className="sidebar-item-wrap" key={item.href}>
-            {divider ? <span className="sidebar-divider" aria-hidden="true" /> : null}
-            <Link href={item.href} aria-label={item.label} className={active ? "active" : ""}>
-              <Icon size={20} strokeWidth={1.9} />
-              <span className="sidebar-hover-label">{item.label}</span>
-            </Link>
-          </div>
-        );
-      })}
+      <div className="sidebar-brand"><Logo /></div>
+      <div className="sidebar-search"><HeaderToolSearch /></div>
+
+      <nav className="sidebar-navigation" aria-label="Ferramentas principais">
+        {items.map((item) => {
+          const Icon = item.icon;
+          const active = item.match(pathname);
+          return (
+            <div className="sidebar-item-wrap" key={item.href}>
+              <Link href={item.href} aria-current={active ? "page" : undefined} className={active ? "active" : ""}>
+                <Icon size={19} strokeWidth={1.8} />
+                <span className="sidebar-hover-label">{item.label}</span>
+              </Link>
+            </div>
+          );
+        })}
+      </nav>
+
+      <section className="sidebar-recommendation" aria-label="Recomendado para você">
+        <div className="sidebar-recommendation-heading"><strong>Recomendado para você</strong><span aria-hidden="true">✦</span></div>
+        <div className="sidebar-recommendation-card" key={recommendation.title}>
+          <span className="sidebar-recommendation-icon"><RecommendationIcon size={24} /></span>
+          <strong>{recommendation.title}</strong>
+          <p>{recommendation.description}</p>
+          <Link href={recommendation.href}>Usar agora <span aria-hidden="true">→</span></Link>
+        </div>
+        <div className="sidebar-recommendation-dots" aria-label="Recomendações">
+          {recommendations.map((item, index) => (
+            <button key={item.title} type="button" className={index === recommendationIndex ? "active" : ""} onClick={() => setRecommendationIndex(index)} aria-label={`Mostrar recomendação ${index + 1}`} />
+          ))}
+        </div>
+      </section>
     </aside>
   );
 }

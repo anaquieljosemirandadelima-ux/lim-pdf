@@ -1,30 +1,30 @@
-/* Sidebar alignment + density hotfix — 2026-08-12
-   Loaded after the reference editor skin. Keeps every navigation row on one grid,
-   uses the available sidebar width and prevents the active marker from escaping. */
+/* Sidebar final: one alignment system, one deployment. */
 
 .reference-sidebar{
-  width:280px!important;
+  width:272px!important;
   min-height:0!important;
   padding:16px 14px 14px!important;
   overflow:hidden!important;
+  display:flex!important;
+  flex-direction:column!important;
 }
 
 .sidebar-brand{
-  min-height:58px!important;
+  min-height:56px!important;
+  padding:0 8px 8px!important;
   display:flex!important;
   align-items:center!important;
   justify-content:center!important;
-  padding:0 6px 8px!important;
 }
 .sidebar-brand .logo,
 .sidebar-brand .brand-logo-image{
-  width:154px!important;
-  max-width:154px!important;
+  width:150px!important;
+  max-width:150px!important;
 }
 
 .sidebar-search{
   width:100%!important;
-  margin:4px 0 14px!important;
+  margin:3px 0 14px!important;
 }
 .sidebar-search .global-tool-search,
 .sidebar-search .global-tool-search>label{
@@ -34,6 +34,7 @@
 .sidebar-search .global-tool-search>label{
   height:40px!important;
   padding:0 12px!important;
+  box-sizing:border-box!important;
 }
 .sidebar-search .global-tool-search>label>svg{
   width:17px!important;
@@ -43,81 +44,113 @@
 .sidebar-search .global-tool-search input{
   width:100%!important;
   min-width:0!important;
+  text-align:left!important;
   font-size:11.5px!important;
+}
+.sidebar-search .global-tool-search kbd,
+.sidebar-search .search-submit{
+  display:none!important;
 }
 
 .sidebar-navigation{
-  flex:0 1 auto!important;
-  min-height:0!important;
   width:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  padding:2px 0!important;
+  margin:0!important;
   display:flex!important;
   flex-direction:column!important;
-  gap:3px!important;
-  padding:2px 0!important;
+  gap:4px!important;
+  flex:0 0 auto!important;
+  align-items:stretch!important;
 }
 .sidebar-item-wrap{
   width:100%!important;
   min-width:0!important;
   margin:0!important;
   padding:0!important;
+  display:block!important;
 }
 .sidebar-item-wrap>a{
   position:relative!important;
   width:100%!important;
   min-width:0!important;
-  height:40px!important;
-  min-height:40px!important;
-  padding:0 13px!important;
-  display:grid!important;
-  grid-template-columns:20px minmax(0,1fr)!important;
-  align-items:center!important;
-  justify-content:stretch!important;
-  column-gap:11px!important;
-  border-radius:11px!important;
+  height:42px!important;
+  min-height:42px!important;
+  margin:0!important;
+  padding:0 12px!important;
   box-sizing:border-box!important;
+  display:grid!important;
+  grid-template-columns:22px 1fr!important;
+  grid-template-rows:1fr!important;
+  column-gap:12px!important;
+  align-items:center!important;
+  justify-items:start!important;
+  justify-content:stretch!important;
+  border-radius:12px!important;
+  overflow:hidden!important;
+  text-align:left!important;
   transform:none!important;
 }
-.sidebar-item-wrap>a svg{
-  display:block!important;
-  width:20px!important;
-  height:20px!important;
-  min-width:20px!important;
-  max-width:20px!important;
-  margin:0!important;
-  justify-self:center!important;
-  align-self:center!important;
+.sidebar-item-wrap>a::before{
+  display:none!important;
+  content:none!important;
 }
-.sidebar-hover-label{
-  display:block!important;
-  min-width:0!important;
+.sidebar-item-wrap>a svg{
+  grid-column:1!important;
+  grid-row:1!important;
+  width:19px!important;
+  height:19px!important;
+  min-width:19px!important;
+  max-width:19px!important;
   margin:0!important;
   padding:0!important;
-  line-height:1.1!important;
-  font-size:12.5px!important;
-  font-weight:700!important;
+  align-self:center!important;
+  justify-self:center!important;
+  flex:none!important;
+}
+.sidebar-item-wrap>a .sidebar-hover-label{
+  grid-column:2!important;
+  grid-row:1!important;
+  position:static!important;
+  inset:auto!important;
+  display:block!important;
+  width:auto!important;
+  min-width:0!important;
+  max-width:100%!important;
+  margin:0!important;
+  padding:0!important;
+  align-self:center!important;
+  justify-self:start!important;
   text-align:left!important;
+  opacity:1!important;
+  visibility:visible!important;
+  transform:none!important;
   white-space:nowrap!important;
   overflow:hidden!important;
   text-overflow:ellipsis!important;
+  font-size:12.5px!important;
+  line-height:1.15!important;
+  font-weight:700!important;
+  letter-spacing:-.01em!important;
 }
 .sidebar-item-wrap>a:hover{
   transform:none!important;
 }
 .sidebar-item-wrap>a.active{
-  padding-left:13px!important;
   background:#fff0f1!important;
-  box-shadow:inset 3px 0 0 var(--lim-ref-red)!important;
+  box-shadow:inset 3px 0 0 #f0181f!important;
 }
-.sidebar-item-wrap>a.active::before{
-  display:none!important;
-  content:none!important;
+.sidebar-item-wrap>a.active svg,
+.sidebar-item-wrap>a.active .sidebar-hover-label{
+  color:#f0181f!important;
 }
 
 .sidebar-recommendation{
-  flex:0 0 auto!important;
   width:100%!important;
+  flex:0 0 auto!important;
   margin-top:auto!important;
-  padding-top:10px!important;
+  padding-top:12px!important;
 }
 .sidebar-recommendation-heading,
 .sidebar-recommendation-dots{
@@ -125,10 +158,11 @@
 }
 .sidebar-recommendation-card{
   width:100%!important;
-  min-height:128px!important;
+  min-height:136px!important;
   padding:11px 12px!important;
-  border-radius:14px!important;
   box-sizing:border-box!important;
+  border-radius:14px!important;
+  overflow:hidden!important;
 }
 .sidebar-recommendation-icon{
   width:34px!important;
@@ -141,17 +175,25 @@
   height:19px!important;
 }
 .sidebar-recommendation-card>strong{
+  display:block!important;
+  width:100%!important;
+  margin:0!important;
+  text-align:left!important;
   font-size:11.5px!important;
   line-height:1.2!important;
 }
 .sidebar-recommendation-card>p{
+  width:100%!important;
   min-height:0!important;
   margin:4px 0 8px!important;
+  text-align:left!important;
   font-size:9.8px!important;
   line-height:1.35!important;
 }
 .sidebar-recommendation-card>a{
+  width:100%!important;
   min-height:31px!important;
+  padding:0 10px!important;
   font-size:10px!important;
   border-radius:9px!important;
 }
@@ -162,51 +204,45 @@
     padding-bottom:12px!important;
   }
   .sidebar-brand{
-    min-height:48px!important;
+    min-height:46px!important;
     padding-bottom:4px!important;
   }
   .sidebar-brand .logo,
   .sidebar-brand .brand-logo-image{
-    width:140px!important;
-    max-width:140px!important;
+    width:138px!important;
+    max-width:138px!important;
   }
   .sidebar-search{
-    margin:2px 0 8px!important;
+    margin:2px 0 9px!important;
+  }
+  .sidebar-navigation{
+    gap:2px!important;
   }
   .sidebar-item-wrap>a{
-    height:36px!important;
-    min-height:36px!important;
-  }
-  .sidebar-hover-label{
-    font-size:12px!important;
+    height:37px!important;
+    min-height:37px!important;
   }
   .sidebar-recommendation{
-    padding-top:7px!important;
+    padding-top:8px!important;
   }
   .sidebar-recommendation-card{
-    min-height:106px!important;
+    min-height:112px!important;
     padding:10px 11px!important;
   }
   .sidebar-recommendation-icon{
     display:none!important;
   }
-  .sidebar-recommendation-card>p{
-    margin:3px 0 7px!important;
-  }
 }
 
 @media (max-height:720px) and (min-width:761px){
   .sidebar-item-wrap>a{
-    height:33px!important;
-    min-height:33px!important;
+    height:34px!important;
+    min-height:34px!important;
   }
-  .sidebar-hover-label{
+  .sidebar-item-wrap>a .sidebar-hover-label{
     font-size:11.5px!important;
   }
-  .sidebar-recommendation-card{
-    min-height:88px!important;
-  }
-  .sidebar-recommendation-card>p{
+  .sidebar-recommendation{
     display:none!important;
   }
 }

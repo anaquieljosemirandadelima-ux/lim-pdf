@@ -80,6 +80,38 @@ export function AppSidebar() {
       </nav>
 
       <section className="sidebar-recommendation" aria-label="Sugestão de ferramenta">
+        <div
+          role="note"
+          aria-label="Site em desenvolvimento"
+          style={{
+            width: "100%",
+            marginBottom: 8,
+            padding: "8px 10px",
+            boxSizing: "border-box",
+            border: "1px solid #f1dfb5",
+            borderLeft: "3px solid #e5a600",
+            borderRadius: 10,
+            background: "linear-gradient(180deg, #fffdf7 0%, #fff9eb 100%)",
+            color: "#685632",
+            fontSize: 10,
+            lineHeight: 1.35,
+            fontWeight: 700,
+          }}
+        >
+          Site em desenvolvimento
+          <span
+            style={{
+              display: "block",
+              marginTop: 2,
+              color: "#8a7650",
+              fontSize: 9,
+              fontWeight: 500,
+              lineHeight: 1.35,
+            }}
+          >
+            Algumas funções ainda estão sendo aprimoradas.
+          </span>
+        </div>
         <div className="sidebar-recommendation-card" key={recommendation.title}>
           <span className="sidebar-recommendation-icon"><RecommendationIcon size={24} /></span>
           <strong>{recommendation.title}</strong>

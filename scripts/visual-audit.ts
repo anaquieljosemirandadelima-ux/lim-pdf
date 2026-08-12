@@ -49,6 +49,11 @@ async function main() {
         }
         const box = await main.boundingBox();
         assert.ok(box && box.width > 250, `${viewport.name}/${route.name}: conteúdo principal colapsado`);
+        if (route.path.startsWith("/ferramentas/")) {
+          for (const forbidden of ["Sobre a ferramenta", "Dúvidas desta função", "Abrir guias práticos"]) {
+            assert.equal(await page.getByText(forbidden, { exact: true }).count(), 0, `${viewport.name}/${route.name}: conteúdo removido voltou (${forbidden})`);
+          }
+        }
         await page.screenshot({ path: join(outDir, `${route.name}-${viewport.name}.png`), fullPage: true });
       }
       await context.close();
@@ -68,6 +73,7 @@ async function main() {
     const searchResults = uxPage.locator(".global-search-results");
     await searchResults.waitFor({ state: "visible", timeout: 10_000 });
     assert.ok((await searchResults.getByText(/Compactar PDF/i).count()) > 0, "Busca por intenção 'diminuir pdf' deve encontrar Compactar PDF.");
+    await uxPage.waitForTimeout(240);
     await uxPage.screenshot({ path: join(outDir, "busca-desktop-1440.png"), fullPage: true });
     await uxContext.close();
 
@@ -81,7 +87,7 @@ async function main() {
     await reducedContext.close();
 
     assert.deepEqual(issues, [], issues.join("\n"));
-    console.log(JSON.stringify({ ok: true, suite: "visual-audit", screenshots: viewports.length * routes.length + 2, outDir, cookiePopup: true, globalSearch: true }));
+    console.log(JSON.stringify({ ok: true, suite: "visual-audit", screenshots: viewports.length * routes.length + 2, outDir, cookiePopup: true, globalSearch: true, noEditorialNoise: true }));
   } finally {
     await browser.close();
   }

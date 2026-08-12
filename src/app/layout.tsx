@@ -7,7 +7,6 @@ import { LanguageDocumentSync } from "@/components/LanguageDocumentSync";
 import { LocalPrivacyGuard } from "@/components/LocalPrivacyGuard";
 import { NativeTranslator } from "@/components/NativeTranslator";
 import { SiteFooter } from "@/components/SiteFooter";
-import { TrustStrip } from "@/components/TrustStrip";
 import { ADSENSE_CLIENT } from "@/lib/adsense";
 import { allTools } from "@/lib/all-tools";
 import { proTools } from "@/lib/pro-tools";
@@ -22,6 +21,8 @@ import "./release-clean.css";
 import "./release-clean-home.css";
 import "./release-clean-fixes.css";
 import "./release-pro.css";
+import "./limpdf-refresh.css";
+import "./limpdf-final-fixes.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://limpdf.com.br";
 const adsenseClient = ADSENSE_CLIENT;
@@ -39,7 +40,7 @@ const structuredData = {
   isAccessibleForFree: true,
   offers: { "@type": "Offer", price: "0", priceCurrency: "BRL" },
   featureList: [...allTools.map((tool) => tool.name), ...proTools.map((tool) => tool.name), ...standaloneFlows],
-  publisher: { "@type": "Organization", name: "LIM PDF", url: siteUrl, logo: `${siteUrl}/brand/lim-pdf-icon-192.png` },
+  publisher: { "@type": "Organization", name: "LIM Group", url: siteUrl, logo: `${siteUrl}/brand/lim-pdf-icon-192.png` },
 };
 
 export const metadata: Metadata = {
@@ -48,9 +49,9 @@ export const metadata: Metadata = {
   description: "Edite, converta, organize, reconheça texto com OCR, assine, proteja, compare e prepare PDFs gratuitamente no navegador.",
   applicationName: "LIM PDF",
   keywords: ["PDF grátis", "editar PDF", "converter PDF", "OCR PDF", "juntar PDF", "compactar PDF", "PDF para Word", "assinar PDF", "PDF online"],
-  authors: [{ name: "LIM PDF" }],
-  creator: "LIM PDF",
-  publisher: "LIM PDF",
+  authors: [{ name: "LIM Group" }],
+  creator: "LIM Group",
+  publisher: "LIM Group",
   alternates: { canonical: "/" },
   icons: { icon: [{ url: "/brand/lim-pdf-icon-32.png", sizes: "32x32", type: "image/png" }, { url: "/brand/lim-pdf-icon-192.png", sizes: "192x192", type: "image/png" }], apple: [{ url: "/brand/lim-pdf-icon-192.png", sizes: "192x192", type: "image/png" }] },
   openGraph: { type: "website", locale: "pt_BR", url: siteUrl, siteName: "LIM PDF", title: "LIM PDF — ferramentas PDF gratuitas", description: `${toolCount} fluxos para editar, converter, organizar, reconhecer, assinar, proteger e otimizar PDFs.`, images: [{ url: "/brand/lim-pdf-og.png", width: 1200, height: 630, alt: "LIM PDF" }] },
@@ -61,5 +62,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="pt-BR"><body className="app-body reference-app-body"><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} /><a className="skip-link" href="#conteudo">Pular para o conteúdo</a><LocalPrivacyGuard /><LanguageDocumentSync /><NativeTranslator /><AdSenseRouteLoader client={adsenseClient} /><Header /><AppSidebar /><main id="conteudo" className="reference-main">{children}</main><TrustStrip /><SiteFooter /><ConsentBanner /></body></html>;
+  return <html lang="pt-BR"><body className="app-body reference-app-body"><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} /><a className="skip-link" href="#conteudo">Pular para o conteúdo</a><LocalPrivacyGuard /><LanguageDocumentSync /><NativeTranslator /><AdSenseRouteLoader client={adsenseClient} /><Header /><AppSidebar /><main id="conteudo" className="reference-main">{children}</main><SiteFooter /><ConsentBanner /></body></html>;
 }

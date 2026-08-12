@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { Settings2, ShieldCheck, X } from "lucide-react";
+import { Cookie, Settings2, X } from "lucide-react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 export type ConsentValue = "accepted" | "essential";
 export const CONSENT_KEY = "limpdf-consent-v1";
@@ -26,6 +26,7 @@ export function ConsentBanner() {
     localStorage.setItem(CONSENT_KEY, value);
     window.dispatchEvent(new CustomEvent("limpdf:consent-change", { detail: value }));
     setForcedOpen(false);
+    setDetails(false);
   }
 
   useEffect(() => {
@@ -35,7 +36,31 @@ export function ConsentBanner() {
   }, []);
 
   if (consent !== "missing" && !forcedOpen) return null;
-  return <div className="consent-backdrop" role="presentation"><section className="consent-card" role="dialog" aria-modal="true" aria-labelledby="consent-title"><button className="consent-close" type="button" aria-label="Fechar e usar somente recursos essenciais" onClick={() => save("essential")}><X size={18} /></button><span className="consent-icon"><ShieldCheck size={23} /></span><h2 id="consent-title">Sua privacidade no LIM PDF</h2><p>As ferramentas de PDF funcionam sem cookies de publicidade. Com sua autorização, serviços de anúncios e medição poderão ser carregados quando estiverem configurados.</p>{details ? <div className="consent-details"><div><strong>Essenciais</strong><small>Preferências, segurança e funcionamento básico. Sempre ativos.</small></div><div><strong>Publicidade e medição</strong><small>Permite carregar serviços configurados para sustentar e melhorar o site.</small></div></div> : null}<div className="consent-actions"><button className="primary-button" type="button" onClick={() => save("accepted")}>Aceitar opcionais</button><button className="secondary-button" type="button" onClick={() => save("essential")}>Somente essenciais</button></div><button className="consent-settings" type="button" onClick={() => setDetails((current) => !current)}><Settings2 size={15} /> {details ? "Ocultar detalhes" : "Ver detalhes"}</button><p className="consent-links"><Link href="/privacidade">Privacidade</Link> · <Link href="/cookies">Cookies</Link></p></section></div>;
+
+  return (
+    <section className="consent-toast" role="dialog" aria-modal="false" aria-labelledby="consent-title">
+      <button className="consent-close" type="button" aria-label="Fechar e usar somente cookies essenciais" onClick={() => save("essential")}><X size={16} /></button>
+      <div className="consent-copy">
+        <span className="consent-icon"><Cookie size={18} /></span>
+        <div>
+          <strong id="consent-title">Cookies no LIM PDF</strong>
+          <p>Usamos cookies essenciais para o site funcionar. Com sua permissão, também usamos publicidade e medição.</p>
+        </div>
+      </div>
+      {details ? <div className="consent-details">
+        <span><strong>Essenciais</strong><small>Sempre ativos para preferências e funcionamento.</small></span>
+        <span><strong>Publicidade e medição</strong><small>Carregados somente depois da sua autorização.</small></span>
+        <span className="consent-links"><Link href="/privacidade">Privacidade</Link><Link href="/cookies">Cookies</Link></span>
+      </div> : null}
+      <div className="consent-actions">
+        <button className="primary-button" type="button" onClick={() => save("accepted")}>Aceitar</button>
+        <button className="secondary-button" type="button" onClick={() => save("essential")}>Só essenciais</button>
+        <button className="consent-settings" type="button" onClick={() => setDetails((current) => !current)}><Settings2 size={14} /> {details ? "Menos" : "Opções"}</button>
+      </div>
+    </section>
+  );
 }
 
-export function PrivacyPreferencesButton() { return <button className="privacy-settings-button" type="button" onClick={() => window.dispatchEvent(new Event("limpdf:open-consent"))}>Preferências de privacidade</button>; }
+export function PrivacyPreferencesButton() {
+  return <button className="privacy-settings-button" type="button" onClick={() => window.dispatchEvent(new Event("limpdf:open-consent"))}>Preferências de cookies</button>;
+}

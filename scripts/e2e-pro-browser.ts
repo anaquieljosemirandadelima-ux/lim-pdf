@@ -29,9 +29,9 @@ async function outputFor(page: Page, slug: ProToolSlug, timeout = 100_000) {
 }
 
 async function openTool(page: Page, slug: ProToolSlug, files: string | string[]) {
-  const response = await page.goto(`${baseUrl}/ferramentas/${slug}`, { waitUntil: "networkidle" });
+  const response = await page.goto(`${baseUrl}/ferramentas/${slug}`, { waitUntil: "domcontentloaded", timeout: 45_000 });
   assert.equal(response?.status(), 200, `${slug}: HTTP ${response?.status()}`);
-  assert.ok(await page.locator(".pro-pdf-workspace").isVisible(), `${slug}: workspace profissional invisível`);
+  await page.locator(".pro-pdf-workspace").waitFor({ state: "visible", timeout: 30_000 });
   await page.locator('.drop-zone input[type="file"]').first().setInputFiles(files);
   await page.locator(".selected-files").waitFor({ state: "visible", timeout: 20_000 });
 }
@@ -115,8 +115,9 @@ async function runSignature(page: Page) {
 }
 
 async function runPreflight(page: Page) {
-  const response = await page.goto(`${baseUrl}/ferramentas/preflight-pdf`, { waitUntil: "networkidle" });
+  const response = await page.goto(`${baseUrl}/ferramentas/preflight-pdf`, { waitUntil: "domcontentloaded", timeout: 45_000 });
   assert.equal(response?.status(), 200);
+  await page.locator(".preflight-workspace").waitFor({ state: "visible", timeout: 30_000 });
   await page.locator('.preflight-workspace input[type="file"]').setInputFiles(fixture("basic.pdf"));
   await page.locator(".preflight-workspace button.process-button").click();
   await page.locator(".preflight-results").waitFor({ state: "visible", timeout: 30_000 });

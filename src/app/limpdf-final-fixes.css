@@ -1,0 +1,84 @@
+/* Final QA fixes: search dropdown, tablet geometry and clean tool pages. */
+
+.global-tool-search,
+.global-tool-search *{min-width:0}
+
+.global-tool-search{grid-column:auto!important}
+.search-clear,
+.search-submit,
+.global-search-results>button,
+.global-search-results .search-view-all{
+  position:static!important;
+  right:auto!important;
+  top:auto!important;
+  bottom:auto!important;
+}
+.search-clear{width:26px!important;height:26px!important;flex:none!important}
+.search-submit{width:40px!important;height:42px!important}
+.global-search-results{
+  display:block!important;
+  max-height:min(520px,70vh)!important;
+  overflow:auto!important;
+}
+.global-search-results>button:not(.search-view-all){
+  width:100%!important;
+  height:auto!important;
+  min-height:54px!important;
+}
+.global-search-results .search-view-all{
+  width:100%!important;
+  height:auto!important;
+  min-height:38px!important;
+  border:0!important;
+  border-top:1px solid #eceef1!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  color:#c81019!important;
+}
+.global-search-results .search-view-all:hover{
+  background:#fff5f5!important;
+  color:#a90b13!important;
+  transform:none!important;
+}
+
+@media (max-width:860px) and (min-width:621px){
+  .reference-header{
+    height:64px!important;
+    min-height:64px!important;
+  }
+  .reference-header-inner{
+    grid-template-columns:142px minmax(0,1fr)!important;
+    grid-template-rows:1fr!important;
+    align-items:center!important;
+  }
+  .reference-header .logo,
+  .reference-header .brand-logo-image{width:142px!important}
+  .global-tool-search{
+    grid-column:2!important;
+    grid-row:1!important;
+    width:100%!important;
+    max-width:none!important;
+    height:42px!important;
+    align-self:center!important;
+  }
+  .global-tool-search>label{height:42px!important}
+  .reference-main{
+    width:calc(100% - 68px)!important;
+    max-width:none!important;
+    margin-left:58px!important;
+    margin-right:10px!important;
+    padding-left:0!important;
+    padding-right:0!important;
+  }
+  .minimal-site-footer{
+    width:calc(100% - 68px)!important;
+    margin-left:58px!important;
+    margin-right:10px!important;
+  }
+}
+
+@media (max-width:620px){
+  .reference-main{width:calc(100% - 16px)!important;margin-left:8px!important;margin-right:8px!important;padding-left:0!important;padding-right:0!important}
+  .global-tool-search{grid-column:2!important;grid-row:1!important}
+}

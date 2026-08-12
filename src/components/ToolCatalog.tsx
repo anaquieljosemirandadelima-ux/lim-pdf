@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { ArrowRight, FileOutput, Grid2X2, PencilLine, Repeat2, Search, ShieldCheck, Sparkles } from "lucide-react";
-import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { ToolIcon } from "@/components/ToolIcon";
 import { allToolBySlug, type AllToolSlug, type AnyToolDefinition } from "@/lib/all-tools";
 import { proTools } from "@/lib/pro-tools";
@@ -18,10 +19,31 @@ const sections: Array<{ id: "converter" | "editar" | "organizar" | "proteger" | 
 
 type CatalogTab = "todas" | "converter" | "editar" | "organizar" | "proteger" | "outros" | "profissional";
 
-function normalize(value: string) { return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(); }
+const queryAliases: Record<string, string[]> = {
+  compactar: ["comprimir", "diminuir", "reduzir", "menor"],
+  juntar: ["unir", "mesclar", "combinar", "merge"],
+  dividir: ["separar", "cortar", "split"],
+  assinar: ["assinatura", "rubrica", "firmar"],
+  proteger: ["senha", "bloquear", "criptografar"],
+  ocr: ["escaneado", "digitalizacao", "pesquisavel", "reconhecer texto"],
+};
+
+function normalize(value: string) { return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim(); }
 function resolveTools(slugs: AllToolSlug[]) { return slugs.flatMap((slug) => { const tool = allToolBySlug.get(slug); return tool ? [tool] : []; }); }
 function parseStoredToolSlugs(raw: string): AllToolSlug[] { try { const parsed = JSON.parse(raw) as unknown; return Array.isArray(parsed) ? parsed.filter((value): value is AllToolSlug => typeof value === "string") : []; } catch { return []; } }
-function matchesQuery(tool: { name: string; shortDescription: string; description: string; keywords: string[] }, query: string) { return !query || normalize(`${tool.name} ${tool.shortDescription} ${tool.description} ${tool.keywords.join(" ")}`).includes(query); }
+function expandedQuery(query: string) {
+  const normalized = normalize(query);
+  const terms = [normalized];
+  for (const [canonical, aliases] of Object.entries(queryAliases)) {
+    if (normalized.includes(canonical) || aliases.some((alias) => normalized.includes(alias))) terms.push(canonical, ...aliases);
+  }
+  return [...new Set(terms.filter(Boolean))];
+}
+function matchesQuery(tool: { name: string; shortDescription: string; description: string; keywords: string[] }, query: string) {
+  if (!query) return true;
+  const haystack = normalize(`${tool.name} ${tool.shortDescription} ${tool.description} ${tool.keywords.join(" ")}`);
+  return expandedQuery(query).some((term) => haystack.includes(term));
+}
 
 function useToolStorage(key: string) {
   const subscribe = useCallback((callback: () => void) => { window.addEventListener(TOOL_EXPERIENCE_CHANGE_EVENT, callback); window.addEventListener("storage", callback); return () => { window.removeEventListener(TOOL_EXPERIENCE_CHANGE_EVENT, callback); window.removeEventListener("storage", callback); }; }, []);
@@ -39,12 +61,21 @@ function ProToolItem({ tool }: { tool: (typeof proTools)[number] }) {
 }
 
 export function ToolCatalog() {
+  const searchParams = useSearchParams();
   const [active, setActive] = useState<CatalogTab>("todas");
   const [query, setQuery] = useState("");
   const favorites = useToolStorage(TOOL_EXPERIENCE_FAVORITES_KEY);
   const recents = useToolStorage(TOOL_EXPERIENCE_RECENTS_KEY);
-  const normalizedQuery = normalize(query.trim());
+  const normalizedQuery = normalize(query);
   const handleFavorite = (slug: AllToolSlug) => toggleFavoriteTool(slug);
+
+  useEffect(() => {
+    const incoming = searchParams.get("busca")?.trim() || "";
+    if (!incoming) return;
+    setActive("todas");
+    setQuery(incoming);
+  }, [searchParams]);
+
   const filteredSections = useMemo(() => sections.filter((section) => active === "todas" || section.id === active).map((section) => ({ ...section, resolved: resolveTools(section.tools).filter((tool) => matchesQuery(tool, normalizedQuery)) })).filter((section) => section.resolved.length > 0), [active, normalizedQuery]);
   const filteredProTools = useMemo(() => proTools.filter((tool) => matchesQuery(tool, normalizedQuery)), [normalizedQuery]);
   const tabs = [["todas", "Todas", Grid2X2], ["converter", "Converter", Repeat2], ["editar", "Editar", PencilLine], ["organizar", "Organizar", Grid2X2], ["proteger", "Proteger", ShieldCheck], ["profissional", "Profissional", Sparkles], ["outros", "Outros", Grid2X2]] as const;
@@ -53,8 +84,8 @@ export function ToolCatalog() {
   const showCore = active !== "profissional";
   const showPro = active === "todas" || active === "profissional";
 
-  return <div className="reference-catalog"><div className="reference-catalog-head"><div><h1>Todas as ferramentas</h1><p>Comece pela tarefa principal e abra os controles avançados só quando precisar.</p></div><label className="reference-search"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar ferramenta..." /></label></div>
-    {!normalizedQuery && active === "todas" ? <section className="catalog-priority-actions" aria-label="Ações principais"><Link href="/ferramentas/converter-pdf"><span><Repeat2 size={19} /></span><div><strong>Converter PDF</strong><small>Escolha a saída depois do upload</small></div><ArrowRight size={17} /></Link><Link href="/ferramentas/editar-pdf"><span><PencilLine size={19} /></span><div><strong>Editar PDF</strong><small>Studio, texto, páginas e revisão</small></div><ArrowRight size={17} /></Link><Link href="/ferramentas/ocr-pdf"><span><FileOutput size={19} /></span><div><strong>OCR PDF</strong><small>Torne digitalizações pesquisáveis</small></div><ArrowRight size={17} /></Link><Link href="/ferramentas/preflight-pdf"><span><ShieldCheck size={19} /></span><div><strong>Preflight PDF</strong><small>Cheque o arquivo antes de entregar</small></div><ArrowRight size={17} /></Link></section> : null}
+  return <div className="reference-catalog"><div className="reference-catalog-head"><div><h1>Todas as ferramentas</h1><p>Comece pela tarefa principal e abra os controles avançados só quando precisar.</p></div><label className="reference-search"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar: juntar, assinar, diminuir, Word..." /></label></div>
+    {!normalizedQuery && active === "todas" ? <section className="catalog-priority-actions" aria-label="Ações principais"><Link href="/ferramentas/converter-pdf"><span><Repeat2 size={19} /></span><div><strong>Converter PDF</strong><small>Escolha a saída depois do upload</small></div><ArrowRight size={17} /></Link><Link href="/ferramentas/editar-pdf"><span><PencilLine size={19} /></span><div><strong>Editar PDF</strong><small>Texto, imagens, páginas e revisão em um só editor</small></div><ArrowRight size={17} /></Link><Link href="/ferramentas/ocr-pdf"><span><FileOutput size={19} /></span><div><strong>OCR PDF</strong><small>Torne digitalizações pesquisáveis</small></div><ArrowRight size={17} /></Link><Link href="/ferramentas/preflight-pdf"><span><ShieldCheck size={19} /></span><div><strong>Preflight PDF</strong><small>Cheque o arquivo antes de entregar</small></div><ArrowRight size={17} /></Link></section> : null}
     {!normalizedQuery && active === "todas" && (favoriteTools.length || recentTools.length) ? <section className="reference-personal-tools" aria-label="Acesso rápido">{favoriteTools.length ? <div><header><span><Sparkles size={17} /></span><strong>Favoritas</strong><small>Ficam sempre à mão neste dispositivo.</small></header><div className="reference-personal-grid">{favoriteTools.slice(0, 6).map((tool) => <ToolItem key={tool.slug} tool={tool} favorite onFavorite={handleFavorite} />)}</div></div> : null}{recentTools.length ? <div><header><span><Repeat2 size={17} /></span><strong>Recentes</strong><small>Continue de onde parou.</small></header><div className="reference-personal-grid">{recentTools.map((tool) => <ToolItem key={tool.slug} tool={tool} favorite={false} onFavorite={handleFavorite} />)}</div></div> : null}</section> : null}
     <div className="reference-catalog-tabs" role="tablist" aria-label="Filtrar ferramentas por categoria">{tabs.map(([id, label, Icon]) => <button key={id} type="button" className={active === id ? "active" : ""} onClick={() => setActive(id)}><Icon size={16} /> {label}</button>)}</div>
     <div className="reference-catalog-sections">

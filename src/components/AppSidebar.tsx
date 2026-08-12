@@ -80,38 +80,17 @@ export function AppSidebar() {
       </nav>
 
       <section className="sidebar-recommendation" aria-label="Sugestão de ferramenta">
-        <div
-          role="note"
-          aria-label="Site em desenvolvimento"
-          style={{
-            width: "100%",
-            marginBottom: 8,
-            padding: "8px 10px",
-            boxSizing: "border-box",
-            border: "1px solid #f1dfb5",
-            borderLeft: "3px solid #e5a600",
-            borderRadius: 10,
-            background: "linear-gradient(180deg, #fffdf7 0%, #fff9eb 100%)",
-            color: "#685632",
-            fontSize: 10,
-            lineHeight: 1.35,
-            fontWeight: 700,
-          }}
-        >
-          Site em desenvolvimento
-          <span
-            style={{
-              display: "block",
-              marginTop: 2,
-              color: "#8a7650",
-              fontSize: 9,
-              fontWeight: 500,
-              lineHeight: 1.35,
-            }}
-          >
-            Algumas funções ainda estão sendo aprimoradas.
+        <div className="sidebar-development-note" role="note" aria-label="LIM PDF em desenvolvimento">
+          <span className="sidebar-development-orb" aria-hidden="true" />
+          <span className="sidebar-development-copy">
+            <span className="sidebar-development-title-row">
+              <strong>LIM PDF em evolução</strong>
+              <span className="sidebar-development-chip">Em desenvolvimento</span>
+            </span>
+            <span className="sidebar-development-text">Algumas funções ainda estão sendo aprimoradas.</span>
           </span>
         </div>
+
         <div className="sidebar-recommendation-card" key={recommendation.title}>
           <span className="sidebar-recommendation-icon"><RecommendationIcon size={24} /></span>
           <strong>{recommendation.title}</strong>
@@ -119,6 +98,169 @@ export function AppSidebar() {
           <Link href={recommendation.href}>Usar agora <span aria-hidden="true">→</span></Link>
         </div>
       </section>
+
+      <style jsx>{`
+        .sidebar-development-note {
+          position: relative;
+          display: grid;
+          grid-template-columns: 26px minmax(0, 1fr);
+          align-items: center;
+          gap: 9px;
+          width: 100%;
+          min-height: 58px;
+          margin-bottom: 8px;
+          padding: 9px 10px;
+          box-sizing: border-box;
+          overflow: hidden;
+          border: 1px solid #e7e9ee;
+          border-radius: 12px;
+          background: #ffffff;
+          box-shadow: 0 5px 16px rgba(25, 28, 34, 0.05);
+        }
+
+        .sidebar-development-note::after {
+          content: "";
+          position: absolute;
+          left: 0;
+          bottom: 0;
+          width: 34%;
+          height: 2px;
+          border-radius: 999px;
+          background: #f0181f;
+          opacity: 0.72;
+          transform: translateX(-120%);
+          animation: sidebar-development-sweep 4.6s ease-in-out infinite;
+        }
+
+        .sidebar-development-orb {
+          position: relative;
+          width: 26px;
+          height: 26px;
+          border: 1px solid #ffd8da;
+          border-radius: 50%;
+          background: #fff5f5;
+          box-shadow: inset 0 0 0 5px #fffafa;
+        }
+
+        .sidebar-development-orb::before,
+        .sidebar-development-orb::after {
+          content: "";
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          border-radius: 50%;
+          transform: translate(-50%, -50%);
+        }
+
+        .sidebar-development-orb::before {
+          width: 7px;
+          height: 7px;
+          background: #f0181f;
+          box-shadow: 0 0 0 3px rgba(240, 24, 31, 0.08);
+        }
+
+        .sidebar-development-orb::after {
+          width: 9px;
+          height: 9px;
+          border: 1px solid rgba(240, 24, 31, 0.38);
+          animation: sidebar-development-pulse 2.4s ease-out infinite;
+        }
+
+        .sidebar-development-copy {
+          min-width: 0;
+        }
+
+        .sidebar-development-title-row {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          min-width: 0;
+        }
+
+        .sidebar-development-title-row strong {
+          color: #20242c;
+          white-space: nowrap;
+          font-size: 10.5px;
+          font-weight: 800;
+          line-height: 1.2;
+          letter-spacing: -0.01em;
+        }
+
+        .sidebar-development-chip {
+          flex: 0 0 auto;
+          padding: 3px 5px;
+          border: 1px solid #ffdadd;
+          border-radius: 999px;
+          background: #fff5f5;
+          color: #d71920;
+          font-size: 7px;
+          font-weight: 800;
+          line-height: 1;
+          letter-spacing: 0.035em;
+          text-transform: uppercase;
+        }
+
+        .sidebar-development-text {
+          display: block;
+          margin-top: 4px;
+          color: #79818e;
+          font-size: 8.8px;
+          font-weight: 500;
+          line-height: 1.35;
+        }
+
+        @keyframes sidebar-development-pulse {
+          0% {
+            opacity: 0.75;
+            transform: translate(-50%, -50%) scale(1);
+          }
+          70%, 100% {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(2.15);
+          }
+        }
+
+        @keyframes sidebar-development-sweep {
+          0%, 14% {
+            transform: translateX(-120%);
+          }
+          48%, 62% {
+            transform: translateX(292%);
+          }
+          100% {
+            transform: translateX(292%);
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .sidebar-development-note::after,
+          .sidebar-development-orb::after {
+            animation: none;
+          }
+        }
+
+        @media (max-height: 850px) and (min-width: 761px) {
+          .sidebar-development-note {
+            min-height: 50px;
+            margin-bottom: 6px;
+            padding: 7px 9px;
+          }
+
+          .sidebar-development-orb {
+            width: 23px;
+            height: 23px;
+          }
+
+          .sidebar-development-chip {
+            display: none;
+          }
+
+          .sidebar-development-text {
+            margin-top: 3px;
+            font-size: 8.4px;
+          }
+        }
+      `}</style>
     </aside>
   );
 }

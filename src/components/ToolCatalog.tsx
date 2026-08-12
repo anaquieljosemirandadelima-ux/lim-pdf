@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { ArrowRight, FileOutput, Grid2X2, PencilLine, Repeat2, Search, ShieldCheck, Sparkles } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { ToolIcon } from "@/components/ToolIcon";
 import { allToolBySlug, type AllToolSlug, type AnyToolDefinition } from "@/lib/all-tools";
 import { proTools } from "@/lib/pro-tools";
@@ -60,21 +59,13 @@ function ProToolItem({ tool }: { tool: (typeof proTools)[number] }) {
   return <Link href={`/ferramentas/${tool.slug}`} className="reference-pro-tool-card"><span className={`reference-catalog-icon accent-${tool.accent}`}><ToolIcon icon={tool.icon} /></span><span><strong>{tool.name}</strong><small>{tool.shortDescription}</small></span><ArrowRight size={17} /></Link>;
 }
 
-export function ToolCatalog() {
-  const searchParams = useSearchParams();
+export function ToolCatalog({ initialQuery = "" }: { initialQuery?: string }) {
   const [active, setActive] = useState<CatalogTab>("todas");
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const favorites = useToolStorage(TOOL_EXPERIENCE_FAVORITES_KEY);
   const recents = useToolStorage(TOOL_EXPERIENCE_RECENTS_KEY);
   const normalizedQuery = normalize(query);
   const handleFavorite = (slug: AllToolSlug) => toggleFavoriteTool(slug);
-
-  useEffect(() => {
-    const incoming = searchParams.get("busca")?.trim() || "";
-    if (!incoming) return;
-    setActive("todas");
-    setQuery(incoming);
-  }, [searchParams]);
 
   const filteredSections = useMemo(() => sections.filter((section) => active === "todas" || section.id === active).map((section) => ({ ...section, resolved: resolveTools(section.tools).filter((tool) => matchesQuery(tool, normalizedQuery)) })).filter((section) => section.resolved.length > 0), [active, normalizedQuery]);
   const filteredProTools = useMemo(() => proTools.filter((tool) => matchesQuery(tool, normalizedQuery)), [normalizedQuery]);

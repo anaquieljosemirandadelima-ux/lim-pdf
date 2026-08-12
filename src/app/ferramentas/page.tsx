@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import { ToolCatalog } from "@/components/ToolCatalog";
 
 export const metadata: Metadata = {
@@ -8,12 +7,13 @@ export const metadata: Metadata = {
   alternates: { canonical: "/ferramentas" },
 };
 
-export default function ToolsPage() {
+export default async function ToolsPage({ searchParams }: { searchParams: Promise<{ busca?: string | string[] }> }) {
+  const params = await searchParams;
+  const rawQuery = Array.isArray(params.busca) ? params.busca[0] : params.busca;
+  const initialQuery = rawQuery?.trim().slice(0, 120) || "";
   return (
     <section className="reference-catalog-page">
-      <Suspense fallback={<div className="reference-catalog-loading" role="status">Carregando ferramentas…</div>}>
-        <ToolCatalog />
-      </Suspense>
+      <ToolCatalog key={initialQuery || "catalog"} initialQuery={initialQuery} />
     </section>
   );
 }

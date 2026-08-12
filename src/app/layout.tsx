@@ -7,7 +7,6 @@ import { LanguageDocumentSync } from "@/components/LanguageDocumentSync";
 import { LocalPrivacyGuard } from "@/components/LocalPrivacyGuard";
 import { NativeTranslator } from "@/components/NativeTranslator";
 import { SiteFooter } from "@/components/SiteFooter";
-import { TrustStrip } from "@/components/TrustStrip";
 import { ADSENSE_CLIENT } from "@/lib/adsense";
 import { allTools } from "@/lib/all-tools";
 import { proTools } from "@/lib/pro-tools";
@@ -62,5 +61,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="pt-BR"><body className="app-body reference-app-body"><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} /><a className="skip-link" href="#conteudo">Pular para o conteúdo</a><LocalPrivacyGuard /><LanguageDocumentSync /><NativeTranslator /><AdSenseRouteLoader client={adsenseClient} /><Header /><AppSidebar /><main id="conteudo" className="reference-main">{children}</main><TrustStrip /><SiteFooter /><ConsentBanner /></body></html>;
+  return <html lang="pt-BR"><body className="app-body reference-app-body"><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} /><a className="skip-link" href="#conteudo">Pular para o conteúdo</a><LocalPrivacyGuard /><LanguageDocumentSync /><NativeTranslator /><AdSenseRouteLoader client={adsenseClient} /><Header /><AppSidebar /><main id="conteudo" className="reference-main">{children}</main><SiteFooter /><ConsentBanner /></body></html>;
 }

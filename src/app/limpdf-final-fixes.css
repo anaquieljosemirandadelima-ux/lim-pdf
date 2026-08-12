@@ -29,6 +29,17 @@
   width:100%!important;
   height:auto!important;
   min-height:38px!important;
+  border:0!important;
+  border-top:1px solid #eceef1!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  color:#c81019!important;
+}
+.global-search-results .search-view-all:hover{
+  background:#fff5f5!important;
+  color:#a90b13!important;
+  transform:none!important;
 }
 
 @media (max-width:860px) and (min-width:621px){

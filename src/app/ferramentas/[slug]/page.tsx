@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { AdSlot } from "@/components/AdSlot";
 import { AdvancedToolWorkspace } from "@/components/AdvancedToolWorkspace";
 import { MemorySafePdfWorkspace } from "@/components/MemorySafePdfWorkspace";
 import { PdfEditorExperienceSwitcher } from "@/components/PdfEditorExperienceSwitcher";
@@ -109,26 +110,27 @@ export default async function ToolPage({ params }: ToolPageProps) {
   };
   const schemas = <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }} /><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} /></>;
   const heading = <div className="reference-tool-heading"><div><h1>{tool.name}</h1><p>{description}</p></div><span className={`reference-heading-icon accent-${tool.accent}`} aria-hidden="true"><ToolIcon icon={tool.icon} /></span></div>;
+  const inlineAd = <AdSlot placement="tool-inline" format="horizontal" className="tool-ad-slot" />;
 
   if (proTool) {
     const workspace = proTool.slug === "links-pdf" ? <ProLinksWorkspace /> : proTool.slug === "bookmarks-pdf" ? <ProNavigationWorkspace tool={proTool} /> : <ProPdfWorkspace tool={proTool} />;
-    return <section className="reference-tool-page reference-pro-tool-page">{schemas}{heading}<div className="reference-workspace-wrap">{workspace}</div><ToolEditorialPanel tool={proTool} /></section>;
+    return <section className="reference-tool-page reference-pro-tool-page">{schemas}{heading}<div className="reference-workspace-wrap">{workspace}</div>{inlineAd}<ToolEditorialPanel tool={proTool} /></section>;
   }
 
   if (converterOutputSet.has(tool.slug as AllToolSlug)) {
     const coreTool = tool as (typeof allTools)[number];
-    return <section className="reference-tool-page converter-output-page">{schemas}<ToolTelemetryBridge toolSlug={coreTool.slug} />{heading}<PremiumToolExperience toolName={coreTool.name} toolSlug={coreTool.slug} accent={coreTool.accent} /><div className="reference-workspace-wrap"><UnifiedConverterWorkspace initialOutput={coreTool.slug as ConverterOutputSlug} /></div><ToolEditorialPanel tool={coreTool} /></section>;
+    return <section className="reference-tool-page converter-output-page">{schemas}<ToolTelemetryBridge toolSlug={coreTool.slug} />{heading}<PremiumToolExperience toolName={coreTool.name} toolSlug={coreTool.slug} accent={coreTool.accent} /><div className="reference-workspace-wrap"><UnifiedConverterWorkspace initialOutput={coreTool.slug as ConverterOutputSlug} /></div>{inlineAd}<ToolEditorialPanel tool={coreTool} /></section>;
   }
 
   if (isAdvancedToolSlug(tool.slug as AllToolSlug)) {
     const advancedTool = tool as (typeof allTools)[number];
-    return <section className="reference-tool-page">{schemas}<ToolTelemetryBridge toolSlug={advancedTool.slug} />{heading}<PremiumToolExperience toolName={advancedTool.name} toolSlug={advancedTool.slug} accent={advancedTool.accent} /><div className="reference-workspace-wrap"><AdvancedToolWorkspace tool={advancedTool} /></div><ToolEditorialPanel tool={advancedTool} /></section>;
+    return <section className="reference-tool-page">{schemas}<ToolTelemetryBridge toolSlug={advancedTool.slug} />{heading}<PremiumToolExperience toolName={advancedTool.name} toolSlug={advancedTool.slug} accent={advancedTool.accent} /><div className="reference-workspace-wrap"><AdvancedToolWorkspace tool={advancedTool} /></div>{inlineAd}<ToolEditorialPanel tool={advancedTool} /></section>;
   }
 
   const baseTool = tool as ToolDefinition;
   if (baseTool.slug === "editar-pdf") {
-    return <section className="reference-tool-page reference-editor-page">{schemas}<ToolTelemetryBridge toolSlug={baseTool.slug} />{heading}<PremiumToolExperience toolName={baseTool.name} toolSlug={baseTool.slug} accent={baseTool.accent} editor /><div className="reference-editor-wrap"><PdfEditorExperienceSwitcher /></div><ToolEditorialPanel tool={baseTool} /></section>;
+    return <section className="reference-tool-page reference-editor-page">{schemas}<ToolTelemetryBridge toolSlug={baseTool.slug} />{heading}<PremiumToolExperience toolName={baseTool.name} toolSlug={baseTool.slug} accent={baseTool.accent} editor /><div className="reference-editor-wrap"><PdfEditorExperienceSwitcher /></div>{inlineAd}<ToolEditorialPanel tool={baseTool} /></section>;
   }
 
-  return <section className="reference-tool-page">{schemas}<ToolTelemetryBridge toolSlug={baseTool.slug} />{heading}<PremiumToolExperience toolName={baseTool.name} toolSlug={baseTool.slug} accent={baseTool.accent} /><div className="reference-workspace-wrap">{memorySafeToolSlugs.has(baseTool.slug) ? <MemorySafePdfWorkspace tool={baseTool} /> : <PdfToolWorkspace tool={baseTool} />}</div><ToolEditorialPanel tool={baseTool} /></section>;
+  return <section className="reference-tool-page">{schemas}<ToolTelemetryBridge toolSlug={baseTool.slug} />{heading}<PremiumToolExperience toolName={baseTool.name} toolSlug={baseTool.slug} accent={baseTool.accent} /><div className="reference-workspace-wrap">{memorySafeToolSlugs.has(baseTool.slug) ? <MemorySafePdfWorkspace tool={baseTool} /> : <PdfToolWorkspace tool={baseTool} />}</div>{inlineAd}<ToolEditorialPanel tool={baseTool} /></section>;
 }

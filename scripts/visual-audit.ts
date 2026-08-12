@@ -33,8 +33,11 @@ async function main() {
       page.on("pageerror", (error) => issues.push(`${viewport.name}:pageerror:${error.message}`));
       page.on("console", (message) => { if (message.type() === "error" && !/adsbygoogle|ERR_BLOCKED_BY_CLIENT/i.test(message.text())) issues.push(`${viewport.name}:console:${message.text()}`); });
       for (const route of routes) {
-        const response = await page.goto(`${baseUrl}${route.path}`, { waitUntil: "networkidle" });
+        const response = await page.goto(`${baseUrl}${route.path}`, { waitUntil: "domcontentloaded", timeout: 45_000 });
         assert.equal(response?.status(), 200, `${viewport.name}/${route.name}: HTTP ${response?.status()}`);
+        const main = page.locator("#conteudo");
+        await main.waitFor({ state: "visible", timeout: 30_000 });
+        await page.waitForTimeout(180);
         const dimensions = await page.evaluate(() => ({
           scrollWidth: document.documentElement.scrollWidth,
           clientWidth: document.documentElement.clientWidth,
@@ -44,8 +47,6 @@ async function main() {
         if (dimensions.scrollWidth > dimensions.clientWidth + 2 || dimensions.bodyWidth > dimensions.viewport + 2) {
           issues.push(`${viewport.name}/${route.name}:overflow-horizontal:${JSON.stringify(dimensions)}`);
         }
-        const main = page.locator("#conteudo");
-        assert.ok(await main.isVisible(), `${viewport.name}/${route.name}: conteúdo principal invisível`);
         const box = await main.boundingBox();
         assert.ok(box && box.width > 250, `${viewport.name}/${route.name}: conteúdo principal colapsado`);
         await page.screenshot({ path: join(outDir, `${route.name}-${viewport.name}.png`), fullPage: true });
@@ -55,9 +56,9 @@ async function main() {
 
     const uxContext = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
     const uxPage = await uxContext.newPage();
-    await uxPage.goto(`${baseUrl}/`, { waitUntil: "networkidle" });
+    await uxPage.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded", timeout: 45_000 });
     const consent = uxPage.locator(".consent-toast");
-    assert.ok(await consent.isVisible(), "Pop-up compacto de cookies precisa aparecer para novo visitante.");
+    await consent.waitFor({ state: "visible", timeout: 30_000 });
     const consentBox = await consent.boundingBox();
     assert.ok(consentBox && consentBox.width <= 540 && consentBox.height < 330, `Cookie popup grande demais: ${JSON.stringify(consentBox)}`);
     await uxPage.screenshot({ path: join(outDir, "cookies-desktop-1440.png"), fullPage: true });
@@ -65,7 +66,7 @@ async function main() {
     const search = uxPage.getByRole("combobox");
     await search.fill("diminuir pdf");
     const searchResults = uxPage.locator(".global-search-results");
-    assert.ok(await searchResults.isVisible(), "Busca global deve abrir resultados durante digitação.");
+    await searchResults.waitFor({ state: "visible", timeout: 10_000 });
     assert.ok((await searchResults.getByText(/Compactar PDF/i).count()) > 0, "Busca por intenção 'diminuir pdf' deve encontrar Compactar PDF.");
     await uxPage.screenshot({ path: join(outDir, "busca-desktop-1440.png"), fullPage: true });
     await uxContext.close();
@@ -73,7 +74,8 @@ async function main() {
     const reducedContext = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: "reduce" });
     await reducedContext.addInitScript(() => localStorage.setItem("limpdf-consent-v1", "essential"));
     const reducedPage = await reducedContext.newPage();
-    await reducedPage.goto(`${baseUrl}/ferramentas/editar-pdf`, { waitUntil: "networkidle" });
+    await reducedPage.goto(`${baseUrl}/ferramentas/editar-pdf`, { waitUntil: "domcontentloaded", timeout: 45_000 });
+    await reducedPage.locator("#conteudo").waitFor({ state: "visible", timeout: 30_000 });
     const loadingAnimation = await reducedPage.evaluate(() => getComputedStyle(document.querySelector(".editor-mode-loading") || document.body).animationName);
     assert.ok(loadingAnimation === "none" || loadingAnimation === "", "prefers-reduced-motion deve desativar animação de loading");
     await reducedContext.close();

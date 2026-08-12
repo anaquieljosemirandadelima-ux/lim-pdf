@@ -53,6 +53,23 @@ async function main() {
       await context.close();
     }
 
+    const uxContext = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
+    const uxPage = await uxContext.newPage();
+    await uxPage.goto(`${baseUrl}/`, { waitUntil: "networkidle" });
+    const consent = uxPage.locator(".consent-toast");
+    assert.ok(await consent.isVisible(), "Pop-up compacto de cookies precisa aparecer para novo visitante.");
+    const consentBox = await consent.boundingBox();
+    assert.ok(consentBox && consentBox.width <= 540 && consentBox.height < 330, `Cookie popup grande demais: ${JSON.stringify(consentBox)}`);
+    await uxPage.screenshot({ path: join(outDir, "cookies-desktop-1440.png"), fullPage: true });
+    await uxPage.getByRole("button", { name: "Só essenciais" }).click();
+    const search = uxPage.getByRole("combobox");
+    await search.fill("diminuir pdf");
+    const searchResults = uxPage.locator(".global-search-results");
+    assert.ok(await searchResults.isVisible(), "Busca global deve abrir resultados durante digitação.");
+    assert.ok((await searchResults.getByText(/Compactar PDF/i).count()) > 0, "Busca por intenção 'diminuir pdf' deve encontrar Compactar PDF.");
+    await uxPage.screenshot({ path: join(outDir, "busca-desktop-1440.png"), fullPage: true });
+    await uxContext.close();
+
     const reducedContext = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: "reduce" });
     await reducedContext.addInitScript(() => localStorage.setItem("limpdf-consent-v1", "essential"));
     const reducedPage = await reducedContext.newPage();
@@ -62,7 +79,7 @@ async function main() {
     await reducedContext.close();
 
     assert.deepEqual(issues, [], issues.join("\n"));
-    console.log(JSON.stringify({ ok: true, suite: "visual-audit", screenshots: viewports.length * routes.length, outDir }));
+    console.log(JSON.stringify({ ok: true, suite: "visual-audit", screenshots: viewports.length * routes.length + 2, outDir, cookiePopup: true, globalSearch: true }));
   } finally {
     await browser.close();
   }

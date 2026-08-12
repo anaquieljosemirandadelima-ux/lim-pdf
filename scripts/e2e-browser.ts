@@ -83,6 +83,8 @@ async function processEditor(page: Page) {
   const input = page.locator('.editor-upload-card input[type="file"]');
   await input.setInputFiles(fixture("basic.pdf"));
   await page.locator(".pdf-editor-shell").waitFor({ state: "visible", timeout: 30_000 });
+  await page.locator(".editor-pages > button").first().waitFor({ state: "visible", timeout: 30_000 });
+  await page.locator(".editor-stage").waitFor({ state: "visible", timeout: 30_000 });
 
   for (const label of ["Selecionar", "Adicionar texto", "Destacar", "Redigir", "Comentário", "Assinatura", "Adicionar imagem"]) {
     assert.ok(await page.getByRole("button", { name: label, exact: true }).count(), `Editor unificado sem ferramenta ${label}`);
@@ -101,7 +103,7 @@ async function processEditor(page: Page) {
   assert.ok(await page.locator(".editor-pages > button").count() >= 3, "Editor não inseriu página em branco");
 
   await page.keyboard.press("Control+K");
-  assert.ok(await page.locator("#header-tool-search").isFocused(), "Ctrl+K deve abrir a busca global, não uma paleta de comandos do editor");
+  assert.equal(await page.evaluate(() => document.activeElement?.id), "header-tool-search", "Ctrl+K deve abrir a busca global, não uma paleta de comandos do editor");
   await page.keyboard.press("Escape");
 
   const [download] = await Promise.all([

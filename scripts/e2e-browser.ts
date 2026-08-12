@@ -73,8 +73,15 @@ async function prepareTool(page: Page, slug: AllToolSlug) {
   if (slug === "permissoes-pdf") await page.locator('input[type="password"]').first().fill("owner1234");
 }
 
+async function navigate(page: Page, path: string) {
+  const response = await page.goto(`${baseUrl}${path}`, { waitUntil: "domcontentloaded", timeout: 45_000 });
+  assert.equal(response?.status(), 200, `${path}: HTTP ${response?.status()}`);
+  await page.locator("#conteudo").waitFor({ state: "visible", timeout: 30_000 });
+  return response;
+}
+
 async function processEditor(page: Page) {
-  await page.goto(`${baseUrl}/ferramentas/editar-pdf`, { waitUntil: "networkidle" });
+  await navigate(page, "/ferramentas/editar-pdf");
   assert.match(await page.title(), /Editar PDF/i);
   for (const forbidden of ["Studio", "Modo preciso", "Foco", "Tela cheia", "Comandos"]) {
     assert.equal(await page.getByText(forbidden, { exact: true }).count(), 0, `Editor ainda expõe controle antigo: ${forbidden}`);
@@ -117,10 +124,9 @@ async function processEditor(page: Page) {
 
 async function processTool(page: Page, slug: AllToolSlug) {
   if (slug === "editar-pdf") return processEditor(page);
-  const response = await page.goto(`${baseUrl}/ferramentas/${slug}`, { waitUntil: "networkidle" });
-  assert.equal(response?.status(), 200, `${slug}: rota não retornou 200`);
+  await navigate(page, `/ferramentas/${slug}`);
   assert.ok(await page.locator("h1").first().isVisible(), `${slug}: h1 ausente`);
-  assert.ok(await page.locator(".premium-experience").isVisible(), `${slug}: fluxo premium ausente`);
+  await page.locator(".premium-experience").waitFor({ state: "visible", timeout: 30_000 });
 
   const primary = page.locator('input[type="file"]').first();
   const first = await primaryFixture(slug);
@@ -156,7 +162,7 @@ async function terminalErrorText(page: Page) {
 
 async function negativeCases(page: Page) {
   console.log("QA negativo confirmação de senha divergente");
-  await page.goto(`${baseUrl}/ferramentas/proteger-pdf`, { waitUntil: "networkidle" });
+  await navigate(page, "/ferramentas/proteger-pdf");
   await page.locator('input[type="file"]').first().setInputFiles(fixture("basic.pdf"));
   const protectPasswords = page.locator('input[type="password"]');
   await protectPasswords.nth(0).fill("qa1234");
@@ -165,13 +171,13 @@ async function negativeCases(page: Page) {
   assert.match(await terminalErrorText(page), /confirmação|senha/i);
 
   console.log("QA negativo senha obrigatória para desbloquear");
-  await page.goto(`${baseUrl}/ferramentas/desbloquear-pdf`, { waitUntil: "networkidle" });
+  await navigate(page, "/ferramentas/desbloquear-pdf");
   await page.locator('input[type="file"]').first().setInputFiles(fixture("protected.pdf"));
   await page.locator("button.process-button").click();
   assert.match(await terminalErrorText(page), /informe|senha/i);
 
   console.log("QA negativo senha de proprietário obrigatória");
-  await page.goto(`${baseUrl}/ferramentas/permissoes-pdf`, { waitUntil: "networkidle" });
+  await navigate(page, "/ferramentas/permissoes-pdf");
   await page.locator('input[type="file"]').first().setInputFiles(fixture("basic.pdf"));
   await page.locator("button.process-button").click();
   assert.match(await terminalErrorText(page), /proprietário|senha/i);

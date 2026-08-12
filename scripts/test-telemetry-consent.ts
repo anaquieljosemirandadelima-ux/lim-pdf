@@ -38,7 +38,7 @@ async function main() {
     await missingPage.goto(`${baseUrl}/ferramentas/compactar-pdf`, { waitUntil: "networkidle" });
     await missingPage.waitForTimeout(250);
     assert.equal(missingRequests.length, 0, "Antes da escolha de privacidade nenhuma medição pode ser enviada.");
-    await missingPage.getByRole("button", { name: "Aceitar opcionais" }).click();
+    await missingPage.getByRole("button", { name: "Aceitar", exact: true }).click();
     await missingPage.waitForFunction(() => localStorage.getItem("limpdf-consent-v1") === "accepted");
     await missingPage.waitForTimeout(500);
     assert.ok(missingRequests.length >= 1, "Após consentimento opcional explícito a medição pode iniciar.");

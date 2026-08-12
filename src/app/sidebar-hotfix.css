@@ -1,4 +1,4 @@
-/* Sidebar final: icon + label share the exact same row center. */
+/* Sidebar final: icon + label share the exact same optical center. */
 
 .reference-sidebar{
   width:272px!important;
@@ -106,8 +106,9 @@
   transform:none!important;
 }
 .sidebar-item-wrap>a .sidebar-hover-label{
-  position:static!important;
-  inset:auto!important;
+  position:relative!important;
+  top:10px!important;
+  inset-inline:auto!important;
   display:flex!important;
   align-items:center!important;
   width:auto!important;
@@ -222,6 +223,7 @@
     min-height:37px!important;
   }
   .sidebar-item-wrap>a .sidebar-hover-label{
+    top:10px!important;
     transform:none!important;
   }
   .sidebar-recommendation{
@@ -243,6 +245,7 @@
   }
   .sidebar-item-wrap>a .sidebar-hover-label{
     font-size:12.5px!important;
+    top:10px!important;
     transform:none!important;
   }
   .sidebar-recommendation{

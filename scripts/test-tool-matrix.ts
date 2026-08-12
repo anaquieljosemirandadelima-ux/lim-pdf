@@ -4,7 +4,7 @@ import { allTools, advancedTools, isAdvancedToolSlug } from "../src/lib/all-tool
 import { proTools } from "../src/lib/pro-tools";
 
 const memorySafe = new Set(["pdf-para-jpg", "pdf-para-png", "compactar-pdf", "pdf-em-escala-de-cinza"]);
-const STANDALONE_FLOWS = 4; // Converter, OCR, Dimensionar e Preflight.
+const STANDALONE_FLOWS = 4;
 
 async function source(path: string) { return readFile(path, "utf8"); }
 
@@ -46,7 +46,7 @@ async function main() {
   assert.match(route, /proToolBySlug\.get/, "A rota deve resolver ferramentas profissionais pelo registro limpo.");
   assert.match(route, /ProPdfWorkspace|ProLinksWorkspace|ProNavigationWorkspace/, "A rota deve expor workspaces profissionais reais.");
   assert.match(route, /UnifiedConverterWorkspace/, "Rotas de saída devem reaproveitar o conversor unificado.");
-  assert.match(route, /ToolEditorialPanel/, "Ferramentas devem receber conteúdo editorial específico.");
+  assert.ok(!route.includes("ToolEditorialPanel"), "Ferramentas não devem renderizar blocos Sobre, dúvidas ou guias.");
   assert.match(route, /AdSlot/, "Páginas de ferramentas devem reservar espaço publicitário fora do workspace.");
 
   for (const tool of allTools) {
@@ -67,7 +67,7 @@ async function main() {
   for (const marker of ["Organizar PDF", "OCR e digitalização", "Assinar PDF", "Formulários PDF", "Segurança PDF"]) assert.ok(sidebar.includes(marker), `Sidebar sem nicho ${marker}`);
   assert.ok(search.includes("searchScore") && search.includes("aliases") && search.includes("Ctrl K") && search.includes("navigationGroups") && search.includes("proTools"), "Busca global deve cobrir intenção, categorias e suíte profissional.");
   assert.ok(consent.includes("Cookies no LIM PDF") && consent.includes("Só essenciais") && consent.includes("Opções"), "Consentimento deve permanecer compacto e configurável.");
-  assert.ok(footer.includes("uma ferramenta do LIM Group") && !footer.includes("/guias") && !footer.includes("/sobre") && !footer.includes("/contato"), "Rodapé deve ser mínimo e sem conteúdo institucional.");
+  assert.ok(footer.includes("LIM PDF pertence ao LIM Group") && !footer.includes("/guias") && !footer.includes("/sobre") && !footer.includes("/contato"), "Rodapé deve ser mínimo, identificar o LIM Group e não ter conteúdo institucional.");
   assert.ok(adRoute.includes("AdSenseLoader") && !adRoute.includes("purgeAdSenseFromInteractiveRoute"), "AdSense não pode ser removido das rotas de ferramentas.");
 
   for (const slug of ["assinatura-digital-pdf", "links-pdf", "criar-formulario-pdf", "bookmarks-pdf", "comparar-pdfs", "reparar-pdf", "pdf-a", "pdf-para-powerpoint", "powerpoint-para-pdf", "extrair-imagens-pdf", "limpar-documento-digitalizado", "otimizar-pdf-avancado", "anotacoes-pdf", "processamento-lote-pdf", "numeracao-bates", "editar-metadados-pdf"]) assert.ok(proRegistry.includes(`"${slug}"`), `Registro profissional sem ${slug}`);
@@ -88,7 +88,7 @@ async function main() {
   assert.ok(telemetryApi.includes("request.body?.getReader()") && telemetryApi.includes("MAX_REQUEST_BYTES"), "Endpoint deve limitar o corpo durante leitura.");
   assert.ok(!telemetryApi.includes("user-agent"), "User-Agent bruto não deve ser lido.");
 
-  console.log(JSON.stringify({ ok: true, suite: "tool-matrix", coreTools: allTools.length, professionalTools: proTools.length, standaloneFlows: STANDALONE_FLOWS, publicFlows: 61, advancedCore: advancedTools.length, memorySafe: memorySafe.size, cleanRelease: true, unifiedEditor: true, globalSearch: true, adsOnTools: true, realOcr: true, pades: true, unifiedConverter: true, preflight: true }));
+  console.log(JSON.stringify({ ok: true, suite: "tool-matrix", coreTools: allTools.length, professionalTools: proTools.length, standaloneFlows: STANDALONE_FLOWS, publicFlows: 61, advancedCore: advancedTools.length, memorySafe: memorySafe.size, cleanRelease: true, unifiedEditor: true, globalSearch: true, adsOnTools: true, editorialRemoved: true, realOcr: true, pades: true, unifiedConverter: true, preflight: true }));
 }
 
 main().catch((error) => { console.error(error); process.exitCode = 1; });

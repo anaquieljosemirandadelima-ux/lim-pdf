@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { ToolCatalog } from "@/components/ToolCatalog";
 
 export const metadata: Metadata = {
@@ -10,7 +11,9 @@ export const metadata: Metadata = {
 export default function ToolsPage() {
   return (
     <section className="reference-catalog-page">
-      <ToolCatalog />
+      <Suspense fallback={<div className="reference-catalog-loading" role="status">Carregando ferramentas…</div>}>
+        <ToolCatalog />
+      </Suspense>
     </section>
   );
 }

@@ -129,7 +129,7 @@ export default async function ToolPage({ params }: ToolPageProps) {
 
   const baseTool = tool as ToolDefinition;
   if (baseTool.slug === "editar-pdf") {
-    return <section className="reference-tool-page reference-editor-page">{schemas}<ToolTelemetryBridge toolSlug={baseTool.slug} />{heading}<PremiumToolExperience toolName={baseTool.name} toolSlug={baseTool.slug} accent={baseTool.accent} editor /><div className="reference-editor-wrap"><PdfEditorExperienceSwitcher /></div>{inlineAd}<ToolEditorialPanel tool={baseTool} /></section>;
+    return <section className="reference-tool-page reference-editor-page">{schemas}<ToolTelemetryBridge toolSlug={baseTool.slug} />{heading}<div className="reference-editor-wrap"><PdfEditorExperienceSwitcher /></div>{inlineAd}<ToolEditorialPanel tool={baseTool} /></section>;
   }
 
   return <section className="reference-tool-page">{schemas}<ToolTelemetryBridge toolSlug={baseTool.slug} />{heading}<PremiumToolExperience toolName={baseTool.name} toolSlug={baseTool.slug} accent={baseTool.accent} /><div className="reference-workspace-wrap">{memorySafeToolSlugs.has(baseTool.slug) ? <MemorySafePdfWorkspace tool={baseTool} /> : <PdfToolWorkspace tool={baseTool} />}</div>{inlineAd}<ToolEditorialPanel tool={baseTool} /></section>;

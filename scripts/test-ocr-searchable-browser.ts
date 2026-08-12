@@ -23,8 +23,9 @@ async function main() {
   page.on("requestfailed", (request) => failedRequests.push(`${request.url()} :: ${request.failure()?.errorText || "failed"}`));
 
   try {
-    const response = await page.goto(`${baseUrl}/ferramentas/ocr-pdf`, { waitUntil: "networkidle" });
+    const response = await page.goto(`${baseUrl}/ferramentas/ocr-pdf`, { waitUntil: "domcontentloaded", timeout: 45_000 });
     assert.equal(response?.status(), 200);
+    await page.locator(".ocr-workspace").waitFor({ state: "visible", timeout: 30_000 });
     await page.locator('.ocr-workspace .drop-zone input[type="file"]').setInputFiles(join(fixtureDir, "one-page.pdf"));
     await page.locator(".selected-files").waitFor({ state: "visible", timeout: 20_000 });
     await page.locator(".ocr-options select").selectOption("eng");

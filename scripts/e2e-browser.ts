@@ -76,30 +76,32 @@ async function prepareTool(page: Page, slug: AllToolSlug) {
 async function processEditor(page: Page) {
   await page.goto(`${baseUrl}/ferramentas/editar-pdf`, { waitUntil: "networkidle" });
   assert.match(await page.title(), /Editar PDF/i);
-  const input = page.locator('.studio-upload-card input[type="file"]');
-  await input.setInputFiles(fixture("basic.pdf"));
-  await page.locator(".studio-shell").waitFor({ state: "visible", timeout: 30_000 });
-
-  for (const label of ["Selecionar", "Texto", "Caneta", "Destacar", "Linha", "Seta", "Retângulo", "Círculo", "Redigir", "Comentário", "Carimbo", "Assinar", "Imagem"]) {
-    assert.ok(await page.getByRole("button", { name: label, exact: true }).count(), `Editor sem ferramenta ${label}`);
+  for (const forbidden of ["Studio", "Modo preciso", "Foco", "Tela cheia", "Comandos"]) {
+    assert.equal(await page.getByText(forbidden, { exact: true }).count(), 0, `Editor ainda expõe controle antigo: ${forbidden}`);
   }
-  await page.getByRole("button", { name: "Grade", exact: true }).click();
-  await page.getByRole("button", { name: "Snap", exact: true }).click();
 
-  await page.getByRole("button", { name: "Retângulo", exact: true }).click();
-  const stage = page.locator(".studio-stage");
-  const box = await stage.boundingBox();
-  assert.ok(box, "Studio sem área de edição");
-  await page.mouse.move(box.x + box.width * .28, box.y + box.height * .3);
-  await page.mouse.down();
-  await page.mouse.move(box.x + box.width * .52, box.y + box.height * .46, { steps: 8 });
-  await page.mouse.up();
-  await page.locator(".studio-object.kind-rect").waitFor({ state: "visible" });
+  const input = page.locator('.editor-upload-card input[type="file"]');
+  await input.setInputFiles(fixture("basic.pdf"));
+  await page.locator(".pdf-editor-shell").waitFor({ state: "visible", timeout: 30_000 });
+
+  for (const label of ["Selecionar", "Adicionar texto", "Destacar", "Redigir", "Comentário", "Assinatura", "Adicionar imagem"]) {
+    assert.ok(await page.getByRole("button", { name: label, exact: true }).count(), `Editor unificado sem ferramenta ${label}`);
+  }
+
+  await page.getByRole("button", { name: "Adicionar texto", exact: true }).click();
+  await page.locator(".editor-object-text").last().waitFor({ state: "visible" });
+  await page.getByRole("button", { name: "Destacar", exact: true }).click();
+  await page.locator(".editor-object-highlight").last().waitFor({ state: "visible" });
+  await page.getByRole("button", { name: "Comentário", exact: true }).click();
+  await page.locator(".editor-object-comment").last().waitFor({ state: "visible" });
+
+  await page.getByRole("button", { name: "Duplicar", exact: true }).first().click();
+  assert.ok(await page.locator(".editor-pages > button").count() >= 2, "Editor não duplicou a página");
+  await page.getByRole("button", { name: "Em branco", exact: true }).click();
+  assert.ok(await page.locator(".editor-pages > button").count() >= 3, "Editor não inseriu página em branco");
 
   await page.keyboard.press("Control+K");
-  await page.locator(".premium-command-palette").waitFor({ state: "visible" });
-  await page.locator(".premium-command-search input").fill("redação");
-  assert.ok(await page.locator(".premium-command-list button").count() >= 1, "Paleta não encontrou redação");
+  assert.ok(await page.locator("#header-tool-search").isFocused(), "Ctrl+K deve abrir a busca global, não uma paleta de comandos do editor");
   await page.keyboard.press("Escape");
 
   const [download] = await Promise.all([
@@ -109,12 +111,6 @@ async function processEditor(page: Page) {
   const target = join(downloadDir, `editar-pdf-${download.suggestedFilename()}`);
   await download.saveAs(target);
   await validateOutput("editar-pdf", target);
-
-  await page.getByRole("tab", { name: /Modo preciso/ }).click();
-  await page.locator(".editor-upload-card,.pdf-editor-shell").first().waitFor({ state: "visible", timeout: 20_000 });
-  await page.getByRole("tab", { name: /Studio/ }).click();
-  await page.locator(".studio-shell").waitFor({ state: "visible" });
-  assert.ok(await page.locator(".studio-object.kind-rect").count(), "Sessão do Studio foi perdida ao alternar modos");
 }
 
 async function processTool(page: Page, slug: AllToolSlug) {
@@ -212,7 +208,7 @@ async function main() {
     assert.deepEqual(pageErrors, [], `Erros de página: ${pageErrors.join(" | ")}`);
     const relevantConsoleErrors = consoleErrors.filter((line) => !/favicon|adsbygoogle|ERR_BLOCKED_BY_CLIENT|Failed to load resource/i.test(line));
     assert.deepEqual(relevantConsoleErrors, [], `Erros de console: ${relevantConsoleErrors.join(" | ")}`);
-    console.log(JSON.stringify({ ok: true, suite: "browser-e2e", processedTools: allTools.length, negativeCases: 3 }));
+    console.log(JSON.stringify({ ok: true, suite: "browser-e2e", processedTools: allTools.length, negativeCases: 3, unifiedEditor: true }));
   } finally {
     await context.close().catch(() => undefined);
     await browser.close();

@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 
 const UnifiedPdfEditor = dynamic(
-  () => import("@/components/PdfEditorWorkspaceHardened").then((module) => module.PdfEditorWorkspaceHardened),
+  () => import("@/components/PdfEditorStudio").then((module) => module.PdfEditorStudio),
   { loading: () => <div className="editor-mode-loading" role="status">Abrindo o editor…</div> },
 );
 

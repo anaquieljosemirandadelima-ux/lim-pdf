@@ -159,24 +159,21 @@ export function HeaderToolSearch() {
   }
 
   return (
-    <form
-      ref={formRef}
-      className={`header-search global-tool-search ${open ? "open" : ""}`}
-      role="search"
-      onSubmit={(event) => { event.preventDefault(); navigate(); }}
-    >
+    <form ref={formRef} className={`header-search global-tool-search ${open ? "open" : ""}`} role="search" onSubmit={(event) => { event.preventDefault(); navigate(); }}>
       <label htmlFor="header-tool-search">
         <Search size={18} />
         <input
           ref={inputRef}
           id="header-tool-search"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={open}
+          aria-controls="global-search-results"
           value={query}
           onChange={(event) => { setQuery(event.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
           placeholder={text.searchPlaceholder}
           autoComplete="off"
-          aria-expanded={open}
-          aria-controls="global-search-results"
         />
         {query ? <button className="search-clear" type="button" aria-label="Limpar busca" onClick={() => { setQuery(""); inputRef.current?.focus(); }}><X size={15} /></button> : <kbd>Ctrl K</kbd>}
       </label>

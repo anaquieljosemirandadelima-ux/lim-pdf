@@ -53,7 +53,9 @@ export function AppSidebar() {
   const RecommendationIcon = recommendation.icon;
 
   useEffect(() => {
-    const timer = window.setInterval(() => setRecommendationIndex((index) => (index + 1) % recommendations.length), 7000);
+    const timer = window.setInterval(() => {
+      setRecommendationIndex((index) => (index + 1) % recommendations.length);
+    }, 5200);
     return () => window.clearInterval(timer);
   }, []);
 
@@ -77,18 +79,12 @@ export function AppSidebar() {
         })}
       </nav>
 
-      <section className="sidebar-recommendation" aria-label="Recomendado para você">
-        <div className="sidebar-recommendation-heading"><strong>Recomendado para você</strong><span aria-hidden="true">✦</span></div>
+      <section className="sidebar-recommendation" aria-label="Sugestão de ferramenta">
         <div className="sidebar-recommendation-card" key={recommendation.title}>
           <span className="sidebar-recommendation-icon"><RecommendationIcon size={24} /></span>
           <strong>{recommendation.title}</strong>
           <p>{recommendation.description}</p>
           <Link href={recommendation.href}>Usar agora <span aria-hidden="true">→</span></Link>
-        </div>
-        <div className="sidebar-recommendation-dots" aria-label="Recomendações">
-          {recommendations.map((item, index) => (
-            <button key={item.title} type="button" className={index === recommendationIndex ? "active" : ""} onClick={() => setRecommendationIndex(index)} aria-label={`Mostrar recomendação ${index + 1}`} />
-          ))}
         </div>
       </section>
     </aside>

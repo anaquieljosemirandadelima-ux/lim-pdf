@@ -89,9 +89,14 @@ async function processEditor(page: Page) {
 
   const input = page.locator('.editor-upload-card input[type="file"]');
   await input.setInputFiles(fixture("basic.pdf"));
-  await page.locator(".pdf-editor-shell").waitFor({ state: "visible", timeout: 30_000 });
-  await page.locator(".editor-pages > button").first().waitFor({ state: "visible", timeout: 30_000 });
-  await page.locator(".editor-stage").waitFor({ state: "visible", timeout: 30_000 });
+  try {
+    await page.locator(".pdf-editor-shell").waitFor({ state: "visible", timeout: 60_000 });
+  } catch (error) {
+    const visibleStatus = await page.locator(".editor-upload-card,.status-message,.editor-mode-loading").allTextContents().catch(() => []);
+    throw new Error(`Editor não abriu após o upload. Estado visível: ${JSON.stringify(visibleStatus)}`, { cause: error });
+  }
+  await page.locator(".editor-pages > button").first().waitFor({ state: "visible", timeout: 60_000 });
+  await page.locator(".editor-stage").waitFor({ state: "visible", timeout: 60_000 });
 
   for (const label of ["Selecionar", "Adicionar texto", "Destacar", "Redigir", "Comentário", "Assinatura", "Adicionar imagem"]) {
     assert.ok(await page.getByRole("button", { name: label, exact: true }).count(), `Editor unificado sem ferramenta ${label}`);

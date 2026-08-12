@@ -42,6 +42,8 @@ declare module "lucide-react" {
   export const Globe2: LucideIcon;
   export const Grid2X2: LucideIcon;
   export const HardDrive: LucideIcon;
+  export const HelpCircle: LucideIcon;
+  export const Home: LucideIcon;
   export const Image: LucideIcon;
   export const ImagePlus: LucideIcon;
   export const Images: LucideIcon;
@@ -56,6 +58,7 @@ declare module "lucide-react" {
   export const LockKeyhole: LucideIcon;
   export const Menu: LucideIcon;
   export const Minimize2: LucideIcon;
+  export const Moon: LucideIcon;
   export const MousePointer2: LucideIcon;
   export const PaintBucket: LucideIcon;
   export const PanelTop: LucideIcon;
@@ -64,6 +67,7 @@ declare module "lucide-react" {
   export const RotateCw: LucideIcon;
   export const Save: LucideIcon;
   export const Scaling: LucideIcon;
+  export const ScanText: LucideIcon;
   export const Search: LucideIcon;
   export const Send: LucideIcon;
   export const Settings2: LucideIcon;
@@ -76,6 +80,7 @@ declare module "lucide-react" {
   export const SquarePen: LucideIcon;
   export const Star: LucideIcon;
   export const Stamp: LucideIcon;
+  export const Sun: LucideIcon;
   export const TableProperties: LucideIcon;
   export const TextSearch: LucideIcon;
   export const Trash2: LucideIcon;

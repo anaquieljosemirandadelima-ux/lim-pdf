@@ -1,0 +1,107 @@
+/* Sidebar hotfix — keeps the navigation stable at every desktop height. */
+.reference-sidebar{
+  min-height:0!important;
+  overflow:hidden!important;
+}
+
+.sidebar-navigation{
+  flex:0 1 auto!important;
+  min-height:0!important;
+}
+
+.sidebar-recommendation{
+  flex:0 0 auto!important;
+  margin-top:auto!important;
+  padding-top:10px!important;
+}
+
+.sidebar-recommendation-heading,
+.sidebar-recommendation-dots{
+  display:none!important;
+}
+
+.sidebar-recommendation-card{
+  min-height:158px!important;
+  padding:13px 13px 12px!important;
+  border-radius:15px!important;
+}
+
+.sidebar-recommendation-icon{
+  width:38px!important;
+  height:38px!important;
+  margin-bottom:9px!important;
+  border-radius:11px!important;
+}
+
+.sidebar-recommendation-card>strong{
+  font-size:11.5px!important;
+}
+
+.sidebar-recommendation-card>p{
+  min-height:30px!important;
+  margin:4px 0 9px!important;
+  font-size:10px!important;
+}
+
+.sidebar-recommendation-card>a{
+  min-height:32px!important;
+  font-size:10px!important;
+}
+
+@media (max-height:840px) and (min-width:761px){
+  .reference-sidebar{
+    padding-top:12px!important;
+    padding-bottom:12px!important;
+  }
+  .sidebar-brand{
+    min-height:48px!important;
+    padding-bottom:4px!important;
+  }
+  .sidebar-brand .logo,
+  .sidebar-brand .brand-logo-image{
+    width:138px!important;
+  }
+  .sidebar-search{
+    margin:2px 0 8px!important;
+  }
+  .sidebar-item-wrap>a{
+    height:37px!important;
+    min-height:37px!important;
+  }
+  .sidebar-recommendation{
+    padding-top:7px!important;
+  }
+  .sidebar-recommendation-card{
+    min-height:138px!important;
+    padding:11px!important;
+  }
+  .sidebar-recommendation-icon{
+    width:34px!important;
+    height:34px!important;
+    margin-bottom:7px!important;
+  }
+  .sidebar-recommendation-card>p{
+    min-height:24px!important;
+    margin-bottom:7px!important;
+  }
+}
+
+@media (max-height:720px) and (min-width:761px){
+  .sidebar-item-wrap>a{
+    height:34px!important;
+    min-height:34px!important;
+  }
+  .sidebar-hover-label{
+    font-size:11.5px!important;
+  }
+  .sidebar-recommendation-card{
+    min-height:112px!important;
+  }
+  .sidebar-recommendation-icon{
+    display:none!important;
+  }
+  .sidebar-recommendation-card>p{
+    min-height:0!important;
+    margin:4px 0 7px!important;
+  }
+}

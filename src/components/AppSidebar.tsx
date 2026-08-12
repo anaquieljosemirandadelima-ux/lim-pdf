@@ -359,75 +359,73 @@ export function AppSidebar() {
               font-size: 8.2px;
             }
           }
+
+          .site-development-trails {
+            position: fixed;
+            inset: 0;
+            z-index: 205;
+            pointer-events: none;
+            overflow: hidden;
+            opacity: 0.9;
+          }
+
+          .site-development-trails svg {
+            display: block;
+            width: 100%;
+            height: 100%;
+            overflow: visible;
+          }
+
+          .site-development-trail {
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            opacity: 0;
+            filter: drop-shadow(0 0 5px rgba(240, 24, 31, 0.12));
+            animation-timing-function: linear;
+            animation-iteration-count: infinite;
+          }
+
+          .site-development-trail-1 {
+            stroke: url(#limpdf-trail-red);
+            stroke-width: 2.2;
+            stroke-dasharray: 68 932;
+            animation-name: site-development-trail-run-1;
+            animation-duration: 11.5s;
+          }
+
+          .site-development-trail-2 {
+            stroke: url(#limpdf-trail-violet);
+            stroke-width: 1.75;
+            stroke-dasharray: 46 954;
+            animation-name: site-development-trail-run-2;
+            animation-duration: 15s;
+            animation-delay: -5.2s;
+          }
+
+          @keyframes site-development-trail-run-1 {
+            0%, 10% { stroke-dashoffset: 1000; opacity: 0; }
+            15% { opacity: 0.55; }
+            55% { opacity: 0.42; }
+            90% { opacity: 0.26; }
+            100% { stroke-dashoffset: 0; opacity: 0; }
+          }
+
+          @keyframes site-development-trail-run-2 {
+            0%, 14% { stroke-dashoffset: 1000; opacity: 0; }
+            20% { opacity: 0.38; }
+            60% { opacity: 0.3; }
+            92% { opacity: 0.2; }
+            100% { stroke-dashoffset: 0; opacity: 0; }
+          }
+
+          @media (max-width: 900px), (prefers-reduced-motion: reduce) {
+            .site-development-trails {
+              display: none !important;
+            }
+          }
         `}</style>
       </aside>
-
-      <style jsx global>{`
-        .site-development-trails {
-          position: fixed;
-          inset: 0;
-          z-index: 205;
-          pointer-events: none;
-          overflow: hidden;
-          opacity: 0.9;
-        }
-
-        .site-development-trails svg {
-          display: block;
-          width: 100%;
-          height: 100%;
-          overflow: visible;
-        }
-
-        .site-development-trail {
-          fill: none;
-          stroke-linecap: round;
-          stroke-linejoin: round;
-          opacity: 0;
-          filter: drop-shadow(0 0 5px rgba(240, 24, 31, 0.12));
-          animation-timing-function: linear;
-          animation-iteration-count: infinite;
-        }
-
-        .site-development-trail-1 {
-          stroke: url(#limpdf-trail-red);
-          stroke-width: 2.2;
-          stroke-dasharray: 68 932;
-          animation-name: site-development-trail-run-1;
-          animation-duration: 11.5s;
-        }
-
-        .site-development-trail-2 {
-          stroke: url(#limpdf-trail-violet);
-          stroke-width: 1.75;
-          stroke-dasharray: 46 954;
-          animation-name: site-development-trail-run-2;
-          animation-duration: 15s;
-          animation-delay: -5.2s;
-        }
-
-        @keyframes site-development-trail-run-1 {
-          0%, 10% { stroke-dashoffset: 1000; opacity: 0; }
-          15% { opacity: 0.55; }
-          55% { opacity: 0.42; }
-          90% { opacity: 0.26; }
-          100% { stroke-dashoffset: 0; opacity: 0; }
-        }
-
-        @keyframes site-development-trail-run-2 {
-          0%, 14% { stroke-dashoffset: 1000; opacity: 0; }
-          20% { opacity: 0.38; }
-          60% { opacity: 0.3; }
-          92% { opacity: 0.2; }
-          100% { stroke-dashoffset: 0; opacity: 0; }
-        }
-
-        @media (max-width: 900px), (prefers-reduced-motion: reduce) {
-          .site-development-trails {
-            display: none !important;
-          }
-        }
-      `}</style>
     </>
   );
 }

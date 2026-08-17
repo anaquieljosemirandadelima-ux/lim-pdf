@@ -177,7 +177,7 @@ export function ProPdfWorkspace({ tool }: { tool: ProToolDefinition }) {
     <div className="pro-option-grid four"><label><span>X</span><input type="number" value={x} onChange={(event) => setX(Number(event.target.value) || 0)} /></label><label><span>Y</span><input type="number" value={y} onChange={(event) => setY(Number(event.target.value) || 0)} /></label><label><span>Largura</span><input type="number" min={8} value={width} onChange={(event) => setWidth(Number(event.target.value) || 8)} /></label><label><span>Altura</span><input type="number" min={8} value={height} onChange={(event) => setHeight(Number(event.target.value) || 8)} /></label></div>
   </> : null;
 
-  return <section className="workspace pro-pdf-workspace">
+  return <section className="workspace pro-pdf-workspace" aria-busy={processing}>
     <div className="drop-zone" onDragOver={(event) => { if (!processing) event.preventDefault(); }} onDrop={(event) => { event.preventDefault(); if (!processing) void selectFiles(event.dataTransfer.files); }}>
       <span className="drop-icon"><UploadCloud size={31} /></span><strong>{multiple ? (tool.slug === "comparar-pdfs" ? "Selecione dois PDFs" : "Selecione seus PDFs") : `Selecione seu ${acceptedLabel}`}</strong><span>Arraste para esta área ou escolha no dispositivo.</span>
       <button className="primary-button" type="button" disabled={processing} onClick={openFilePicker}><FileText size={18} /> Escolher {acceptedLabel}</button>
@@ -200,8 +200,8 @@ export function ProPdfWorkspace({ tool }: { tool: ProToolDefinition }) {
 
     <button className="process-button" type="button" disabled={!ready || processing} onClick={() => void process()}>{processing ? <><LoaderCircle className="spin" size={18} /> {status.message || "Processando…"}</> : <>Executar {tool.name}</>}</button>
     {processing && typeof status.progress === "number" ? <div className="pro-progress"><i style={{ width: `${Math.max(2, Math.min(100, status.progress))}%` }} /><span>{Math.round(status.progress)}%</span></div> : null}
-    {status.type === "success" ? <div className="status-message success"><CheckCircle2 size={18} /><span>{status.message}</span></div> : null}
-    {status.type === "error" ? <div className="status-message error"><span>{status.message}</span></div> : null}
+    {status.type === "success" ? <div className="status-message success" role="status" aria-live="polite"><CheckCircle2 size={18} /><span>{status.message}</span></div> : null}
+    {status.type === "error" ? <div className="status-message error" role="alert" aria-live="assertive"><span>{status.message}</span></div> : null}
     {report.length ? <div className="pro-report"><strong>Relatório</strong>{report.map((item) => <span key={item}>{item}</span>)}</div> : null}
   </section>;
 }

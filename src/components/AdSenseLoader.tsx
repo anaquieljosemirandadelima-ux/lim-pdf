@@ -45,7 +45,12 @@ export function AdSenseLoader({ client }: { client?: string }) {
     };
 
     const sync = () => {
-      const accepted = window.localStorage.getItem(CONSENT_KEY) === "accepted";
+      let accepted = false;
+      try {
+        accepted = window.localStorage.getItem(CONSENT_KEY) === "accepted";
+      } catch {
+        accepted = false;
+      }
       applyConsentMode(accepted);
       if (accepted) loadAdSense();
       else removeAdSense();

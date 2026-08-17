@@ -20,7 +20,7 @@ const professionalRoutes = [
 const routes = [
   "/", "/ferramentas", "/ferramentas/editar-pdf", "/ferramentas/converter-pdf", "/ferramentas/ocr-pdf", "/ferramentas/dimensionar-pdf", "/ferramentas/preflight-pdf", "/ferramentas/juntar-pdf", "/ferramentas/compactar-pdf", "/ferramentas/preencher-formulario-pdf",
   ...professionalRoutes,
-  "/privacidade", "/cookies", "/termos", "/seguranca", "/acessibilidade", "/sitemap.xml", "/robots.txt", "/ads.txt", "/.well-known/security.txt",
+  "/privacidade", "/cookies", "/termos", "/seguranca", "/acessibilidade", "/guias", "/guias/editar-pdf-sem-perder-formatacao", "/guias/ocr-pdf-escaneado", "/guias/comprimir-pdf", "/guias/redacao-segura-pdf", "/guias/juntar-pdf", "/guias/converter-pdf-para-word", "/guias/assinar-pdf-digitalmente", "/guias/proteger-pdf-com-senha", "/sobre", "/contato", "/sitemap.xml", "/robots.txt", "/ads.txt", "/.well-known/security.txt",
 ];
 
 for (const route of routes) {
@@ -39,14 +39,14 @@ for (const route of routes) {
   if (professionalRoutes.includes(route) && !text.includes("pro-pdf-workspace")) throw new Error(`${route} missing professional workspace`);
   if (route === "/sitemap.xml") {
     for (const marker of ["/ferramentas/converter-pdf", "/ferramentas/ocr-pdf", "/ferramentas/dimensionar-pdf", "/ferramentas/preflight-pdf", "/ferramentas/assinatura-digital-pdf", "/ferramentas/links-pdf", "/ferramentas/comparar-pdfs"]) if (!text.includes(marker)) throw new Error(`sitemap missing ${marker}`);
-    for (const removed of ["/sobre", "/guias", "/contato"]) {
-      const exactLoc = `<loc>${base}${removed}</loc>`;
-      if (text.includes(exactLoc)) throw new Error(`sitemap still contains removed route ${removed}`);
+    for (const required of ["/sobre", "/guias", "/contato", "/guias/editar-pdf-sem-perder-formatacao", "/guias/ocr-pdf-escaneado"]) {
+      const locSuffix = `${required}</loc>`;
+      if (!text.includes(locSuffix)) throw new Error(`sitemap missing editorial route ${required}`);
     }
   }
 }
 
-for (const route of ["/faq", "/sobre", "/guias", "/guias/editar-pdf-sem-perder-formatacao", "/guias/ocr-pdf-escaneado", "/guias/comprimir-pdf", "/guias/redacao-segura-pdf", "/contato", "/api/colorcopia-guia", "/api/contato"]) {
+for (const route of ["/faq", "/api/colorcopia-guia", "/api/contato"]) {
   const response = await fetch(`${base}${route}`, { redirect: "manual" });
   if (route === "/api/contato") {
     if (response.status !== 404 && response.status !== 405) throw new Error(`${route} should be removed, got ${response.status}`);
@@ -65,4 +65,4 @@ if (oversizedMetric.status !== 413) throw new Error(`telemetry oversized payload
 const wrongContentType = await fetch(`${base}/api/telemetry`, { method: "POST", headers: { "content-type": "text/plain" }, body: metricPayload });
 if (wrongContentType.status !== 415) throw new Error(`telemetry wrong content-type returned ${wrongContentType.status}`);
 
-console.log(JSON.stringify({ ok: true, suite: "routes", checked: routes.length, professionalRoutes: professionalRoutes.length, removed: 10, telemetry: true, publicFlows: 61, unifiedEditor: true, seoFocused: true }));
+console.log(JSON.stringify({ ok: true, suite: "routes", checked: routes.length, professionalRoutes: professionalRoutes.length, removed: 3, editorialRoutes: true, telemetry: true, publicFlows: 61, unifiedEditor: true, seoFocused: true }));

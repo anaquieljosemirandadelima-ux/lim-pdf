@@ -511,7 +511,7 @@ export function AdvancedToolWorkspace({ tool }: { tool: AnyToolDefinition }) {
   const showPermissions = slug === "proteger-pdf" || slug === "permissoes-pdf";
 
   return (
-    <section className="workspace" aria-labelledby="advanced-workspace-title">
+    <section className="workspace" aria-labelledby="advanced-workspace-title" aria-busy={status.type === "processing"}>
       <div className="workspace-heading"><div><h2 id="advanced-workspace-title">Selecione seu arquivo {acceptedLabel}</h2><p>O processamento é feito diretamente no seu navegador.</p></div></div>
 
       <div
@@ -526,7 +526,7 @@ export function AdvancedToolWorkspace({ tool }: { tool: AnyToolDefinition }) {
         <span>ou arraste e solte aqui</span>
         <button type="button" className="primary-button" onClick={() => inputRef.current?.click()}>Selecionar arquivo</button>
         <small>{acceptedLabel} · até 60 MB · gratuito</small>
-        <input ref={inputRef} type="file" accept={tool.accept} hidden onChange={(event) => selectFile(event.target.files?.[0])} />
+        <input ref={inputRef} type="file" accept={tool.accept} hidden onClick={(event) => { event.currentTarget.value = ""; }} onChange={(event) => selectFile(event.target.files?.[0])} />
       </div>
 
       {file ? (
@@ -555,7 +555,7 @@ export function AdvancedToolWorkspace({ tool }: { tool: AnyToolDefinition }) {
         </div>
       ) : null}
 
-      {status.type !== "idle" ? <div className={`status-message ${status.type}`}>
+      {status.type !== "idle" ? <div className={`status-message ${status.type}`} role={status.type === "error" ? "alert" : "status"} aria-live={status.type === "error" ? "assertive" : "polite"}>
         {status.type === "processing" ? <LoaderCircle className="spin" size={19} /> : status.type === "success" ? <CheckCircle2 size={19} /> : null}
         <span>{status.message}</span>
       </div> : null}

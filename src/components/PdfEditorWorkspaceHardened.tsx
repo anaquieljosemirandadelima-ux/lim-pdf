@@ -29,11 +29,11 @@ import { downloadBytes } from "@/lib/browser-files";
 import { loadEditorImageAssets, saveEditorImageAssets } from "@/lib/editor-assets";
 import { cleanupExpiredEditorDrafts, EDITOR_DRAFT_PREFIX, EDITOR_RECENTS_KEY } from "@/lib/editor-drafts";
 import { canvasToBlob, loadPdfJsDocument } from "@/lib/pdf-render";
+import { isFileWithinLimit, isPdfFile, MAX_LOCAL_PDF_BYTES } from "@/lib/file-validation";
 import { useTemporaryFiles } from "@/lib/use-temporary-files";
 import { useLanguage } from "@/lib/use-language";
 import { SignaturePad } from "./SignaturePad";
 
-const MAX_FILE_SIZE = 60 * 1024 * 1024;
 const MAX_IMAGE_SIZE = 20 * 1024 * 1024;
 const MAX_PREVIEW_PIXELS = 1_800_000;
 const MAX_SANITIZE_PIXELS = 20_000_000;
@@ -484,6 +484,9 @@ export function PdfEditorWorkspaceHardened() {
     cleanupExpiredEditorDrafts();
     return safeReadJson<EditorRecent[]>(EDITOR_RECENTS_KEY, []);
   });
+  useEffect(() => {
+    window.document.getElementById("editor-pdf-file-input")?.setAttribute("data-editor-ready", "true");
+  }, []);
 
   const currentPageId = pageSequence[currentPage];
   const page = pages.find((item) => item.pageIndex === currentPageId) || null;
@@ -552,12 +555,12 @@ export function PdfEditorWorkspaceHardened() {
   }
 
   const openFile = useCallback((selectedFile: File) => {
-    if (selectedFile.type !== "application/pdf") {
+    if (!isPdfFile(selectedFile)) {
       setStatus("error");
       setMessage("Selecione um arquivo PDF.");
       return;
     }
-    if (selectedFile.size > MAX_FILE_SIZE) {
+    if (!isFileWithinLimit(selectedFile, MAX_LOCAL_PDF_BYTES)) {
       setStatus("error");
       setMessage("O arquivo ultrapassa o limite recomendado de 60 MB.");
       return;
@@ -1110,8 +1113,8 @@ export function PdfEditorWorkspaceHardened() {
         <span className="editor-upload-icon"><UploadCloud size={31} /></span>
         <h2>{text.openTitle}</h2>
         <p>{text.openDescription}</p>
-        <button className="primary-button large-button" type="button" onClick={() => fileInputRef.current?.click()}><FileText size={18} /> {text.selectPdf}</button>
-        <input ref={fileInputRef} type="file" accept="application/pdf" hidden onChange={(event) => event.target.files?.[0] && openFile(event.target.files[0])} />
+        <label className="primary-button large-button editor-file-picker" htmlFor="editor-pdf-file-input" role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); fileInputRef.current?.click(); } }}><FileText size={18} /> {text.selectPdf}</label>
+        <input id="editor-pdf-file-input" data-editor-ready="false" ref={fileInputRef} type="file" accept="application/pdf" hidden onClick={(event) => { event.currentTarget.value = ""; }} onChange={(event) => event.target.files?.[0] && openFile(event.target.files[0])} />
         {recentDrafts.length ? <div className="editor-recent-drafts"><strong>{text.recentDrafts}</strong>{recentDrafts.map((draft) => <div key={draft.fileKey}><span>{draft.fileName}</span><small>{formatBytes(draft.fileSize)} · {draft.objectCount} alteração(ões) · {formatDraftDate(draft.updatedAt)}</small></div>)}</div> : null}
         <div className="editor-upload-security"><ShieldCheck size={17} /> {text.noUpload}</div>
       </section>
@@ -1135,14 +1138,14 @@ export function PdfEditorWorkspaceHardened() {
           <button type="button" onClick={addComment}><FileText size={20} /><span>{text.comment}</span></button>
           <button type="button" onClick={addSignature}><Signature size={20} /><span>{text.signature}</span></button>
           <button type="button" onClick={() => imageInputRef.current?.click()}><ImagePlus size={20} /><span>{text.addImage}</span></button>
-          <input ref={imageInputRef} type="file" accept="image/jpeg,image/png" hidden onChange={(event) => event.target.files?.[0] && addImage(event.target.files[0])} />
+          <input ref={imageInputRef} type="file" accept="image/jpeg,image/png" hidden onClick={(event) => { event.currentTarget.value = ""; }} onChange={(event) => event.target.files?.[0] && addImage(event.target.files[0])} />
         </aside>
 
         <aside className="editor-pages">
           <h2>{text.pages}</h2>
           <div className="page-production-controls">
-            <button type="button" onClick={() => movePage(-1)} disabled={currentPage === 0} title="Mover página para cima"><ArrowUp size={14} /></button>
-            <button type="button" onClick={() => movePage(1)} disabled={currentPage === pageSequence.length - 1} title="Mover página para baixo"><ArrowDown size={14} /></button>
+            <button type="button" onClick={() => movePage(-1)} disabled={currentPage === 0} title="Mover página para cima" aria-label="Mover página para cima"><ArrowUp size={14} aria-hidden="true" /></button>
+            <button type="button" onClick={() => movePage(1)} disabled={currentPage === pageSequence.length - 1} title="Mover página para baixo" aria-label="Mover página para baixo"><ArrowDown size={14} aria-hidden="true" /></button>
             <button type="button" onClick={duplicatePage}>Duplicar</button>
             <button type="button" onClick={insertBlankPage}>Em branco</button>
             <button type="button" onClick={deletePage} disabled={pageSequence.length <= 1}>Excluir</button>
@@ -1180,7 +1183,7 @@ export function PdfEditorWorkspaceHardened() {
               {selectedObject?.id === object.id && !object.locked ? <span className="editor-resize-handle" role="presentation" onPointerDown={(event) => beginDrag(event, object, "resize")} onPointerMove={continueDrag} onPointerUp={endDrag} onPointerCancel={endDrag} /> : null}
             </button>)}
           </div> : null}
-          {pageSequence.length ? <div className="editor-page-navigation"><button type="button" disabled={currentPage === 0} onClick={() => setCurrentPage((value) => value - 1)}><ArrowLeft size={17} /></button><span>{currentPage + 1} / {pageSequence.length}</span><button type="button" disabled={currentPage === pageSequence.length - 1} onClick={() => setCurrentPage((value) => value + 1)}><ArrowRight size={17} /></button></div> : null}
+          {pageSequence.length ? <div className="editor-page-navigation"><button type="button" aria-label="Página anterior" disabled={currentPage === 0} onClick={() => setCurrentPage((value) => value - 1)}><ArrowLeft size={17} aria-hidden="true" /></button><span>{currentPage + 1} / {pageSequence.length}</span><button type="button" aria-label="Página seguinte" disabled={currentPage === pageSequence.length - 1} onClick={() => setCurrentPage((value) => value + 1)}><ArrowRight size={17} aria-hidden="true" /></button></div> : null}
         </div>
 
         <aside className="editor-properties">
@@ -1193,11 +1196,11 @@ export function PdfEditorWorkspaceHardened() {
             {selectedObjects.length === 1 && selectedObject.kind === "highlight" ? <label><span>Cor do destaque</span><input type="color" value={selectedObject.color} disabled={selectedObject.locked} onChange={(event) => updateObject(selectedObject.id, { color: event.target.value } as Partial<EditorObject>)} /></label> : null}
             {selectedObjects.length === 1 ? <div className="properties-grid"><label><span>X</span><input type="number" value={Math.round(selectedObject.x)} disabled={selectedObject.locked} onChange={(event) => updateObject(selectedObject.id, { x: Number(event.target.value) || 0 } as Partial<EditorObject>)} /></label><label><span>Y</span><input type="number" value={Math.round(selectedObject.y)} disabled={selectedObject.locked} onChange={(event) => updateObject(selectedObject.id, { y: Number(event.target.value) || 0 } as Partial<EditorObject>)} /></label><label><span>Largura</span><input type="number" min={MIN_OBJECT_SIZE} value={Math.round(selectedObject.width)} disabled={selectedObject.locked} onChange={(event) => updateObject(selectedObject.id, { width: Number(event.target.value) || MIN_OBJECT_SIZE } as Partial<EditorObject>)} /></label><label><span>Altura</span><input type="number" min={MIN_OBJECT_SIZE} value={Math.round(selectedObject.height)} disabled={selectedObject.locked} onChange={(event) => updateObject(selectedObject.id, { height: Number(event.target.value) || MIN_OBJECT_SIZE } as Partial<EditorObject>)} /></label></div> : null}
             {selectedObjects.length > 1 ? <div className="alignment-controls"><button type="button" onClick={() => alignSelected("left")}>Alinhar esq.</button><button type="button" onClick={() => alignSelected("center")}>Centro H</button><button type="button" onClick={() => alignSelected("right")}>Alinhar dir.</button><button type="button" onClick={() => alignSelected("top")}>Topo</button><button type="button" onClick={() => alignSelected("middle")}>Centro V</button><button type="button" onClick={() => alignSelected("bottom")}>Base</button><button type="button" onClick={() => distributeSelected("horizontal")}>Distribuir H</button><button type="button" onClick={() => distributeSelected("vertical")}>Distribuir V</button></div> : null}
-            <div className="layer-controls"><button type="button" onClick={() => updateObject(selectedObject.id, { hidden: !selectedObject.hidden } as Partial<EditorObject>)}><CircleOff size={15} /> {selectedObject.hidden ? "Mostrar" : "Ocultar"}</button><button type="button" onClick={() => updateObject(selectedObject.id, { locked: !selectedObject.locked } as Partial<EditorObject>)}><LockKeyhole size={15} /> {selectedObject.locked ? "Desbloquear" : "Bloquear"}</button><button type="button" onClick={() => moveLayer("front")}><ArrowUp size={15} /> Frente</button><button type="button" onClick={() => moveLayer("back")}><ArrowDown size={15} /> Fundo</button><button type="button" onClick={() => moveLayer("up")}>Subir camada</button><button type="button" onClick={() => moveLayer("down")}>Descer camada</button></div>
+            <div className="layer-controls"><button type="button" aria-label={selectedObject.hidden ? "Mostrar objeto" : "Ocultar objeto"} onClick={() => updateObject(selectedObject.id, { hidden: !selectedObject.hidden } as Partial<EditorObject>)}><CircleOff size={15} aria-hidden="true" /> {selectedObject.hidden ? "Mostrar" : "Ocultar"}</button><button type="button" aria-label={selectedObject.locked ? "Desbloquear objeto" : "Bloquear objeto"} onClick={() => updateObject(selectedObject.id, { locked: !selectedObject.locked } as Partial<EditorObject>)}><LockKeyhole size={15} aria-hidden="true" /> {selectedObject.locked ? "Desbloquear" : "Bloquear"}</button><button type="button" aria-label="Mover camada para a frente" onClick={() => moveLayer("front")}><ArrowUp size={15} aria-hidden="true" /> Frente</button><button type="button" aria-label="Mover camada para o fundo" onClick={() => moveLayer("back")}><ArrowDown size={15} aria-hidden="true" /> Fundo</button><button type="button" onClick={() => moveLayer("up")}>Subir camada</button><button type="button" onClick={() => moveLayer("down")}>Descer camada</button></div>
             {selectedObjects.length === 1 && selectedObject.kind === "text-replacement" ? <><button type="button" className="secondary-button" onClick={() => updateObject(selectedObject.id, { text: selectedObject.originalText } as Partial<EditorObject>)}>Restaurar original</button><p>Ao substituir texto, a página é achatada e os pixels do conteúdo anterior são apagados antes da exportação.</p></> : null}
           </div> : <div className="empty-properties"><MousePointer2 size={26} /><strong>Selecione um objeto</strong><p>Clique em uma camada para editar, mover, redimensionar, ocultar ou bloquear.</p></div>}
 
-          <div className="editor-layers-panel"><div className="layers-panel-heading"><strong>{text.layers}</strong><span>{layers.length}</span></div>{layers.length ? <div className="layers-list">{layers.map((object) => <div className={`layer-item ${selectedIds.includes(object.id) ? "active" : ""} ${object.hidden ? "hidden-layer" : ""}`} key={object.id}><button type="button" className="layer-select-button" onClick={() => setSelectedIds([object.id])}><span>{kindLabel(object)}</span><small>{objectLabel(object)}</small></button><button type="button" onClick={() => updateObject(object.id, { hidden: !object.hidden } as Partial<EditorObject>)}><CircleOff size={14} /></button><button type="button" onClick={() => updateObject(object.id, { locked: !object.locked } as Partial<EditorObject>)}><LockKeyhole size={14} /></button></div>)}</div> : <p className="layers-empty">{text.noLayers}</p>}</div>
+          <div className="editor-layers-panel"><div className="layers-panel-heading"><strong>{text.layers}</strong><span>{layers.length}</span></div>{layers.length ? <div className="layers-list">{layers.map((object) => <div className={`layer-item ${selectedIds.includes(object.id) ? "active" : ""} ${object.hidden ? "hidden-layer" : ""}`} key={object.id}><button type="button" className="layer-select-button" onClick={() => setSelectedIds([object.id])}><span>{kindLabel(object)}</span><small>{objectLabel(object)}</small></button><button type="button" aria-label={object.hidden ? `Mostrar ${objectLabel(object)}` : `Ocultar ${objectLabel(object)}`} onClick={() => updateObject(object.id, { hidden: !object.hidden } as Partial<EditorObject>)}><CircleOff size={14} aria-hidden="true" /></button><button type="button" aria-label={object.locked ? `Desbloquear ${objectLabel(object)}` : `Bloquear ${objectLabel(object)}`} onClick={() => updateObject(object.id, { locked: !object.locked } as Partial<EditorObject>)}><LockKeyhole size={14} aria-hidden="true" /></button></div>)}</div> : <p className="layers-empty">{text.noLayers}</p>}</div>
           <div className="editor-signature-panel"><strong>{text.signature}</strong><SignaturePad onChange={setSignatureDataUrl} /><button type="button" className="secondary-button" onClick={addSignature} disabled={!signatureDataUrl}>{text.insertSignature}</button></div>
           <div className="editor-status-card">{status === "exporting" ? <LoaderCircle className="spin" size={18} /> : <CheckCircle2 size={18} />}<span>{message || "Alterações locais e privadas."}</span></div>
         </aside>

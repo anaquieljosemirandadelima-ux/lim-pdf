@@ -8,7 +8,13 @@ export type ConsentValue = "accepted" | "essential";
 export const CONSENT_KEY = "limpdf-consent-v1";
 
 type ConsentSnapshot = ConsentValue | "missing";
-function getSnapshot(): ConsentSnapshot { return (localStorage.getItem(CONSENT_KEY) as ConsentValue | null) || "missing"; }
+function getSnapshot(): ConsentSnapshot {
+  try {
+    return (localStorage.getItem(CONSENT_KEY) as ConsentValue | null) || "missing";
+  } catch {
+    return "essential";
+  }
+}
 function getServerSnapshot(): ConsentSnapshot { return "essential"; }
 function subscribe(callback: () => void) {
   const handler = () => callback();
@@ -23,7 +29,11 @@ export function ConsentBanner() {
   const [details, setDetails] = useState(false);
 
   function save(value: ConsentValue) {
-    localStorage.setItem(CONSENT_KEY, value);
+    try {
+      localStorage.setItem(CONSENT_KEY, value);
+    } catch {
+      // Alguns browsers bloqueiam storage; a escolha ainda vale para esta sessão.
+    }
     window.dispatchEvent(new CustomEvent("limpdf:consent-change", { detail: value }));
     setForcedOpen(false);
     setDetails(false);
@@ -47,7 +57,7 @@ export function ConsentBanner() {
           <p>Usamos cookies essenciais para o site funcionar. Com sua permissão, também usamos publicidade e medição.</p>
         </div>
       </div>
-      {details ? <div className="consent-details">
+      {details ? <div id="consent-details" className="consent-details">
         <span><strong>Essenciais</strong><small>Sempre ativos para preferências e funcionamento.</small></span>
         <span><strong>Publicidade e medição</strong><small>Carregados somente depois da sua autorização.</small></span>
         <span className="consent-links"><Link href="/privacidade">Privacidade</Link><Link href="/cookies">Cookies</Link></span>
@@ -55,12 +65,12 @@ export function ConsentBanner() {
       <div className="consent-actions">
         <button className="primary-button" type="button" onClick={() => save("accepted")}>Aceitar</button>
         <button className="secondary-button" type="button" onClick={() => save("essential")}>Só essenciais</button>
-        <button className="consent-settings" type="button" onClick={() => setDetails((current) => !current)}><Settings2 size={14} /> {details ? "Menos" : "Opções"}</button>
+        <button className="consent-settings" type="button" aria-expanded={details} aria-controls="consent-details" onClick={() => setDetails((current) => !current)}><Settings2 size={14} /> {details ? "Menos" : "Opções"}</button>
       </div>
     </section>
   );
 }
 
 export function PrivacyPreferencesButton() {
-  return <button className="privacy-settings-button" type="button" onClick={() => window.dispatchEvent(new Event("limpdf:open-consent"))}>Preferências de cookies</button>;
+  return <button className="privacy-settings-button" type="button" aria-haspopup="dialog" onClick={() => window.dispatchEvent(new Event("limpdf:open-consent"))}>Preferências de cookies</button>;
 }

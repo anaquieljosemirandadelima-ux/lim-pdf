@@ -73,8 +73,8 @@ export async function generateMetadata({ params }: ToolPageProps): Promise<Metad
     keywords: [tool.name, ...tool.keywords, "grátis", "online", "sem cadastro", "PDF no navegador"],
     alternates: { canonical },
     robots: { index: true, follow: true },
-    openGraph: { type: "website", title: `${tool.name} grátis e online | LIM PDF`, description, url: canonical, siteName: "LIM PDF", locale: "pt_BR" },
-    twitter: { card: "summary_large_image", title: `${tool.name} grátis e online | LIM PDF`, description },
+    openGraph: { type: "website", title: `${tool.name} grátis e online | LIM PDF`, description, url: canonical, siteName: "LIM PDF", locale: "pt_BR", images: [{ url: "/brand/lim-pdf-og.png", width: 1200, height: 630, alt: `${tool.name} — LIM PDF` }] },
+    twitter: { card: "summary_large_image", title: `${tool.name} grátis e online | LIM PDF`, description, images: ["/brand/lim-pdf-og.png"] },
   };
 }
 

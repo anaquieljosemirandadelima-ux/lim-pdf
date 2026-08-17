@@ -3,7 +3,7 @@ import { allTools } from "@/lib/all-tools";
 import { navigationGroups } from "@/lib/navigation";
 import { proTools } from "@/lib/pro-tools";
 
-const CONTENT_UPDATED_AT = new Date("2026-08-11T21:08:00-03:00");
+const CONTENT_UPDATED_AT = new Date("2026-08-17T17:45:00-03:00");
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = process.env.NEXT_PUBLIC_SITE_URL || "https://limpdf.com.br";

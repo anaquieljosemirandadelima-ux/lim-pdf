@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PrivacyPreferencesButton } from "@/components/ConsentBanner";
+import { LocalPrivacyPanel } from "@/components/LocalPrivacyPanel";
 
 export function SiteFooter() {
   return (
@@ -10,6 +11,7 @@ export function SiteFooter() {
         <Link href="/cookies">Cookies</Link>
         <Link href="/termos">Termos</Link>
         <PrivacyPreferencesButton />
+        <LocalPrivacyPanel />
       </nav>
     </footer>
   );

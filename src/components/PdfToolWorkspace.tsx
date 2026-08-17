@@ -24,6 +24,7 @@ import {
 import { toolText, uiText, type UiTextBundle } from "@/lib/i18n-content";
 import { parsePageOrder, parsePages } from "@/lib/page-selection";
 import { canvasToBlob, extractTextByPage, renderPdfPages } from "@/lib/pdf-render";
+import { isFileWithinLimit, isPdfFile } from "@/lib/file-validation";
 import type { ToolDefinition, ToolSlug } from "@/lib/tools";
 import { useTemporaryFiles } from "@/lib/use-temporary-files";
 import { useLanguage } from "@/lib/use-language";
@@ -302,12 +303,12 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
     const next = Array.from(incoming);
     const invalidType = next.find((file) => acceptsImages
       ? !["image/jpeg", "image/png"].includes(file.type)
-      : file.type !== "application/pdf");
+      : !isPdfFile(file));
     if (invalidType) {
       setStatus({ type: "error", message: `O arquivo ${invalidType.name} não é compatível.` });
       return;
     }
-    const oversized = next.find((file) => file.size > MAX_FILE_SIZE);
+    const oversized = next.find((file) => !isFileWithinLimit(file, MAX_FILE_SIZE));
     if (oversized) {
       setStatus({ type: "error", message: `${oversized.name} ultrapassa o limite recomendado de 60 MB.` });
       return;
@@ -718,6 +719,7 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
     const textPages = pages.filter((page) => page.trim()).length;
     const emptyPages = pages.length - textPages;
     const text = pages.map((page, index) => `--- Página ${index + 1} ---\n${page || "[Nenhum texto detectado]"}`).join("\n\n");
+    const markdown = `# ${file.name.replace(/\.pdf$/i, "")}\n\n> Extração local realizada pelo LIM PDF.\n\n${pages.map((page, index) => `## Página ${index + 1}\n\n${page.trim() || "_Nenhum texto detectado._"}`).join("\n\n")}`;
     const report = {
       file: file.name,
       generatedAt: new Date().toISOString(),
@@ -730,11 +732,12 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
     };
     downloadBlob(createStoredZip([
       { name: `${file.name.replace(/\.pdf$/i, "")}-texto.txt`, data: new TextEncoder().encode(text) },
+      { name: `${file.name.replace(/\.pdf$/i, "")}-texto.md`, data: new TextEncoder().encode(markdown) },
       { name: `${file.name.replace(/\.pdf$/i, "")}-relatorio.json`, data: new TextEncoder().encode(JSON.stringify(report, null, 2)) },
     ]), `${file.name.replace(/\.pdf$/i, "")}-extracao-texto-lim-pdf.zip`);
     setSummary({
       title: "Extração concluída",
-      details: [`${textPages} de ${pages.length} página(s) tinham camada de texto.`, "O download inclui TXT por página e relatório JSON."],
+      details: [`${textPages} de ${pages.length} página(s) tinham camada de texto.`, "O download inclui TXT, Markdown por página e relatório JSON."],
       warnings: emptyPages ? [`${emptyPages} página(s) parecem escaneadas ou sem camada de texto. OCR real exige motor dedicado/API.`] : undefined,
     });
   }
@@ -890,7 +893,7 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
           {tool.multiple ? text.selectFiles : text.selectFile}
         </button>
         <small>{acceptedLabel} · {text.maxFile}</small>
-        <input ref={inputRef} type="file" accept={tool.accept} multiple={tool.multiple} onChange={(event) => event.target.files && addFiles(event.target.files)} hidden />
+        <input ref={inputRef} type="file" accept={tool.accept} multiple={tool.multiple} onClick={(event) => { event.currentTarget.value = ""; }} onChange={(event) => event.target.files && addFiles(event.target.files)} hidden />
       </div>
 
       {files.length ? (

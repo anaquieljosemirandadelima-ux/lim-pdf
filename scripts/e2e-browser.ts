@@ -131,7 +131,7 @@ async function processEditor(page: Page) {
 async function processTool(page: Page, slug: AllToolSlug) {
   if (slug === "editar-pdf") return processEditor(page);
   await navigate(page, `/ferramentas/${slug}`);
-  assert.ok(await page.locator("h1").first().isVisible(), `${slug}: h1 ausente`);
+  await page.locator("h1").first().waitFor({ state: "visible", timeout: 30_000 });
   await page.locator(".premium-experience").waitFor({ state: "visible", timeout: 30_000 });
 
   const primary = page.locator('input[type="file"]').first();
@@ -154,6 +154,13 @@ async function processTool(page: Page, slug: AllToolSlug) {
   assert.equal(await error.count(), 0, `${slug}: terminou com erro visível`);
 }
 
+async function waitForProcessButton(page: Page) {
+  await page.waitForFunction(() => {
+    const button = document.querySelector<HTMLButtonElement>("button.process-button");
+    return Boolean(button && !button.disabled);
+  }, undefined, { timeout: 30_000 });
+}
+
 async function terminalErrorText(page: Page) {
   await page.waitForFunction(() => {
     const statuses = Array.from(document.querySelectorAll<HTMLElement>(".status-message.error,.status-message.status-error"));
@@ -171,20 +178,25 @@ async function negativeCases(page: Page) {
   await navigate(page, "/ferramentas/proteger-pdf");
   await page.locator('input[type="file"]').first().setInputFiles(fixture("basic.pdf"));
   const protectPasswords = page.locator('input[type="password"]');
+  await protectPasswords.nth(0).waitFor({ state: "visible", timeout: 30_000 });
+  await protectPasswords.nth(1).waitFor({ state: "visible", timeout: 30_000 });
   await protectPasswords.nth(0).fill("qa1234");
   await protectPasswords.nth(1).fill("qa5678");
+  await waitForProcessButton(page);
   await page.locator("button.process-button").click();
   assert.match(await terminalErrorText(page), /confirmação|senha/i);
 
   console.log("QA negativo senha obrigatória para desbloquear");
   await navigate(page, "/ferramentas/desbloquear-pdf");
   await page.locator('input[type="file"]').first().setInputFiles(fixture("protected.pdf"));
+  await waitForProcessButton(page);
   await page.locator("button.process-button").click();
   assert.match(await terminalErrorText(page), /informe|senha/i);
 
   console.log("QA negativo senha de proprietário obrigatória");
   await navigate(page, "/ferramentas/permissoes-pdf");
   await page.locator('input[type="file"]').first().setInputFiles(fixture("basic.pdf"));
+  await waitForProcessButton(page);
   await page.locator("button.process-button").click();
   assert.match(await terminalErrorText(page), /proprietário|senha/i);
 }

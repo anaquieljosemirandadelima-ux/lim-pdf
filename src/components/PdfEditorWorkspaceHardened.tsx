@@ -29,11 +29,11 @@ import { downloadBytes } from "@/lib/browser-files";
 import { loadEditorImageAssets, saveEditorImageAssets } from "@/lib/editor-assets";
 import { cleanupExpiredEditorDrafts, EDITOR_DRAFT_PREFIX, EDITOR_RECENTS_KEY } from "@/lib/editor-drafts";
 import { canvasToBlob, loadPdfJsDocument } from "@/lib/pdf-render";
+import { isFileWithinLimit, isPdfFile, MAX_LOCAL_PDF_BYTES } from "@/lib/file-validation";
 import { useTemporaryFiles } from "@/lib/use-temporary-files";
 import { useLanguage } from "@/lib/use-language";
 import { SignaturePad } from "./SignaturePad";
 
-const MAX_FILE_SIZE = 60 * 1024 * 1024;
 const MAX_IMAGE_SIZE = 20 * 1024 * 1024;
 const MAX_PREVIEW_PIXELS = 1_800_000;
 const MAX_SANITIZE_PIXELS = 20_000_000;
@@ -555,12 +555,12 @@ export function PdfEditorWorkspaceHardened() {
   }
 
   const openFile = useCallback((selectedFile: File) => {
-    if (selectedFile.type !== "application/pdf") {
+    if (!isPdfFile(selectedFile)) {
       setStatus("error");
       setMessage("Selecione um arquivo PDF.");
       return;
     }
-    if (selectedFile.size > MAX_FILE_SIZE) {
+    if (!isFileWithinLimit(selectedFile, MAX_LOCAL_PDF_BYTES)) {
       setStatus("error");
       setMessage("O arquivo ultrapassa o limite recomendado de 60 MB.");
       return;
@@ -1114,7 +1114,7 @@ export function PdfEditorWorkspaceHardened() {
         <h2>{text.openTitle}</h2>
         <p>{text.openDescription}</p>
         <label className="primary-button large-button editor-file-picker" htmlFor="editor-pdf-file-input" role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); fileInputRef.current?.click(); } }}><FileText size={18} /> {text.selectPdf}</label>
-        <input id="editor-pdf-file-input" data-editor-ready="false" ref={fileInputRef} type="file" accept="application/pdf" hidden onChange={(event) => event.target.files?.[0] && openFile(event.target.files[0])} />
+        <input id="editor-pdf-file-input" data-editor-ready="false" ref={fileInputRef} type="file" accept="application/pdf" hidden onClick={(event) => { event.currentTarget.value = ""; }} onChange={(event) => event.target.files?.[0] && openFile(event.target.files[0])} />
         {recentDrafts.length ? <div className="editor-recent-drafts"><strong>{text.recentDrafts}</strong>{recentDrafts.map((draft) => <div key={draft.fileKey}><span>{draft.fileName}</span><small>{formatBytes(draft.fileSize)} · {draft.objectCount} alteração(ões) · {formatDraftDate(draft.updatedAt)}</small></div>)}</div> : null}
         <div className="editor-upload-security"><ShieldCheck size={17} /> {text.noUpload}</div>
       </section>

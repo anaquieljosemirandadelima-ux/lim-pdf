@@ -6,8 +6,7 @@ import { createStoredZipFromBlobs, downloadBlob, downloadBytes, humanSize, outpu
 import { canvasToBlob, renderPdfPagesSequentially } from "@/lib/pdf-render";
 import type { ToolDefinition } from "@/lib/tools";
 import { useTemporaryFiles } from "@/lib/use-temporary-files";
-
-const MAX_FILE_SIZE = 60 * 1024 * 1024;
+import { isFileWithinLimit, isPdfFile, MAX_LOCAL_PDF_BYTES } from "@/lib/file-validation";
 
 type SupportedSlug = "pdf-para-jpg" | "pdf-para-png" | "compactar-pdf" | "pdf-em-escala-de-cinza";
 type Status =
@@ -32,11 +31,11 @@ export function MemorySafePdfWorkspace({ tool }: { tool: ToolDefinition }) {
   const file = files[0];
 
   function addFile(nextFile: File) {
-    if (nextFile.type !== "application/pdf") {
+    if (!isPdfFile(nextFile)) {
       setStatus({ type: "error", message: "Selecione um arquivo PDF válido." });
       return;
     }
-    if (nextFile.size > MAX_FILE_SIZE) {
+    if (!isFileWithinLimit(nextFile, MAX_LOCAL_PDF_BYTES)) {
       setStatus({ type: "error", message: `${nextFile.name} ultrapassa o limite recomendado de 60 MB.` });
       return;
     }
@@ -136,7 +135,7 @@ export function MemorySafePdfWorkspace({ tool }: { tool: ToolDefinition }) {
           <strong>Arraste um PDF ou escolha no dispositivo</strong>
           <span>PDF · até 60 MB</span>
           <button type="button" className="primary-button" onClick={() => inputRef.current?.click()}>Selecionar arquivo</button>
-          <input ref={inputRef} type="file" accept="application/pdf" hidden onChange={(event) => event.target.files?.[0] && addFile(event.target.files[0])} />
+          <input ref={inputRef} type="file" accept="application/pdf" hidden onClick={(event) => { event.currentTarget.value = ""; }} onChange={(event) => event.target.files?.[0] && addFile(event.target.files[0])} />
         </div>
       ) : (
         <div className="selected-files">

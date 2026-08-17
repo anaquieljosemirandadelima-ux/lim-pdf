@@ -526,7 +526,7 @@ export function AdvancedToolWorkspace({ tool }: { tool: AnyToolDefinition }) {
         <span>ou arraste e solte aqui</span>
         <button type="button" className="primary-button" onClick={() => inputRef.current?.click()}>Selecionar arquivo</button>
         <small>{acceptedLabel} · até 60 MB · gratuito</small>
-        <input ref={inputRef} type="file" accept={tool.accept} hidden onChange={(event) => selectFile(event.target.files?.[0])} />
+        <input ref={inputRef} type="file" accept={tool.accept} hidden onClick={(event) => { event.currentTarget.value = ""; }} onChange={(event) => selectFile(event.target.files?.[0])} />
       </div>
 
       {file ? (

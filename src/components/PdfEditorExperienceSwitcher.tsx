@@ -1,10 +1,14 @@
-"use client";
-
 import dynamic from "next/dynamic";
 
 const UnifiedPdfEditor = dynamic(
-  () => import("@/components/PdfEditorStudio").then((module) => module.PdfEditorStudio),
-  { loading: () => <div className="editor-mode-loading" role="status">Abrindo o editor…</div> },
+  () => import("@/components/PdfEditorWorkspaceHardened").then((module) => module.PdfEditorWorkspaceHardened),
+  {
+    loading: () => (
+      <div className="editor-mode-loading" role="status" aria-live="polite">
+        Abrindo o editor…
+      </div>
+    ),
+  },
 );
 
 export function PdfEditorExperienceSwitcher() {

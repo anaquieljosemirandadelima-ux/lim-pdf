@@ -484,6 +484,9 @@ export function PdfEditorWorkspaceHardened() {
     cleanupExpiredEditorDrafts();
     return safeReadJson<EditorRecent[]>(EDITOR_RECENTS_KEY, []);
   });
+  useEffect(() => {
+    window.document.getElementById("editor-pdf-file-input")?.setAttribute("data-editor-ready", "true");
+  }, []);
 
   const currentPageId = pageSequence[currentPage];
   const page = pages.find((item) => item.pageIndex === currentPageId) || null;
@@ -1110,8 +1113,8 @@ export function PdfEditorWorkspaceHardened() {
         <span className="editor-upload-icon"><UploadCloud size={31} /></span>
         <h2>{text.openTitle}</h2>
         <p>{text.openDescription}</p>
-        <button className="primary-button large-button" type="button" onClick={() => fileInputRef.current?.click()}><FileText size={18} /> {text.selectPdf}</button>
-        <input ref={fileInputRef} type="file" accept="application/pdf" hidden onChange={(event) => event.target.files?.[0] && openFile(event.target.files[0])} />
+        <label className="primary-button large-button editor-file-picker" htmlFor="editor-pdf-file-input" role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); fileInputRef.current?.click(); } }}><FileText size={18} /> {text.selectPdf}</label>
+        <input id="editor-pdf-file-input" data-editor-ready="false" ref={fileInputRef} type="file" accept="application/pdf" hidden onChange={(event) => event.target.files?.[0] && openFile(event.target.files[0])} />
         {recentDrafts.length ? <div className="editor-recent-drafts"><strong>{text.recentDrafts}</strong>{recentDrafts.map((draft) => <div key={draft.fileKey}><span>{draft.fileName}</span><small>{formatBytes(draft.fileSize)} · {draft.objectCount} alteração(ões) · {formatDraftDate(draft.updatedAt)}</small></div>)}</div> : null}
         <div className="editor-upload-security"><ShieldCheck size={17} /> {text.noUpload}</div>
       </section>

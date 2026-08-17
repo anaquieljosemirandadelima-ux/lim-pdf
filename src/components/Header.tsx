@@ -2,23 +2,40 @@
 
 import Link from "next/link";
 import { ChevronDown, Globe2, HelpCircle, Moon, Sun } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { getLanguage, supportedLanguages, type LanguageCode } from "@/lib/i18n";
 import { useLanguage } from "@/lib/use-language";
 
+const THEME_KEY = "limpdf_theme";
+const THEME_EVENT = "limpdf:themechange";
+
+function subscribeToTheme(onChange: () => void) {
+  window.addEventListener("storage", onChange);
+  window.addEventListener(THEME_EVENT, onChange);
+  return () => {
+    window.removeEventListener("storage", onChange);
+    window.removeEventListener(THEME_EVENT, onChange);
+  };
+}
+
+function getThemeSnapshot() {
+  return window.localStorage.getItem(THEME_KEY) === "dark";
+}
+
+function getServerThemeSnapshot() {
+  return false;
+}
+
 export function Header() {
   const [languageOpen, setLanguageOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
+  const darkMode = useSyncExternalStore(subscribeToTheme, getThemeSnapshot, getServerThemeSnapshot);
   const selectedLanguage = useLanguage();
   const headerRef = useRef<HTMLElement>(null);
   const currentLanguage = getLanguage(selectedLanguage);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem("limpdf_theme");
-    const nextDark = stored === "dark";
-    setDarkMode(nextDark);
-    document.documentElement.dataset.limpdfTheme = nextDark ? "dark" : "light";
-  }, []);
+    document.documentElement.dataset.limpdfTheme = darkMode ? "dark" : "light";
+  }, [darkMode]);
 
   useEffect(() => {
     const onPointer = (event: MouseEvent) => {
@@ -49,9 +66,9 @@ export function Header() {
 
   function toggleTheme() {
     const nextDark = !darkMode;
-    setDarkMode(nextDark);
-    window.localStorage.setItem("limpdf_theme", nextDark ? "dark" : "light");
+    window.localStorage.setItem(THEME_KEY, nextDark ? "dark" : "light");
     document.documentElement.dataset.limpdfTheme = nextDark ? "dark" : "light";
+    window.dispatchEvent(new Event(THEME_EVENT));
   }
 
   return (

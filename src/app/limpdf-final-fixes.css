@@ -82,3 +82,288 @@
   .reference-main{width:calc(100% - 16px)!important;margin-left:8px!important;margin-right:8px!important;padding-left:0!important;padding-right:0!important}
   .global-tool-search{grid-column:2!important;grid-row:1!important}
 }
+
+
+/* LIM PDF design-system layer — phase 3 */
+:root {
+  --lim-space-1: 4px;
+  --lim-space-2: 8px;
+  --lim-space-3: 12px;
+  --lim-space-4: 16px;
+  --lim-space-5: 20px;
+  --lim-space-6: 24px;
+  --lim-space-7: 32px;
+  --lim-radius-sm: 8px;
+  --lim-radius-md: 12px;
+  --lim-radius-lg: 18px;
+  --lim-radius-xl: 24px;
+  --lim-focus-ring: 0 0 0 4px rgba(239, 21, 28, 0.14);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+body.reference-app-body {
+  min-width: 320px;
+  line-height: 1.45;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid var(--lim-red) !important;
+  outline-offset: 3px !important;
+  box-shadow: var(--lim-focus-ring) !important;
+}
+
+.header-utility-button,
+.reference-language > button,
+.primary-button,
+.secondary-button,
+.reference-ghost-button,
+.reference-primary-button {
+  min-height: 40px;
+}
+
+.primary-button,
+.reference-primary-button,
+.process-button,
+.prominent-process {
+  font-weight: 800 !important;
+  letter-spacing: -0.01em;
+}
+
+.reference-tool-card,
+.reference-catalog-tool-wrap,
+.home-primary-flows > a,
+.catalog-priority-actions > a {
+  border-radius: var(--lim-radius-lg) !important;
+}
+
+.reference-tool-card h2,
+.reference-tool-card h3,
+.reference-catalog-tool-wrap h2,
+.reference-catalog-tool-wrap h3 {
+  letter-spacing: -0.025em;
+}
+
+.pdf-editor-shell {
+  border-radius: var(--lim-radius-xl) !important;
+}
+
+.editor-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+}
+
+.editor-tools button,
+.page-production-controls button,
+.editor-history button,
+.editor-zoom-controls button,
+.editor-page-navigation button {
+  min-width: 40px;
+  min-height: 40px;
+}
+
+.editor-tools button {
+  min-height: 48px !important;
+}
+
+.editor-pages > button {
+  min-height: 92px;
+}
+
+.editor-pages > button img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 0.72;
+  object-fit: contain;
+  background: #f1f2f4;
+  border-radius: 6px;
+}
+
+.editor-stage-wrap {
+  overscroll-behavior: contain;
+}
+
+.editor-stage {
+  max-width: none;
+  transform-origin: top center;
+}
+
+.editor-status-card,
+.editor-cache-bar {
+  line-height: 1.45;
+}
+
+.editor-cache-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.editor-cache-bar span {
+  min-width: 0;
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+@media (max-width: 1100px) {
+  .reference-header {
+    margin-right: 12px !important;
+  }
+
+  .pdf-editor-shell {
+    border-radius: var(--lim-radius-lg) !important;
+  }
+
+  .editor-stage-wrap {
+    padding: var(--lim-space-6) !important;
+  }
+}
+
+@media (max-width: 860px) and (min-width: 621px) {
+  .reference-sidebar {
+    max-height: calc(100vh - 20px) !important;
+  }
+
+  .reference-header {
+    margin-top: 8px !important;
+  }
+
+  .editor-body {
+    min-height: 0 !important;
+  }
+
+  .editor-stage-wrap {
+    min-height: 600px !important;
+  }
+
+  .editor-properties {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 0.8fr) !important;
+    gap: var(--lim-space-3) !important;
+  }
+
+  .editor-properties > h2 {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 620px) {
+  .reference-header {
+    border-radius: var(--lim-radius-md) !important;
+  }
+
+  .reference-main {
+    padding-bottom: env(safe-area-inset-bottom) !important;
+  }
+
+  .global-tool-search > label {
+    min-height: 42px;
+  }
+
+  .pdf-editor-shell {
+    border-radius: var(--lim-radius-lg) !important;
+    overflow: visible !important;
+  }
+
+  .editor-topbar {
+    position: sticky;
+    top: 6px;
+    border-radius: var(--lim-radius-lg) var(--lim-radius-lg) 0 0;
+  }
+
+  .editor-top-actions {
+    gap: 6px !important;
+  }
+
+  .editor-top-actions .secondary-button,
+  .editor-top-actions .primary-button {
+    min-height: 42px !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+
+  .editor-tools {
+    scrollbar-width: thin;
+    overscroll-behavior-x: contain;
+  }
+
+  .editor-tools button {
+    min-width: 64px !important;
+    min-height: 52px !important;
+    padding: 7px 5px !important;
+  }
+
+  .editor-tools button span {
+    white-space: nowrap;
+  }
+
+  .editor-pages {
+    padding: var(--lim-space-4) !important;
+  }
+
+  .editor-stage-wrap {
+    min-height: 460px !important;
+    padding: var(--lim-space-4) !important;
+  }
+
+  .editor-page-navigation {
+    position: sticky !important;
+    bottom: 8px !important;
+    margin: 0 auto !important;
+  }
+
+  .editor-properties {
+    padding: var(--lim-space-4) !important;
+  }
+
+  .properties-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .consent-toast {
+    padding-bottom: calc(12px + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

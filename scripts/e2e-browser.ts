@@ -87,10 +87,9 @@ async function processEditor(page: Page) {
     assert.equal(await page.getByText(forbidden, { exact: true }).count(), 0, `Editor ainda expõe controle antigo: ${forbidden}`);
   }
 
-  const fileChooserPromise = page.waitForEvent("filechooser", { timeout: 30_000 });
-  await page.getByRole("button", { name: "Selecionar PDF", exact: true }).click();
-  const fileChooser = await fileChooserPromise;
-  await fileChooser.setFiles(fixture("basic.pdf"));
+  const fileInput = page.locator("#editor-pdf-file-input[data-editor-ready='true']");
+  await fileInput.waitFor({ state: "attached", timeout: 30_000 });
+  await fileInput.setInputFiles(fixture("basic.pdf"));
   try {
     await page.locator(".pdf-editor-shell").waitFor({ state: "visible", timeout: 60_000 });
   } catch (error) {

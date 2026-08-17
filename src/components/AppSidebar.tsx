@@ -7,6 +7,7 @@ import {
   Grid2X2,
   Home,
   Layers3,
+  ListChecks,
   Minimize2,
   PencilLine,
   ScanText,
@@ -33,8 +34,9 @@ const items: SidebarItem[] = [
   { href: "/ferramentas/converter-pdf", label: "Converter PDF", icon: FileOutput, match: (path) => path.includes("/ferramentas/converter-pdf") || path.includes("/categorias/converter") || /pdf-para-|word-para-pdf|excel-para-pdf|imagens-para-pdf|powerpoint-para-pdf|extrair-texto/.test(path) },
   { href: "/ferramentas/organizar-paginas", label: "Organizar PDF", icon: Layers3, match: (path) => path.includes("/categorias/organizar") || /dividir-pdf|extrair-paginas|excluir-paginas|organizar-paginas|girar-pdf|duplicar-paginas|inserir-pagina|alternar-pdfs|sobrepor-pdfs|bookmarks-pdf|numeracao-bates/.test(path) },
   { href: "/ferramentas/assinar-pdf", label: "Assinar PDF", icon: Signature, match: (path) => /assinar-pdf|assinatura-digital-pdf/.test(path) },
-  { href: "/ferramentas/proteger-pdf", label: "Proteger PDF", icon: ShieldCheck, match: (path) => /proteger-pdf|desbloquear-pdf|permissoes-pdf|remover-metadados|marcar-confidencial/.test(path) },
-  { href: "/ferramentas/ocr-pdf", label: "OCR PDF", icon: ScanText, match: (path) => /ocr-pdf|limpar-documento-digitalizado/.test(path) },
+  { href: "/ferramentas/proteger-pdf", label: "Segurança PDF", icon: ShieldCheck, match: (path) => /proteger-pdf|desbloquear-pdf|permissoes-pdf|remover-metadados|marcar-confidencial/.test(path) },
+  { href: "/ferramentas/criar-formulario-pdf", label: "Formulários PDF", icon: ListChecks, match: (path) => /criar-formulario-pdf|preencher-formulario-pdf/.test(path) },
+  { href: "/ferramentas/ocr-pdf", label: "OCR e digitalização", icon: ScanText, match: (path) => /ocr-pdf|limpar-documento-digitalizado/.test(path) },
   { href: "/ferramentas", label: "Todas as ferramentas", icon: Grid2X2, match: (path) => path === "/ferramentas" },
 ];
 

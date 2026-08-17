@@ -29,7 +29,7 @@ import { downloadBytes } from "@/lib/browser-files";
 import { loadEditorImageAssets, saveEditorImageAssets } from "@/lib/editor-assets";
 import { cleanupExpiredEditorDrafts, EDITOR_DRAFT_PREFIX, EDITOR_RECENTS_KEY } from "@/lib/editor-drafts";
 import { canvasToBlob, loadPdfJsDocument } from "@/lib/pdf-render";
-import { isFileWithinLimit, isPdfFile, MAX_LOCAL_PDF_BYTES } from "@/lib/file-validation";
+import { formatFileSizeLimit, getFileSizeGuidance, isFileWithinLimit, isPdfFile, MAX_LOCAL_PDF_BYTES } from "@/lib/file-validation";
 import { useTemporaryFiles } from "@/lib/use-temporary-files";
 import { useLanguage } from "@/lib/use-language";
 import { SignaturePad } from "./SignaturePad";
@@ -562,7 +562,7 @@ export function PdfEditorWorkspaceHardened() {
     }
     if (!isFileWithinLimit(selectedFile, MAX_LOCAL_PDF_BYTES)) {
       setStatus("error");
-      setMessage("O arquivo ultrapassa o limite recomendado de 60 MB.");
+      setMessage(`O arquivo ultrapassa o limite de ${formatFileSizeLimit()}.`);
       return;
     }
     releaseUrls();
@@ -1115,14 +1115,18 @@ export function PdfEditorWorkspaceHardened() {
         <p>{text.openDescription}</p>
         <label className="primary-button large-button editor-file-picker" htmlFor="editor-pdf-file-input" role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); fileInputRef.current?.click(); } }}><FileText size={18} /> {text.selectPdf}</label>
         <input id="editor-pdf-file-input" data-editor-ready="false" ref={fileInputRef} type="file" accept="application/pdf" hidden onClick={(event) => { event.currentTarget.value = ""; }} onChange={(event) => event.target.files?.[0] && openFile(event.target.files[0])} />
+        <small className="editor-upload-limit">PDF até {formatFileSizeLimit()} · processamento e rascunhos mantidos no navegador</small>
         {recentDrafts.length ? <div className="editor-recent-drafts"><strong>{text.recentDrafts}</strong>{recentDrafts.map((draft) => <div key={draft.fileKey}><span>{draft.fileName}</span><small>{formatBytes(draft.fileSize)} · {draft.objectCount} alteração(ões) · {formatDraftDate(draft.updatedAt)}</small></div>)}</div> : null}
         <div className="editor-upload-security"><ShieldCheck size={17} /> {text.noUpload}</div>
+        <div className="large-file-notice editor-large-file-note" role="note"><ShieldCheck size={16} /><span><strong>Arquivos grandes continuam locais</strong><small>Até {formatFileSizeLimit()} por arquivo. Para PDFs acima de 100 MB, feche outras abas e aguarde o processamento sequencial.</small></span></div>
       </section>
     );
   }
 
   return (
     <section className="pdf-editor-shell">
+      {getFileSizeGuidance(file).tier !== "standard" ? <div className="large-file-notice editor-large-file-note" role="status"><ShieldCheck size={16} /><span><strong>{getFileSizeGuidance(file).tier === "very-large" ? "Arquivo muito grande" : "Arquivo grande"}</strong><small>{getFileSizeGuidance(file).message} O cache de rascunho pode ficar indisponível para preservar a memória.</small></span></div> : null}
+
       <div className="editor-topbar">
         <div className="editor-file-name"><FileText size={19} /><span><strong>{file.name}</strong><small>{draftSavedAt ? `Rascunho salvo ${formatDraftDate(draftSavedAt)}` : cached ? "Salvo temporariamente no navegador" : "Cache local indisponível para este tamanho"}{draftRestored ? " · restaurado" : ""}</small></span></div>
         <div className="editor-history"><button type="button" onClick={undo} disabled={!undoStack.length} title="Desfazer (Ctrl+Z)"><Undo2 size={17} /></button><button type="button" onClick={redo} disabled={!redoStack.length} title="Refazer (Ctrl+Y)"><Redo2 size={17} /></button></div>

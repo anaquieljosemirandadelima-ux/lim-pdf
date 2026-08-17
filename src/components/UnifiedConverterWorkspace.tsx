@@ -8,6 +8,7 @@ import { MemorySafePdfWorkspace } from "@/components/MemorySafePdfWorkspace";
 import { PdfToolWorkspace } from "@/components/PdfToolWorkspace";
 import { allToolBySlug, type AllToolSlug } from "@/lib/all-tools";
 import { humanSize } from "@/lib/browser-files";
+import { formatFileSizeLimit, getFileSizeGuidance, isFileWithinLimit, isPdfFile, MAX_LOCAL_PDF_BYTES } from "@/lib/file-validation";
 import { clearTemporaryFiles } from "@/lib/temporary-cache";
 import type { ToolDefinition } from "@/lib/tools";
 
@@ -40,8 +41,8 @@ export function UnifiedConverterWorkspace({ initialOutput = "pdf-para-word" }: {
 
   async function selectFile(selected: File | null) {
     if (!selected || processingLocked || preparing) return;
-    if (!selected.name.toLowerCase().endsWith(".pdf") && selected.type !== "application/pdf") return;
-    if (selected.size > 60 * 1024 * 1024) return;
+    if (!isPdfFile(selected)) return;
+    if (!isFileWithinLimit(selected, MAX_LOCAL_PDF_BYTES)) return;
     setPreparing(true);
     try {
       // O conversor é a fonte da verdade do arquivo. Limpa snapshots dos workspaces
@@ -98,7 +99,7 @@ export function UnifiedConverterWorkspace({ initialOutput = "pdf-para-word" }: {
   if (!tool) return null;
 
   return <section className={`workspace unified-converter ${processingLocked ? "is-processing" : ""}`}>
-    <div className="unified-converter-upload" onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); if (!processingLocked) void selectFile(event.dataTransfer.files[0] || null); }}>
+    <div className="unified-converter-upload" data-max-file-size={formatFileSizeLimit()} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); if (!processingLocked) void selectFile(event.dataTransfer.files[0] || null); }}>
       {!file ? <><span>{preparing ? <LoaderCircle className="spin" size={30} /> : <UploadCloud size={30} />}</span><div><strong>{preparing ? "Preparando arquivo…" : "Escolha o PDF uma vez"}</strong><small>Depois você pode trocar o formato de saída sem voltar ao catálogo.</small></div><button className="primary-button" type="button" disabled={preparing} onClick={openPicker}><FileText size={18} /> Selecionar PDF</button></> : <><span><FileText size={27} /></span><div className="unified-file-copy"><strong>{file.name}</strong><small>{humanSize(file.size)} · escolha abaixo como deseja converter</small></div><button className="secondary-button" type="button" disabled={processingLocked} onClick={clearFile}><Trash2 size={15} /> Trocar arquivo</button></>}
       <input ref={inputRef} hidden type="file" accept="application/pdf,.pdf" onChange={(event) => void selectFile(event.target.files?.[0] || null)} />
     </div>
@@ -107,6 +108,8 @@ export function UnifiedConverterWorkspace({ initialOutput = "pdf-para-word" }: {
       <div><span className="converter-format-kicker"><Repeat2 size={15} /> Converter para</span><strong>{outputOptions.find((item) => item.slug === output)?.label}</strong><small>{processingLocked ? "Aguarde a conversão atual terminar." : "Você pode mudar o formato mesmo depois de subir o arquivo."}</small></div>
       <div className="converter-format-options" role="list" aria-label="Formato de saída">{outputOptions.map((option) => { const Icon = option.icon; return <button key={option.slug} type="button" disabled={processingLocked} className={output === option.slug ? "active" : ""} onClick={() => setOutput(option.slug)}><Icon size={18} /><span><strong>{option.label}</strong><small>{option.detail}</small></span></button>; })}</div>
     </div>
+
+    {file && getFileSizeGuidance(file).tier !== "standard" ? <div className="large-file-notice" role="status"><FileText size={16} /><span><strong>Arquivo grande</strong><small>{getFileSizeGuidance(file).message} A troca de formato permanece local no navegador.</small></span></div> : null}
 
     {file ? <div className="unified-converter-host" ref={hostRef}>{output === "pdf-para-word" || output === "pdf-para-excel" ? <AdvancedToolWorkspace tool={tool} /> : isMemorySafe(output) ? <MemorySafePdfWorkspace tool={tool as ToolDefinition} /> : <PdfToolWorkspace tool={tool as ToolDefinition} />}</div> : <div className="converter-empty-state"><FileOutput size={25} /><strong>O botão de conversão aparece aqui após selecionar o PDF.</strong><p>O formato escolhido fica visível no mesmo bloco para você não precisar procurar a ação mais abaixo.</p></div>}
 

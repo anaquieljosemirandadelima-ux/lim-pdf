@@ -6,7 +6,7 @@ import { createStoredZipFromBlobs, downloadBlob, downloadBytes, humanSize, outpu
 import { canvasToBlob, renderPdfPagesSequentially } from "@/lib/pdf-render";
 import type { ToolDefinition } from "@/lib/tools";
 import { useTemporaryFiles } from "@/lib/use-temporary-files";
-import { isFileWithinLimit, isPdfFile, MAX_LOCAL_PDF_BYTES } from "@/lib/file-validation";
+import { formatFileSizeLimit, getFileSizeGuidance, isFileWithinLimit, isPdfFile, MAX_LOCAL_PDF_BYTES } from "@/lib/file-validation";
 
 type SupportedSlug = "pdf-para-jpg" | "pdf-para-png" | "compactar-pdf" | "pdf-em-escala-de-cinza";
 type Status =
@@ -29,6 +29,7 @@ export function MemorySafePdfWorkspace({ tool }: { tool: ToolDefinition }) {
   const [compression, setCompression] = useState("equilibrada");
   const { restored, cached, clearCache } = useTemporaryFiles(`tool:${tool.slug}`, files, setFiles);
   const file = files[0];
+  const fileGuidance = file ? getFileSizeGuidance(file) : null;
 
   function addFile(nextFile: File) {
     if (!isPdfFile(nextFile)) {
@@ -36,7 +37,7 @@ export function MemorySafePdfWorkspace({ tool }: { tool: ToolDefinition }) {
       return;
     }
     if (!isFileWithinLimit(nextFile, MAX_LOCAL_PDF_BYTES)) {
-      setStatus({ type: "error", message: `${nextFile.name} ultrapassa o limite recomendado de 60 MB.` });
+      setStatus({ type: "error", message: `${nextFile.name} ultrapassa o limite de ${formatFileSizeLimit()}.` });
       return;
     }
     setFiles([nextFile]);
@@ -133,7 +134,7 @@ export function MemorySafePdfWorkspace({ tool }: { tool: ToolDefinition }) {
         >
           <span className="drop-icon"><UploadCloud size={31} strokeWidth={1.7} aria-hidden="true" /></span>
           <strong>Arraste um PDF ou escolha no dispositivo</strong>
-          <span>PDF · até 60 MB</span>
+          <span>PDF · até {formatFileSizeLimit()} · processamento sequencial</span>
           <button type="button" className="primary-button" onClick={() => inputRef.current?.click()}>Selecionar arquivo</button>
           <input ref={inputRef} type="file" accept="application/pdf" hidden onClick={(event) => { event.currentTarget.value = ""; }} onChange={(event) => event.target.files?.[0] && addFile(event.target.files[0])} />
         </div>
@@ -143,6 +144,8 @@ export function MemorySafePdfWorkspace({ tool }: { tool: ToolDefinition }) {
           <ol><li><span className="file-icon"><FileText size={20} /></span><span className="file-name"><strong>{file.name}</strong><small>{humanSize(file.size)}</small></span><button type="button" className="remove-file" onClick={removeFile} aria-label={`Remover ${file.name}`}><Trash2 size={18} /></button></li></ol>
         </div>
       )}
+
+      {fileGuidance && fileGuidance.tier !== "standard" ? <div className="large-file-notice" role="status"><FileText size={16} /><span><strong>{fileGuidance.tier === "very-large" ? "Arquivo muito grande" : "Arquivo grande"}</strong><small>{fileGuidance.message} As páginas são processadas uma a uma para reduzir o uso de memória.</small></span></div> : null}
 
       {file ? (
         <div className="tool-options options-grid">

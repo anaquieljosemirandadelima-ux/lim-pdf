@@ -30,6 +30,7 @@ import { useTemporaryFiles } from "@/lib/use-temporary-files";
 import { useLanguage } from "@/lib/use-language";
 
 const MAX_FILE_SIZE = 60 * 1024 * 1024;
+const MAX_FILE_COUNT = 20;
 const MM_TO_POINTS = 72 / 25.4;
 const CM_TO_POINTS = 72 / 2.54;
 const IN_TO_POINTS = 72;
@@ -218,6 +219,8 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
   const [dragActive, setDragActive] = useState(false);
   const [status, setStatus] = useState<Status>({ type: "idle" });
   const [summary, setSummary] = useState<ProcessingSummary | null>(null);
+  const [extractedMarkdown, setExtractedMarkdown] = useState("");
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle");
   const [pageSpecification, setPageSpecification] = useState("1");
   const [pageOrder, setPageOrder] = useState("1");
   const [rotation, setRotation] = useState("90");
@@ -301,6 +304,11 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
 
   const addFiles = useCallback((incoming: FileList | File[]) => {
     const next = Array.from(incoming);
+    const remainingSlots = tool.multiple ? MAX_FILE_COUNT - files.length : 1;
+    if (next.length > remainingSlots) {
+      setStatus({ type: "error", message: `Selecione no máximo ${MAX_FILE_COUNT} arquivos nesta ferramenta.` });
+      return;
+    }
     const invalidType = next.find((file) => acceptsImages
       ? !["image/jpeg", "image/png"].includes(file.type)
       : !isPdfFile(file));
@@ -316,7 +324,9 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
     setFiles((current) => (tool.multiple ? [...current, ...next] : next.slice(0, 1)));
     setStatus({ type: "idle" });
     setSummary(null);
-  }, [acceptsImages, tool.multiple]);
+    setExtractedMarkdown("");
+    setCopyStatus("idle");
+  }, [acceptsImages, files.length, tool.multiple]);
 
   function removeFile(index: number) {
     setFiles((current) => {
@@ -326,6 +336,8 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
     });
     setStatus({ type: "idle" });
     setSummary(null);
+    setExtractedMarkdown("");
+    setCopyStatus("idle");
   }
 
   function moveFile(index: number, direction: -1 | 1) {
@@ -735,6 +747,8 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
       { name: `${file.name.replace(/\.pdf$/i, "")}-texto.md`, data: new TextEncoder().encode(markdown) },
       { name: `${file.name.replace(/\.pdf$/i, "")}-relatorio.json`, data: new TextEncoder().encode(JSON.stringify(report, null, 2)) },
     ]), `${file.name.replace(/\.pdf$/i, "")}-extracao-texto-lim-pdf.zip`);
+    setExtractedMarkdown(markdown);
+    setCopyStatus("idle");
     setSummary({
       title: "Extração concluída",
       details: [`${textPages} de ${pages.length} página(s) tinham camada de texto.`, "O download inclui TXT, Markdown por página e relatório JSON."],
@@ -817,11 +831,23 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
     downloadBytes(await output.save({ useObjectStreams: true }), outputName(file, "com-fundo"));
   }
 
+  async function copyExtractedMarkdown() {
+    if (!extractedMarkdown) return;
+    try {
+      await navigator.clipboard.writeText(extractedMarkdown);
+      setCopyStatus("copied");
+    } catch {
+      setCopyStatus("error");
+    }
+  }
+
   async function processFiles() {
     if (!files.length) return;
     setStatus({ type: "processing", message: text.processingMessage });
     try {
       setSummary(null);
+      setExtractedMarkdown("");
+      setCopyStatus("idle");
       const operations: Record<Exclude<ToolSlug, "editar-pdf">, () => Promise<void>> = {
         "juntar-pdf": processMerge,
         "dividir-pdf": processSplit,
@@ -871,7 +897,7 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
   ].includes(tool.slug);
 
   return (
-    <section className="workspace" aria-labelledby="workspace-title">
+    <section className="workspace" aria-labelledby="workspace-title" aria-busy={status.type === "processing"}>
       <div className="workspace-heading">
         <div>
           <h2 id="workspace-title">{text.chooseFile}</h2>
@@ -947,10 +973,11 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
         </div>
       ) : null}
 
-      {status.type !== "idle" ? <div className={`status-message status-${status.type}`} role="status">{status.type === "processing" ? <LoaderCircle className="spin" size={19} /> : null}{status.type === "success" ? <CheckCircle2 size={19} /> : null}{status.type === "error" ? <AlertCircle size={19} /> : null}<span>{status.message}</span></div> : null}
+      {status.type !== "idle" ? <div className={`status-message status-${status.type}`} role={status.type === "error" ? "alert" : "status"} aria-live={status.type === "error" ? "assertive" : "polite"}>{status.type === "processing" ? <LoaderCircle className="spin" size={19} /> : null}{status.type === "success" ? <CheckCircle2 size={19} /> : null}{status.type === "error" ? <AlertCircle size={19} /> : null}<span>{status.message}</span></div> : null}
 
       {summary ? (
         <div className="processing-summary">
+          {tool.slug === "extrair-texto-pdf" && extractedMarkdown ? <button type="button" className="secondary-button" onClick={() => void copyExtractedMarkdown()}>{copyStatus === "copied" ? "Markdown copiado" : "Copiar Markdown"}</button> : null}
           <strong>{summary.title}</strong>
           {summary.details.map((item) => <span key={item}>{item}</span>)}
           {summary.warnings?.map((item) => <small key={item}>{item}</small>)}

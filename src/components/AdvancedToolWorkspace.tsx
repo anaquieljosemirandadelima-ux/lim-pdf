@@ -1,12 +1,11 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, FileText, LoaderCircle, ShieldCheck, UploadCloud } from "lucide-react";
 import { createStoredZip, downloadBlob, downloadBytes, humanSize } from "@/lib/browser-files";
 import { loadPdfJsDocument } from "@/lib/pdf-render";
+import { formatFileSizeLimit, getDeviceMemoryGuidance, getFileSizeGuidance, isFileWithinLimit, MAX_LOCAL_PDF_BYTES } from "@/lib/file-validation";
 import type { AdvancedToolSlug, AnyToolDefinition } from "@/lib/all-tools";
-
-const MAX_FILE_SIZE = 60 * 1024 * 1024;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
@@ -439,15 +438,44 @@ export function AdvancedToolWorkspace({ tool }: { tool: AnyToolDefinition }) {
     return "PDF";
   }, [slug]);
 
-  function selectFile(next: File | undefined) {
+  const selectFile = useCallback((next: File | undefined) => {
     if (!next) return;
-    if (next.size > MAX_FILE_SIZE) { setStatus({ type: "error", message: "O arquivo ultrapassa o limite recomendado de 60 MB." }); return; }
+    if (!isFileWithinLimit(next, MAX_LOCAL_PDF_BYTES)) { setStatus({ type: "error", message: `O arquivo ultrapassa o limite de ${formatFileSizeLimit()}.` }); return; }
     const lower = next.name.toLowerCase();
     const valid = slug === "word-para-pdf" ? lower.endsWith(".docx") : slug === "excel-para-pdf" ? lower.endsWith(".xlsx") : lower.endsWith(".pdf") || next.type === "application/pdf";
     if (!valid) { setStatus({ type: "error", message: `Selecione um arquivo ${acceptedLabel}.` }); return; }
     setFile(next);
     setStatus({ type: "idle" });
+  }, [acceptedLabel, slug]);
+
+  async function pastePdfFromClipboard() {
+    if (acceptedLabel !== "PDF" || !navigator.clipboard?.read) {
+      setStatus({ type: "error", message: "O clipboard está disponível apenas para ferramentas PDF neste navegador." });
+      return;
+    }
+    try {
+      const items = await navigator.clipboard.read();
+      const item = items.find((entry) => entry.types.includes("application/pdf"));
+      if (!item) { setStatus({ type: "error", message: "Nenhum PDF foi encontrado no clipboard." }); return; }
+      const blob = await item.getType("application/pdf");
+      selectFile(new File([blob], "documento-colado.pdf", { type: "application/pdf" }));
+    } catch {
+      setStatus({ type: "error", message: "Não foi possível acessar o clipboard. Permita o acesso ou selecione o PDF manualmente." });
+    }
   }
+
+  useEffect(() => {
+    if (acceptedLabel !== "PDF") return;
+    const handlePaste = (event: ClipboardEvent) => {
+      if (document.activeElement?.matches("input,textarea,select")) return;
+      const pastedPdf = Array.from(event.clipboardData?.files || []).find((candidate) => candidate.type === "application/pdf" || candidate.name.toLowerCase().endsWith(".pdf"));
+      if (!pastedPdf) return;
+      event.preventDefault();
+      selectFile(pastedPdf);
+    };
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [acceptedLabel, selectFile]);
 
   async function processFile() {
     if (!file) return;
@@ -509,6 +537,8 @@ export function AdvancedToolWorkspace({ tool }: { tool: AnyToolDefinition }) {
 
   const showPassword = slug === "proteger-pdf" || slug === "desbloquear-pdf";
   const showPermissions = slug === "proteger-pdf" || slug === "permissoes-pdf";
+  const fileGuidance = file ? getFileSizeGuidance(file) : null;
+  const memoryGuidance = file ? getDeviceMemoryGuidance(file) : "";
 
   return (
     <section className="workspace" aria-labelledby="advanced-workspace-title" aria-busy={status.type === "processing"}>
@@ -524,8 +554,11 @@ export function AdvancedToolWorkspace({ tool }: { tool: AnyToolDefinition }) {
         <span className="drop-icon"><UploadCloud size={31} strokeWidth={1.7} /></span>
         <strong>Selecione seu arquivo {acceptedLabel}</strong>
         <span>ou arraste e solte aqui</span>
-        <button type="button" className="primary-button" onClick={() => inputRef.current?.click()}>Selecionar arquivo</button>
-        <small>{acceptedLabel} · até 60 MB · gratuito</small>
+        <div className="upload-action-row">
+          <button type="button" className="primary-button" onClick={() => inputRef.current?.click()}>Selecionar arquivo</button>
+          {acceptedLabel === "PDF" ? <button type="button" className="secondary-button paste-file-button" onClick={() => void pastePdfFromClipboard()}>Colar PDF</button> : null}
+        </div>
+        <small>{acceptedLabel} · até {formatFileSizeLimit()} · processamento local</small>
         <input ref={inputRef} type="file" accept={tool.accept} hidden onClick={(event) => { event.currentTarget.value = ""; }} onChange={(event) => selectFile(event.target.files?.[0])} />
       </div>
 
@@ -535,6 +568,9 @@ export function AdvancedToolWorkspace({ tool }: { tool: AnyToolDefinition }) {
           <ol><li><span className="file-icon"><FileText size={20} /></span><span className="file-name"><strong>{file.name}</strong><small>{humanSize(file.size)}</small></span></li></ol>
         </div>
       ) : null}
+
+      {fileGuidance && fileGuidance.tier !== "standard" ? <div className="large-file-notice" role="status"><ShieldCheck size={16} /><span><strong>{fileGuidance.tier === "very-large" ? "Arquivo muito grande" : "Arquivo grande"}</strong><small>{fileGuidance.message}</small></span></div> : null}
+      {memoryGuidance ? <div className="large-file-notice memory-guidance" role="status"><ShieldCheck size={16} /><span><strong>Modo de capacidade recomendado</strong><small>{memoryGuidance}</small></span></div> : null}
 
       {file ? (
         <div className="tool-options options-grid">

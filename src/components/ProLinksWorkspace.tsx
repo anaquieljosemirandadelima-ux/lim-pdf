@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { CheckCircle2, ExternalLink, FileText, Layers3, LoaderCircle, Repeat2, Trash2, UploadCloud } from "lucide-react";
 import { downloadBytes, humanSize } from "@/lib/browser-files";
+import { formatFileSizeLimit, getFileSizeGuidance, isFileWithinLimit, isPdfFile, MAX_LOCAL_PDF_BYTES } from "@/lib/file-validation";
 import { addHyperlink, addInternalPageLink, editHyperlink, readHyperlinks, removeAllHyperlinks, removeHyperlink, type PdfHyperlinkInfo } from "@/lib/pro-pdf-engines";
 
 type Mode = "add-url" | "add-page" | "edit" | "remove-one" | "remove-all";
@@ -33,8 +34,8 @@ export function ProLinksWorkspace() {
 
   async function selectFile(selectedFile: File | null) {
     if (!selectedFile) return;
-    if (selectedFile.type !== "application/pdf" && !selectedFile.name.toLowerCase().endsWith(".pdf")) { setState({ type: "error", message: "Selecione um arquivo PDF." }); return; }
-    if (selectedFile.size > 80 * 1024 * 1024) { setState({ type: "error", message: "O arquivo ultrapassa 80 MB." }); return; }
+    if (!isPdfFile(selectedFile)) { setState({ type: "error", message: "Selecione um arquivo PDF." }); return; }
+    if (!isFileWithinLimit(selectedFile, MAX_LOCAL_PDF_BYTES)) { setState({ type: "error", message: `O arquivo ultrapassa ${formatFileSizeLimit()}.` }); return; }
     setFile(selectedFile); await loadLinks(selectedFile);
   }
 
@@ -70,7 +71,10 @@ export function ProLinksWorkspace() {
       <span className="drop-icon"><UploadCloud size={31} /></span><strong>Selecione seu PDF</strong><span>Crie, edite ou remova links sem transformar a página em imagem.</span>
       <button className="primary-button" type="button" onClick={() => { if (inputRef.current) { inputRef.current.value = ""; inputRef.current.click(); } }}><FileText size={18} /> Escolher PDF</button>
       <input ref={inputRef} type="file" accept="application/pdf,.pdf" hidden onChange={(event) => void selectFile(event.target.files?.[0] || null)} />
+      <small>Até {formatFileSizeLimit()} por arquivo · leitura local</small>
     </div>
+
+    {file && getFileSizeGuidance(file).tier !== "standard" ? <div className="large-file-notice" role="status"><FileText size={16} /><span><strong>Arquivo grande</strong><small>{getFileSizeGuidance(file).message} A leitura dos hyperlinks pode demorar mais neste dispositivo.</small></span></div> : null}
 
     {file ? <div className="selected-files pro-selected-files"><div className="selected-file-row"><FileText size={17} /><span><strong>{file.name}</strong><small>{humanSize(file.size)} · {links.length} link(s) detectado(s)</small></span><button type="button" aria-label="Remover arquivo" onClick={clearFile}><Trash2 size={15} /></button></div></div> : null}
 

@@ -177,6 +177,7 @@ async function negativeCases(page: Page) {
   console.log("QA negativo confirmação de senha divergente");
   await navigate(page, "/ferramentas/proteger-pdf");
   await page.locator('input[type="file"]').first().setInputFiles(fixture("basic.pdf"));
+  await page.locator(".selected-files").waitFor({ state: "visible", timeout: 20_000 });
   const protectPasswords = page.locator('input[type="password"]');
   await protectPasswords.nth(0).waitFor({ state: "visible", timeout: 30_000 });
   await protectPasswords.nth(1).waitFor({ state: "visible", timeout: 30_000 });

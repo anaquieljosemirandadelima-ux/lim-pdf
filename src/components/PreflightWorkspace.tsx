@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { CheckCircle2, CircleOff, FileText, ListChecks, LoaderCircle, ShieldCheck, Trash2, UploadCloud } from "lucide-react";
 import { PDFDocument } from "pdf-lib";
 import { humanSize } from "@/lib/browser-files";
+import { formatFileSizeLimit, getFileSizeGuidance, isFileWithinLimit, isPdfFile, MAX_LOCAL_PDF_BYTES } from "@/lib/file-validation";
 import { loadPdfJsDocument } from "@/lib/pdf-render";
 
 type Severity = "ok" | "warn" | "info";
@@ -21,8 +22,8 @@ export function PreflightWorkspace() {
 
   function selectFile(selected: File | null) {
     if (!selected) return;
-    if (selected.type !== "application/pdf" && !selected.name.toLowerCase().endsWith(".pdf")) { setStatus({ type: "error", message: "Selecione um arquivo PDF." }); return; }
-    if (selected.size > 80 * 1024 * 1024) { setStatus({ type: "error", message: "O PDF ultrapassa 80 MB." }); return; }
+    if (!isPdfFile(selected)) { setStatus({ type: "error", message: "Selecione um arquivo PDF." }); return; }
+    if (!isFileWithinLimit(selected, MAX_LOCAL_PDF_BYTES)) { setStatus({ type: "error", message: `O PDF ultrapassa ${formatFileSizeLimit()}.` }); return; }
     setFile(selected); setFindings([]); setStatus({ type: "idle" });
   }
 
@@ -83,8 +84,10 @@ export function PreflightWorkspace() {
       <span className="drop-icon"><UploadCloud size={31} /></span><strong>Selecione o PDF para check-up</strong><span>O diagnóstico lê dimensões, texto, formulários, anotações e metadados sem modificar o arquivo.</span>
       <button className="primary-button" type="button" onClick={() => { if (inputRef.current) { inputRef.current.value = ""; inputRef.current.click(); } }}><FileText size={18} /> Escolher PDF</button>
       <input ref={inputRef} type="file" accept="application/pdf,.pdf" hidden onChange={(event) => selectFile(event.target.files?.[0] || null)} />
+      <small>Até {formatFileSizeLimit()} por arquivo · análise local</small>
     </div>
     {file ? <div className="selected-files"><div className="selected-file-row"><FileText size={17} /><span><strong>{file.name}</strong><small>{humanSize(file.size)}</small></span><button type="button" aria-label="Remover arquivo" onClick={clearFile}><Trash2 size={15} /></button></div></div> : null}
+    {file && getFileSizeGuidance(file).tier !== "standard" ? <div className="large-file-notice" role="status"><ShieldCheck size={16} /><span><strong>Diagnóstico de arquivo grande</strong><small>{getFileSizeGuidance(file).message} O preflight lê a estrutura localmente e não altera o documento.</small></span></div> : null}
     <button className="process-button" type="button" disabled={!file || status.type === "processing"} onClick={() => void analyze()}>{status.type === "processing" ? <><LoaderCircle className="spin" size={18} /> Analisando…</> : <><ListChecks size={18} /> Executar preflight</>}</button>
     {status.type === "success" ? <div className="status-message success"><CheckCircle2 size={18} /><span>{status.message}</span></div> : null}
     {status.type === "error" ? <div className="status-message error"><span>{status.message}</span></div> : null}

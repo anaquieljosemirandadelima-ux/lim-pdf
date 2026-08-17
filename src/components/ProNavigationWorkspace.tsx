@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { CheckCircle2, FilePlus2, FileText, ListOrdered, LoaderCircle, Trash2, UploadCloud } from "lucide-react";
 import { downloadBytes, humanSize } from "@/lib/browser-files";
+import { formatFileSizeLimit, getFileSizeGuidance, isFileWithinLimit, isPdfFile, MAX_LOCAL_PDF_BYTES } from "@/lib/file-validation";
 import { addBookmarks, type BookmarkDraft } from "@/lib/pro-pdf-engines";
 import type { ProToolDefinition } from "@/lib/pro-tools";
 
@@ -19,8 +20,8 @@ export function ProNavigationWorkspace({ tool }: { tool: ProToolDefinition }) {
 
   function selectFile(selected: File | null) {
     if (!selected) return;
-    if (selected.type !== "application/pdf" && !selected.name.toLowerCase().endsWith(".pdf")) { setState({ type: "error", message: "Selecione um arquivo PDF." }); return; }
-    if (selected.size > 80 * 1024 * 1024) { setState({ type: "error", message: "O arquivo ultrapassa 80 MB." }); return; }
+    if (!isPdfFile(selected)) { setState({ type: "error", message: "Selecione um arquivo PDF." }); return; }
+    if (!isFileWithinLimit(selected, MAX_LOCAL_PDF_BYTES)) { setState({ type: "error", message: `O arquivo ultrapassa ${formatFileSizeLimit()}.` }); return; }
     setFile(selected); setState({ type: "idle" }); setBookmarks([]);
   }
 
@@ -52,7 +53,10 @@ export function ProNavigationWorkspace({ tool }: { tool: ProToolDefinition }) {
       <span className="drop-icon"><UploadCloud size={31} /></span><strong>Selecione seu PDF</strong><span>Monte uma navegação por capítulos sem desenhar texto na página.</span>
       <button className="primary-button" type="button" onClick={() => { if (inputRef.current) { inputRef.current.value = ""; inputRef.current.click(); } }}><FileText size={18} /> Escolher PDF</button>
       <input ref={inputRef} type="file" accept={tool.accept} hidden onChange={(event) => selectFile(event.target.files?.[0] || null)} />
+      <small>Até {formatFileSizeLimit()} por arquivo · navegação adicionada localmente</small>
     </div>
+
+    {file && getFileSizeGuidance(file).tier !== "standard" ? <div className="large-file-notice" role="status"><FileText size={16} /><span><strong>Arquivo grande</strong><small>{getFileSizeGuidance(file).message} A criação de marcadores será exportada localmente.</small></span></div> : null}
 
     {file ? <div className="selected-files pro-selected-files"><div className="selected-file-row"><FileText size={17} /><span><strong>{file.name}</strong><small>{humanSize(file.size)} · {bookmarks.length} marcador(es) preparado(s)</small></span><button type="button" aria-label="Remover arquivo" onClick={clearFile}><Trash2 size={15} /></button></div></div> : null}
 

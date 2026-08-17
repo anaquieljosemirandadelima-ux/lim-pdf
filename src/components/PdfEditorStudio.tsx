@@ -30,10 +30,10 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { downloadBytes } from "@/lib/browser-files";
 import { canvasToBlob, loadPdfJsDocument } from "@/lib/pdf-render";
+import { formatFileSizeLimit, isFileWithinLimit, MAX_LOCAL_PDF_BYTES } from "@/lib/file-validation";
 import { useTemporaryFiles } from "@/lib/use-temporary-files";
 import { SignaturePad } from "./SignaturePad";
 
-const MAX_FILE_SIZE = 60 * 1024 * 1024;
 const MAX_IMAGE_SIZE = 8 * 1024 * 1024;
 const MAX_PREVIEW_PIXELS = 1_700_000;
 const MAX_SANITIZE_PIXELS = 18_000_000;
@@ -303,7 +303,7 @@ export function PdfEditorStudio() {
 
   const openFile = useCallback((selectedFile: File) => {
     if (selectedFile.type !== "application/pdf") return setMessage("Selecione um arquivo PDF.");
-    if (selectedFile.size > MAX_FILE_SIZE) return setMessage("O PDF ultrapassa 60 MB.");
+    if (!isFileWithinLimit(selectedFile, MAX_LOCAL_PDF_BYTES)) return setMessage(`O PDF ultrapassa ${formatFileSizeLimit()}.`);
     cleanupUrls();
     setFiles([selectedFile]);
   }, [cleanupUrls, setFiles]);

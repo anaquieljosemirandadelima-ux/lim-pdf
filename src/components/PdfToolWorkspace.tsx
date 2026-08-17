@@ -12,6 +12,7 @@ import {
   LoaderCircle,
   Trash2,
   UploadCloud,
+  ShieldCheck,
 } from "lucide-react";
 import { SignaturePad } from "@/components/SignaturePad";
 import {
@@ -24,12 +25,11 @@ import {
 import { toolText, uiText, type UiTextBundle } from "@/lib/i18n-content";
 import { parsePageOrder, parsePages } from "@/lib/page-selection";
 import { canvasToBlob, extractTextByPage, renderPdfPages } from "@/lib/pdf-render";
-import { isFileWithinLimit, isPdfFile } from "@/lib/file-validation";
+import { formatFileSizeLimit, getDeviceMemoryGuidance, getFileSizeGuidance, isFileWithinLimit, isPdfFile, MAX_LOCAL_PDF_BYTES } from "@/lib/file-validation";
 import type { ToolDefinition, ToolSlug } from "@/lib/tools";
 import { useTemporaryFiles } from "@/lib/use-temporary-files";
 import { useLanguage } from "@/lib/use-language";
 
-const MAX_FILE_SIZE = 60 * 1024 * 1024;
 const MAX_FILE_COUNT = 20;
 const MM_TO_POINTS = 72 / 25.4;
 const CM_TO_POINTS = 72 / 2.54;
@@ -262,6 +262,9 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
   const acceptsImages = tool.slug === "imagens-para-pdf";
   const canProcess = files.length > 0 && status.type !== "processing" && !loadingFields;
   const acceptedLabel = useMemo(() => (acceptsImages ? "JPG ou PNG" : "PDF"), [acceptsImages]);
+  const largestFile = files.reduce<File | null>((largest, current) => !largest || current.size > largest.size ? current : largest, null);
+  const fileGuidance = largestFile ? getFileSizeGuidance(largestFile) : null;
+  const memoryGuidance = largestFile ? getDeviceMemoryGuidance(largestFile) : "";
 
   useEffect(() => {
     if (tool.slug !== "preencher-formulario-pdf" || !files[0]) return;
@@ -316,9 +319,9 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
       setStatus({ type: "error", message: `O arquivo ${invalidType.name} não é compatível.` });
       return;
     }
-    const oversized = next.find((file) => !isFileWithinLimit(file, MAX_FILE_SIZE));
+    const oversized = next.find((file) => !isFileWithinLimit(file, MAX_LOCAL_PDF_BYTES));
     if (oversized) {
-      setStatus({ type: "error", message: `${oversized.name} ultrapassa o limite recomendado de 60 MB.` });
+      setStatus({ type: "error", message: `${oversized.name} ultrapassa o limite de ${formatFileSizeLimit()}.` });
       return;
     }
     setFiles((current) => (tool.multiple ? [...current, ...next] : next.slice(0, 1)));
@@ -327,6 +330,37 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
     setExtractedMarkdown("");
     setCopyStatus("idle");
   }, [acceptsImages, files.length, tool.multiple]);
+
+  async function pasteFromClipboard() {
+    if (!navigator.clipboard?.read) {
+      setStatus({ type: "error", message: "Este navegador não permite ler um PDF do clipboard. Use Ctrl+V na área de upload ou selecione o arquivo." });
+      return;
+    }
+    try {
+      const items = await navigator.clipboard.read();
+      const item = items.find((entry) => entry.types.includes("application/pdf"));
+      if (!item) {
+        setStatus({ type: "error", message: "Nenhum PDF foi encontrado no clipboard." });
+        return;
+      }
+      const blob = await item.getType("application/pdf");
+      addFiles([new File([blob], "documento-colado.pdf", { type: "application/pdf" })]);
+    } catch {
+      setStatus({ type: "error", message: "Não foi possível acessar o clipboard. Permita o acesso ou selecione o PDF manualmente." });
+    }
+  }
+
+  useEffect(() => {
+    const handlePaste = (event: ClipboardEvent) => {
+      if (acceptsImages || document.activeElement?.matches("input,textarea,select")) return;
+      const pastedFiles = Array.from(event.clipboardData?.files || []).filter((file) => isPdfFile(file));
+      if (!pastedFiles.length) return;
+      event.preventDefault();
+      addFiles(pastedFiles);
+    };
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [acceptsImages, addFiles]);
 
   function removeFile(index: number) {
     setFiles((current) => {
@@ -915,9 +949,12 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
         <span className="drop-icon"><UploadCloud size={31} strokeWidth={1.7} aria-hidden="true" /></span>
         <strong>{tool.multiple ? text.dropFiles : text.dropFile}</strong>
         <span>{text.chooseDevice}</span>
-        <button type="button" className="primary-button" onClick={() => inputRef.current?.click()}>
-          {tool.multiple ? text.selectFiles : text.selectFile}
-        </button>
+        <div className="upload-action-row">
+          <button type="button" className="primary-button" onClick={() => inputRef.current?.click()}>
+            {tool.multiple ? text.selectFiles : text.selectFile}
+          </button>
+          {!acceptsImages ? <button type="button" className="secondary-button paste-file-button" onClick={() => void pasteFromClipboard()}>{text.pasteFile}</button> : null}
+        </div>
         <small>{acceptedLabel} · {text.maxFile}</small>
         <input ref={inputRef} type="file" accept={tool.accept} multiple={tool.multiple} onClick={(event) => { event.currentTarget.value = ""; }} onChange={(event) => event.target.files && addFiles(event.target.files)} hidden />
       </div>
@@ -946,6 +983,9 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
           </ol>
         </div>
       ) : null}
+
+      {fileGuidance && fileGuidance.tier !== "standard" ? <div className="large-file-notice" role="status"><FileText size={16} /><span><strong>{fileGuidance.tier === "very-large" ? "Arquivo muito grande" : "Arquivo grande"}</strong><small>{fileGuidance.message} A operação pode criar uma cópia temporária do PDF durante a exportação.</small></span></div> : null}
+      {memoryGuidance ? <div className="large-file-notice memory-guidance" role="status"><ShieldCheck size={16} /><span><strong>Modo de capacidade recomendado</strong><small>{memoryGuidance}</small></span></div> : null}
 
       {files.length ? (
         <div className="tool-options options-grid">

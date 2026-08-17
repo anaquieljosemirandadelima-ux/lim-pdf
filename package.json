@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:unit": "tsx scripts/test-page-selection.ts",
+    "test:unit": "tsx scripts/test-page-selection.ts && tsx scripts/test-file-validation.ts",
     "test:pdf": "tsx scripts/smoke-pdf-tools.ts",
     "test:experience": "tsx scripts/test-tool-experience.ts",
     "test:matrix": "tsx scripts/test-tool-matrix.ts",

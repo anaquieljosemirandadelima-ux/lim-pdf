@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { CheckCircle2, FilePlus2, FileText, LoaderCircle, ShieldCheck, Trash2, UploadCloud } from "lucide-react";
 import { downloadBlob, downloadBytes, humanSize } from "@/lib/browser-files";
+import { formatFileSizeLimit, getFileSizeGuidance, isFileWithinLimit, MAX_LOCAL_PDF_BYTES } from "@/lib/file-validation";
 import type { ProToolDefinition } from "@/lib/pro-tools";
 import {
   addBates,
@@ -25,7 +26,6 @@ import {
   type ScanRotation,
 } from "@/lib/pro-pdf-engines";
 
-const MAX_FILE_SIZE = 80 * 1024 * 1024;
 type Status = { type: "idle" | "processing" | "success" | "error"; message?: string; progress?: number };
 type AnnotationType = "note" | "highlight" | "underline" | "strikeout";
 type BatchOperation = "metadata" | "number" | "confidential" | "structural";
@@ -63,12 +63,14 @@ export function ProPdfWorkspace({ tool }: { tool: ProToolDefinition }) {
   const ready = files.length >= requiredCount;
   const acceptedLabel = tool.slug === "powerpoint-para-pdf" ? "PPTX" : "PDF";
   const processing = status.type === "processing";
+  const largestFile = files.reduce<File | null>((largest, current) => !largest || current.size > largest.size ? current : largest, null);
+  const fileGuidance = largestFile ? getFileSizeGuidance(largestFile) : null;
 
   function validateSelection(selected: File[]) {
     const limit = tool.slug === "processamento-lote-pdf" ? 30 : tool.slug === "comparar-pdfs" ? 2 : 1;
     const filtered = selected.slice(0, limit);
     for (const file of filtered) {
-      if (file.size > MAX_FILE_SIZE) throw new Error(`${file.name} ultrapassa 80 MB.`);
+      if (!isFileWithinLimit(file, MAX_LOCAL_PDF_BYTES)) throw new Error(`${file.name} ultrapassa ${formatFileSizeLimit()}.`);
       if (tool.slug === "powerpoint-para-pdf") {
         if (!file.name.toLowerCase().endsWith(".pptx")) throw new Error("Selecione um arquivo PPTX.");
       } else if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
@@ -181,8 +183,10 @@ export function ProPdfWorkspace({ tool }: { tool: ProToolDefinition }) {
     <div className="drop-zone" onDragOver={(event) => { if (!processing) event.preventDefault(); }} onDrop={(event) => { event.preventDefault(); if (!processing) void selectFiles(event.dataTransfer.files); }}>
       <span className="drop-icon"><UploadCloud size={31} /></span><strong>{multiple ? (tool.slug === "comparar-pdfs" ? "Selecione dois PDFs" : "Selecione seus PDFs") : `Selecione seu ${acceptedLabel}`}</strong><span>Arraste para esta área ou escolha no dispositivo.</span>
       <button className="primary-button" type="button" disabled={processing} onClick={openFilePicker}><FileText size={18} /> Escolher {acceptedLabel}</button>
-      <input ref={fileInputRef} type="file" accept={tool.accept} multiple={multiple} hidden disabled={processing} onChange={(event) => void selectFiles(event.target.files)} /><small>Até 80 MB por arquivo · processamento local</small>
+      <input ref={fileInputRef} type="file" accept={tool.accept} multiple={multiple} hidden disabled={processing} onChange={(event) => void selectFiles(event.target.files)} /><small>Até {formatFileSizeLimit()} por arquivo · processamento local</small>
     </div>
+
+    {fileGuidance && fileGuidance.tier !== "standard" ? <div className="large-file-notice" role="status"><ShieldCheck size={16} /><span><strong>Arquivo grande</strong><small>{fileGuidance.message} Operações avançadas podem usar mais memória durante a exportação.</small></span></div> : null}
 
     {files.length ? <div className="selected-files pro-selected-files"><div className="selected-files-head"><strong>{files.length} arquivo(s)</strong><span>{tool.name}</span></div>{files.map((file, index) => <div className="selected-file-row" key={`${file.name}-${index}`}><FileText size={17} /><span><strong>{file.name}</strong><small>{humanSize(file.size)}</small></span><button type="button" disabled={processing} aria-label={`Remover ${file.name}`} onClick={() => removeFile(index)}><Trash2 size={15} /></button></div>)}</div> : null}
 

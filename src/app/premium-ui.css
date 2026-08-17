@@ -100,3 +100,67 @@ body.editor-focus-mode{overflow:hidden;background:#eef1f5!important}body.editor-
   .reference-editor-wrap .editor-topbar{display:grid!important;grid-template-columns:1fr auto!important;gap:8px!important}.reference-editor-wrap .editor-history{grid-column:2;grid-row:1}.reference-editor-wrap .editor-top-actions{grid-column:1/-1;justify-content:space-between!important}.reference-editor-wrap .editor-file-name strong{max-width:190px}.reference-editor-wrap .editor-body{display:grid!important;grid-template-columns:58px 92px minmax(330px,1fr)!important;overflow:auto!important}.reference-editor-wrap .editor-tools{position:sticky!important;left:0!important;z-index:15!important}.reference-editor-wrap .editor-pages{position:sticky!important;left:58px!important;z-index:14!important}.reference-editor-wrap .editor-tools button{min-height:50px!important}.reference-editor-wrap .editor-tools button span{display:none!important}.reference-editor-wrap .editor-stage-wrap{padding:20px!important}.reference-editor-wrap .editor-properties{min-width:420px!important}.premium-command-palette>footer{display:none}
 }
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
+
+
+/* Premium interaction layer: clear hierarchy, tactile controls and large-file guidance */
+:root{
+  --premium-border:#e3e7ed;
+  --premium-blue:#377bea;
+  --premium-focus:rgba(55,123,234,.22);
+}
+
+.primary-button,.process-button,.secondary-button,.header-cta{
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+  border-radius:12px;
+  transition:transform .18s var(--premium-ease),box-shadow .18s var(--premium-ease),border-color .18s ease,background .18s ease,filter .18s ease!important;
+}
+.primary-button,.process-button,.header-cta{
+  background:linear-gradient(135deg,#ff2a33 0%,#d30512 72%,#b9000c 100%)!important;
+  box-shadow:0 12px 26px rgba(207,0,13,.2)!important;
+}
+.primary-button:before,.process-button:before,.header-cta:before{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:-1;
+  background:linear-gradient(115deg,transparent 18%,rgba(255,255,255,.18) 48%,transparent 70%);
+  transform:translateX(-120%);
+  transition:transform .55s var(--premium-ease);
+}
+.primary-button:hover:before,.process-button:hover:not(:disabled):before,.header-cta:hover:before{transform:translateX(120%)}
+.primary-button:hover,.process-button:hover:not(:disabled),.header-cta:hover{filter:saturate(1.08);transform:translateY(-2px)!important;box-shadow:0 17px 34px rgba(207,0,13,.3)!important}
+.primary-button:active,.process-button:active:not(:disabled),.secondary-button:active,.header-cta:active{transform:translateY(0) scale(.985)!important}
+.secondary-button{border:1px solid var(--premium-border)!important;background:linear-gradient(180deg,#fff,#f8fafc)!important;box-shadow:0 5px 14px rgba(31,41,55,.045)!important;color:#3d4653!important}
+.secondary-button:hover{border-color:#f0a2a5!important;color:#c6000d!important;box-shadow:0 11px 22px rgba(31,41,55,.1)!important;transform:translateY(-2px)!important}
+.primary-button:focus-visible,.process-button:focus-visible,.secondary-button:focus-visible,.header-cta:focus-visible,.drop-zone:focus-within{outline:3px solid var(--premium-focus)!important;outline-offset:3px}
+
+.large-file-notice{display:flex;align-items:flex-start;gap:10px;margin:12px 0;padding:12px 14px;border:1px solid #f1d7b2;border-radius:13px;background:linear-gradient(135deg,#fffaf1,#fffdf8);color:#7a4b13;box-shadow:0 8px 18px rgba(148,94,21,.06);animation:premium-scale .28s var(--premium-ease) both}
+.large-file-notice>svg{flex:none;margin-top:1px;color:#bf771d}
+.large-file-notice span{display:grid;gap:3px;min-width:0}
+.large-file-notice strong{font-size:11px;letter-spacing:.01em}
+.large-file-notice small{font-size:10px;line-height:1.5;color:#886d4a}
+.editor-upload-limit{display:block;margin-top:8px;color:#8a919c;font-size:10px;font-weight:700}
+.editor-large-file-note{margin:16px 0 0}
+.reference-workspace-wrap .large-file-notice{margin:12px 18px}
+
+.workspace .drop-zone{transition:border-color .22s var(--premium-ease),background .22s var(--premium-ease),box-shadow .22s var(--premium-ease),transform .22s var(--premium-ease)!important}
+.workspace .drop-zone:hover{transform:translateY(-2px);box-shadow:var(--premium-shadow-hover)}
+.workspace .drop-zone .drop-icon{transition:transform .22s var(--premium-ease),background .22s ease,box-shadow .22s ease}
+.workspace .drop-zone:hover .drop-icon{transform:translateY(-3px) scale(1.03);box-shadow:0 12px 24px rgba(239,16,16,.1)}
+.workspace .status-message,.workspace .pro-info-card{animation:premium-scale .28s var(--premium-ease) both}
+.workspace .status-message svg{flex:none}
+
+@media(max-width:720px){
+  .reference-workspace-wrap .large-file-notice{margin-left:14px;margin-right:14px}
+  .large-file-notice{padding:11px 12px}
+}
+
+
+.upload-action-row{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:13px}
+.upload-action-row .primary-button,.upload-action-row .secondary-button{margin-top:0!important;min-height:42px}
+.paste-file-button{min-width:112px}
+@media(max-width:520px){.upload-action-row{display:grid;width:100%;grid-template-columns:1fr}.upload-action-row .primary-button,.upload-action-row .secondary-button{width:100%}}
+.memory-guidance{border-color:#d9e3f7;background:linear-gradient(135deg,#f6f9ff,#fff);color:#3e5a85}
+.memory-guidance small{color:#60779a}

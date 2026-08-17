@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { allTools } from "@/lib/all-tools";
 import { navigationGroups } from "@/lib/navigation";
 import { proTools } from "@/lib/pro-tools";
+import { guides } from "@/lib/guides";
 
 const CONTENT_UPDATED_AT = new Date("2026-08-17T17:45:00-03:00");
 
@@ -19,6 +20,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/termos",
     "/seguranca",
     "/acessibilidade",
+    "/guias",
+    "/sobre",
+    "/contato",
   ];
 
   return [
@@ -27,6 +31,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: CONTENT_UPDATED_AT,
       changeFrequency: route === "" || route === "/ferramentas" ? "weekly" as const : "monthly" as const,
       priority: route === "" ? 1 : route === "/ferramentas" ? .97 : route.startsWith("/ferramentas/") ? .94 : .56,
+    })),
+    ...guides.map((guide) => ({
+      url: `${base}/guias/${guide.slug}`,
+      lastModified: CONTENT_UPDATED_AT,
+      changeFrequency: "monthly" as const,
+      priority: .78,
     })),
     ...navigationGroups.map((group) => ({
       url: `${base}/categorias/${group.slug}`,

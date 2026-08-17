@@ -50,8 +50,8 @@ async function main() {
         const box = await main.boundingBox();
         assert.ok(box && box.width > 250, `${viewport.name}/${route.name}: conteúdo principal colapsado`);
         if (route.path.startsWith("/ferramentas/")) {
-          for (const forbidden of ["Sobre a ferramenta", "Dúvidas desta função", "Abrir guias práticos"]) {
-            assert.equal(await page.getByText(forbidden, { exact: true }).count(), 0, `${viewport.name}/${route.name}: conteúdo removido voltou (${forbidden})`);
+          for (const required of ["Sobre a ferramenta", "Dúvidas desta função", "Abrir guias práticos"]) {
+            assert.ok(await page.getByText(required, { exact: true }).count() > 0, `${viewport.name}/${route.name}: painel editorial sem ${required}`);
           }
         }
         await page.screenshot({ path: join(outDir, `${route.name}-${viewport.name}.png`), fullPage: true });
@@ -87,7 +87,7 @@ async function main() {
     await reducedContext.close();
 
     assert.deepEqual(issues, [], issues.join("\n"));
-    console.log(JSON.stringify({ ok: true, suite: "visual-audit", screenshots: viewports.length * routes.length + 2, outDir, cookiePopup: true, globalSearch: true, noEditorialNoise: true }));
+    console.log(JSON.stringify({ ok: true, suite: "visual-audit", screenshots: viewports.length * routes.length + 2, outDir, cookiePopup: true, globalSearch: true, editorialPanel: true }));
   } finally {
     await browser.close();
   }

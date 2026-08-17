@@ -10,6 +10,7 @@ import { ProLinksWorkspace } from "@/components/ProLinksWorkspace";
 import { ProNavigationWorkspace } from "@/components/ProNavigationWorkspace";
 import { ProPdfWorkspace } from "@/components/ProPdfWorkspace";
 import { ToolIcon } from "@/components/ToolIcon";
+import { ToolEditorialPanel } from "@/components/ToolEditorialPanel";
 import { ToolTelemetryBridge } from "@/components/ToolTelemetryBridge";
 import { UnifiedConverterWorkspace } from "@/components/UnifiedConverterWorkspace";
 import type { ConverterOutputSlug } from "@/components/UnifiedConverterWorkspace";
@@ -128,8 +129,8 @@ export default async function ToolPage({ params }: ToolPageProps) {
 
   const baseTool = tool as ToolDefinition;
   if (baseTool.slug === "editar-pdf") {
-    return <section className="reference-tool-page reference-editor-page">{schemas}<ToolTelemetryBridge toolSlug={baseTool.slug} />{heading}<div className="reference-editor-wrap"><PdfEditorExperienceSwitcher /></div>{inlineAd}</section>;
+    return <section className="reference-tool-page reference-editor-page">{schemas}<ToolTelemetryBridge toolSlug={baseTool.slug} />{heading}<div className="reference-editor-wrap"><PdfEditorExperienceSwitcher /></div><ToolEditorialPanel tool={baseTool} />{inlineAd}</section>;
   }
 
-  return <section className="reference-tool-page">{schemas}<ToolTelemetryBridge toolSlug={baseTool.slug} />{heading}<PremiumToolExperience toolName={baseTool.name} toolSlug={baseTool.slug} accent={baseTool.accent} /><div className="reference-workspace-wrap">{memorySafeToolSlugs.has(baseTool.slug) ? <MemorySafePdfWorkspace tool={baseTool} /> : <PdfToolWorkspace tool={baseTool} />}</div>{inlineAd}</section>;
+  return <section className="reference-tool-page">{schemas}<ToolTelemetryBridge toolSlug={baseTool.slug} />{heading}<PremiumToolExperience toolName={baseTool.name} toolSlug={baseTool.slug} accent={baseTool.accent} /><div className="reference-workspace-wrap">{memorySafeToolSlugs.has(baseTool.slug) ? <MemorySafePdfWorkspace tool={baseTool} /> : <PdfToolWorkspace tool={baseTool} />}</div><ToolEditorialPanel tool={baseTool} />{inlineAd}</section>;
 }

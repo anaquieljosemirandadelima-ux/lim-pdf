@@ -41,9 +41,9 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
       <section className="category-content-v3">
         <div className="container category-content-grid">
           <main>
-            <AdSlot placement="catalog-inline" format="horizontal" />
             <div className="category-tools-heading"><div><span>Ferramentas da categoria</span><h2>{group.title}</h2></div><strong>{groupTools.length} ferramentas</strong></div>
             <div className="tool-grid category-tool-grid category-tool-grid-v3">{groupTools.map((tool) => <ToolCard key={tool.slug} tool={tool} />)}</div>
+            <AdSlot placement="catalog-inline" format="horizontal" />
 
             <section className="category-how-v3">
               <h2>Como funciona</h2>
@@ -53,8 +53,8 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
             <section className="category-related-v3"><h2>Outras categorias</h2><div>{relatedGroups.map((item) => <Link key={item.slug} href={`/categorias/${item.slug}`}><span><CategoryIcon icon={item.icon} /></span><div><strong>{item.title}</strong><small>{item.description}</small></div><LucideClientIcon name="ArrowRight" size={16} /></Link>)}</div></section>
           </main>
           <aside className="category-sidebar-v3">
+            <div className="local-processing-card"><span><LucideClientIcon name="ShieldCheck" size={23} /></span><h2>Processamento 100% local</h2><p>Quando indicado na ferramenta, seus documentos são processados no navegador. Nada é enviado automaticamente ao servidor do LIM PDF.</p><ul><li><LucideClientIcon name="CheckCircle2" size={17} /> Não armazenamos arquivos</li><li><LucideClientIcon name="CheckCircle2" size={17} /> Privacidade explicada</li><li><LucideClientIcon name="CheckCircle2" size={17} /> Cache com expiração</li></ul></div>
             <AdSlot placement="catalog-side" format="rectangle" />
-            <div className="local-processing-card"><span><LucideClientIcon name="ShieldCheck" size={23} /></span><h2>Processamento 100% local</h2><p>Seus documentos são processados no navegador. Nada é enviado aos nossos servidores.</p><ul><li><LucideClientIcon name="CheckCircle2" size={17} /> Não armazenamos arquivos</li><li><LucideClientIcon name="CheckCircle2" size={17} /> Privacidade garantida</li><li><LucideClientIcon name="CheckCircle2" size={17} /> Cache com expiração</li></ul></div>
           </aside>
         </div>
       </section>

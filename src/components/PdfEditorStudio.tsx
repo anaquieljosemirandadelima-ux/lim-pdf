@@ -42,7 +42,37 @@ const MIN_SIZE = 12;
 const HISTORY_LIMIT = 40;
 
 type ToolMode = "select" | "text" | "comment" | "stamp" | "signature" | "highlight" | "redact" | "pen" | "line" | "arrow" | "rect" | "ellipse";
-type FontFamily = "Helvetica" | "Times" | "Courier";
+type StandardFontFamily = "Helvetica" | "Times" | "Courier";
+type GoogleFontFamily = "Roboto" | "Open Sans" | "Lato" | "Montserrat" | "Poppins" | "Merriweather" | "Nunito Sans" | "Source Sans 3";
+type FontFamily = StandardFontFamily | GoogleFontFamily;
+
+const GOOGLE_FONT_FAMILIES: GoogleFontFamily[] = ["Roboto", "Open Sans", "Lato", "Montserrat", "Poppins", "Merriweather", "Nunito Sans", "Source Sans 3"];
+
+function isGoogleFontFamily(fontFamily: FontFamily): fontFamily is GoogleFontFamily {
+  return GOOGLE_FONT_FAMILIES.includes(fontFamily as GoogleFontFamily);
+}
+
+function googleFontCssUrl(fontFamily: GoogleFontFamily, weight = "400;700") {
+  return `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontFamily).replace(/%20/g, "+")}:wght@${weight}&display=swap`;
+}
+
+function previewFontFamily(fontFamily: FontFamily) {
+  if (fontFamily === "Times") return "Georgia, serif";
+  if (fontFamily === "Courier") return "ui-monospace, SFMono-Regular, Menlo, monospace";
+  if (fontFamily === "Helvetica") return "Arial, Helvetica, sans-serif";
+  return `\"${fontFamily}\", Arial, sans-serif`;
+}
+
+async function fetchGoogleFontBytes(fontFamily: GoogleFontFamily, bold: boolean) {
+  const cssResponse = await fetch(googleFontCssUrl(fontFamily, bold ? "700" : "400"), { headers: { Accept: "text/css" } });
+  if (!cssResponse.ok) throw new Error("Google Fonts CSS indisponível");
+  const css = await cssResponse.text();
+  const fontUrl = css.match(/src:\s*url\(([^)]+)\)/)?.[1]?.replace(/["']/g, "");
+  if (!fontUrl) throw new Error("Arquivo de fonte não encontrado");
+  const fontResponse = await fetch(fontUrl);
+  if (!fontResponse.ok) throw new Error("Arquivo de fonte indisponível");
+  return new Uint8Array(await fontResponse.arrayBuffer());
+}
 type Point = { x: number; y: number };
 type PdfJsDocument = Awaited<ReturnType<typeof loadPdfJsDocument>>;
 
@@ -253,14 +283,35 @@ export function PdfEditorStudio() {
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
   const [stampText, setStampText] = useState("APROVADO");
   const [searchQuery, setSearchQuery] = useState("");
+  const [replacementText, setReplacementText] = useState("");
   const [searchIndex, setSearchIndex] = useState(-1);
   const [searchHit, setSearchHit] = useState<SearchHit | null>(null);
+  const [fontNotice, setFontNotice] = useState("");
+
+  useEffect(() => {
+    window.document.getElementById("editor-pdf-file-input")?.setAttribute("data-editor-ready", "true");
+  }, []);
 
   const page = pages[currentPage] || null;
+  const pageCount = page ? Math.max(pages.length, currentPage + 1, 1) : 0;
   const selected = objects.find((object) => object.id === selectedId) || null;
   const pageObjects = useMemo(() => page ? objects.filter((object) => object.pageId === page.id && !object.hidden).sort((a, b) => a.z - b.z) : [], [objects, page]);
   const layers = useMemo(() => page ? objects.filter((object) => object.pageId === page.id).sort((a, b) => b.z - a.z) : [], [objects, page]);
   const nextZ = useMemo(() => Math.max(0, ...objects.map((object) => object.z)) + 1, [objects]);
+
+  useEffect(() => {
+    if (!selected || !isTextObject(selected) || !isGoogleFontFamily(selected.fontFamily)) return;
+    const linkId = `lim-pdf-google-font-${selected.fontFamily.toLowerCase().replace(/\\s+/g, "-")}`;
+    if (window.document.getElementById(linkId)) return;
+    const link = window.document.createElement("link");
+    link.id = linkId;
+    link.rel = "stylesheet";
+    link.href = googleFontCssUrl(selected.fontFamily);
+    link.crossOrigin = "anonymous";
+    link.onload = () => setFontNotice(`${selected.fontFamily} carregada para visualização e exportação.`);
+    link.onerror = () => setFontNotice(`${selected.fontFamily} não pôde ser carregada; o PDF usará uma fonte padrão segura.`);
+    window.document.head.appendChild(link);
+  }, [selected]);
 
   const cleanupUrls = useCallback(() => {
     urlsRef.current.forEach((url) => URL.revokeObjectURL(url));
@@ -361,7 +412,7 @@ export function PdfEditorStudio() {
         setUndoStack([]);
         setRedoStack([]);
         setStatus("ready");
-        setMessage(restored ? "Sessão recuperada. Studio pronto." : "PDF pronto. Escolha uma ferramenta e trabalhe diretamente na página.");
+        setMessage("PDF pronto. Escolha uma ferramenta e trabalhe diretamente na página.");
       } catch {
         if (!cancelled) {
           setStatus("error");
@@ -370,7 +421,7 @@ export function PdfEditorStudio() {
       }
     })();
     return () => { cancelled = true; };
-  }, [file, restored]);
+  }, [file]);
 
   function eventPoint(event: React.PointerEvent<HTMLElement>) {
     if (!page || !stageRef.current) return null;
@@ -583,21 +634,45 @@ export function PdfEditorStudio() {
     setSelectedId(null);
   }
 
-  function findNextText() {
+  function searchMatch() {
     const query = searchQuery.trim().toLocaleLowerCase("pt-BR");
-    if (!query) return setMessage("Digite um texto para localizar.");
+    if (!query) { setMessage("Digite um texto para localizar."); return null; }
     const matches = detectedText.filter((item) => item.text.toLocaleLowerCase("pt-BR").includes(query));
-    if (!matches.length) { setSearchHit(null); return setMessage("Texto não encontrado na camada pesquisável."); }
+    if (!matches.length) { setSearchHit(null); setMessage("Texto não encontrado na camada pesquisável."); return null; }
     const nextIndex = (searchIndex + 1) % matches.length;
     const match = matches[nextIndex];
     const pageIndex = pages.findIndex((item) => item.sourceIndex === match.sourceIndex);
-    if (pageIndex < 0) return;
+    if (pageIndex < 0) return null;
     const targetPage = pages[pageIndex];
     setCurrentPage(pageIndex);
     setSelectedId(null);
     setSearchIndex(nextIndex);
     setSearchHit({ pageId: targetPage.id, x: match.x, y: match.y, width: match.width, height: match.height });
-    setMessage(`Ocorrência ${nextIndex + 1} de ${matches.length}. Para substituir texto existente com sanitização, use o Modo preciso.`);
+    return { match, matches, targetPage, nextIndex };
+  }
+
+  function findNextText() {
+    const result = searchMatch();
+    if (!result) return;
+    setMessage(`Ocorrência ${result.nextIndex + 1} de ${result.matches.length}.`);
+  }
+
+  function replaceNextText() {
+    const replacement = replacementText.trim();
+    if (!replacement) return setMessage("Digite o texto de substituição antes de aplicar.");
+    const result = searchMatch();
+    if (!result) return;
+    const { match, matches, targetPage, nextIndex } = result;
+    const redactionId = crypto.randomUUID();
+    const textId = crypto.randomUUID();
+    const height = Math.max(12, match.height * 1.15);
+    pushHistory();
+    setObjects((current) => [...current,
+      { id: redactionId, pageId: targetPage.id, kind: "redact", x: match.x - 1, y: match.y - 1, width: Math.max(match.width + 2, replacement.length * match.height * .52), height, z: nextZ, opacity: 1, rotation: 0, fill: "#000000", stroke: "#000000", strokeWidth: 0 },
+      { id: textId, pageId: targetPage.id, kind: "text", text: replacement, x: match.x + 2, y: match.y, width: Math.max(match.width, replacement.length * match.height * .52), height, z: nextZ + 1, opacity: 1, rotation: 0, fontSize: Math.max(8, match.height * .78), fontFamily: "Helvetica", bold: false, italic: false, color: "#111827" },
+    ]);
+    setSelectedId(textId);
+    setMessage(`Texto substituído localmente. Ocorrência ${nextIndex + 1} de ${matches.length}; o conteúdo anterior será sanitizado no PDF exportado.`);
   }
 
   async function exportPdf() {
@@ -607,17 +682,31 @@ export function PdfEditorStudio() {
     let renderDocument: PdfJsDocument | null = null;
     try {
       const pdfLib = await import("pdf-lib");
+      const fontkitModule = await import("@pdf-lib/fontkit");
       const sourceBytes = await file.arrayBuffer();
       const sourcePdf = await pdfLib.PDFDocument.load(sourceBytes.slice(0));
       const output = await pdfLib.PDFDocument.create();
+      output.registerFontkit(fontkitModule);
       const fontCache = new Map<string, Awaited<ReturnType<typeof output.embedFont>>>();
       const getFont = async (object: TextObject) => {
+        const fontKey = `${object.fontFamily}:${object.bold ? "700" : "400"}`;
+        if (fontCache.has(fontKey)) return fontCache.get(fontKey)!;
+        if (isGoogleFontFamily(object.fontFamily)) {
+          try {
+            const font = await output.embedFont(await fetchGoogleFontBytes(object.fontFamily, object.bold), { subset: true });
+            fontCache.set(fontKey, font);
+            setFontNotice(`${object.fontFamily} incorporada no PDF exportado.`);
+            return font;
+          } catch {
+            setFontNotice(`${object.fontFamily} não pôde ser incorporada; foi aplicado fallback Helvetica.`);
+          }
+        }
         let fontName: string = pdfLib.StandardFonts.Helvetica;
         if (object.fontFamily === "Helvetica") fontName = object.bold && object.italic ? pdfLib.StandardFonts.HelveticaBoldOblique : object.bold ? pdfLib.StandardFonts.HelveticaBold : object.italic ? pdfLib.StandardFonts.HelveticaOblique : pdfLib.StandardFonts.Helvetica;
         if (object.fontFamily === "Times") fontName = object.bold && object.italic ? pdfLib.StandardFonts.TimesRomanBoldItalic : object.bold ? pdfLib.StandardFonts.TimesRomanBold : object.italic ? pdfLib.StandardFonts.TimesRomanItalic : pdfLib.StandardFonts.TimesRoman;
         if (object.fontFamily === "Courier") fontName = object.bold && object.italic ? pdfLib.StandardFonts.CourierBoldOblique : object.bold ? pdfLib.StandardFonts.CourierBold : object.italic ? pdfLib.StandardFonts.CourierOblique : pdfLib.StandardFonts.Courier;
-        if (!fontCache.has(fontName)) fontCache.set(fontName, await output.embedFont(fontName));
-        return fontCache.get(fontName)!;
+        if (!fontCache.has(fontKey)) fontCache.set(fontKey, await output.embedFont(fontName));
+        return fontCache.get(fontKey)!;
       };
       const hasRedactions = objects.some((object) => object.kind === "redact");
       if (hasRedactions) renderDocument = await loadPdfJsDocument(sourceBytes.slice(0));
@@ -727,16 +816,16 @@ export function PdfEditorStudio() {
   }
 
   if (!file) {
-    return <section className="studio-upload-card"><span className="studio-upload-icon"><UploadCloud size={32} /></span><span className="studio-kicker"><Sparkles size={14} /> Studio 2.0</span><h2>Edite o PDF como em um aplicativo</h2><p>Desenho livre, formas, setas, tipografia, carimbos, comentários, imagens, assinatura e redação segura — tudo no navegador.</p><button className="primary-button large-button" type="button" onClick={() => pdfInputRef.current?.click()}><FileText size={18} /> Abrir PDF</button><input ref={pdfInputRef} hidden type="file" accept="application/pdf" onChange={(event) => event.target.files?.[0] && openFile(event.target.files[0])} /><div className="studio-upload-features"><span><ShieldCheck size={15} /> Processamento local</span><span><PencilLine size={15} /> Ferramentas criativas</span><span><Grid2X2 size={15} /> Guias inteligentes</span></div></section>;
+    return <section className="studio-upload-card"><span className="studio-upload-icon"><UploadCloud size={32} /></span><span className="studio-kicker"><Sparkles size={14} /> Studio 2.0</span><h2>Edite o PDF como em um aplicativo</h2><p>Desenho livre, formas, setas, tipografia, carimbos, comentários, imagens, assinatura e redação segura — tudo no navegador.</p><button className="primary-button large-button" type="button" onClick={() => pdfInputRef.current?.click()}><FileText size={18} /> Abrir PDF</button><input id="editor-pdf-file-input" data-editor-ready="false" ref={pdfInputRef} hidden type="file" accept="application/pdf" onClick={(event) => { event.currentTarget.value = ""; }} onChange={(event) => event.target.files?.[0] && openFile(event.target.files[0])} /><div className="studio-upload-features"><span><ShieldCheck size={15} /> Processamento local</span><span><PencilLine size={15} /> Ferramentas criativas</span><span><Grid2X2 size={15} /> Guias inteligentes</span></div></section>;
   }
 
   return <section className="studio-shell">
     <header className="studio-topbar"><div className="studio-file"><FileText size={18} /><span><strong>{file.name}</strong><small>{cached ? "Arquivo temporário protegido neste navegador" : "Sessão local"}{restored ? " · recuperada" : ""}</small></span></div><div className="studio-history"><button type="button" onClick={undo} disabled={!undoStack.length}><Undo2 size={16} /></button><button type="button" onClick={redo} disabled={!redoStack.length}><Redo2 size={16} /></button></div><div className="studio-view-controls"><button type="button" className={grid ? "active" : ""} onClick={() => setGrid((value) => !value)}><Grid2X2 size={15} /> Grade</button><button type="button" className={snap ? "active" : ""} onClick={() => setSnap((value) => !value)}><SlidersHorizontal size={15} /> Snap</button><div><button type="button" onClick={() => setZoom((value) => Math.max(.5, Number((value - .1).toFixed(2))))}>−</button><span>{Math.round(zoom * 100)}%</span><button type="button" onClick={() => setZoom((value) => Math.min(1.7, Number((value + .1).toFixed(2))))}>+</button></div></div><div className="studio-top-actions"><button className="secondary-button" type="button" onClick={closeDocument}>Fechar</button><button className="primary-button" type="button" onClick={exportPdf} disabled={status === "loading" || status === "exporting"}>{status === "exporting" ? <LoaderCircle className="spin" size={16} /> : <Download size={16} />} Baixar PDF</button></div></header>
     <div className="studio-body">
       <aside className="studio-tools">{([ ["select","Selecionar",MousePointer2], ["text","Texto",Type], ["pen","Caneta",PencilLine], ["highlight","Destacar",PencilLine], ["line","Linha",ArrowRight], ["arrow","Seta",ArrowRight], ["rect","Retângulo",Grid2X2], ["ellipse","Círculo",CircleOff], ["redact","Redigir",ShieldCheck], ["comment","Comentário",FileText], ["stamp","Carimbo",CheckCircle2], ["signature","Assinar",Signature] ] as const).map(([id,label,Icon]) => <button key={id} type="button" className={tool === id ? "active" : ""} onClick={() => setTool(id)}><Icon size={19} /><span>{label}</span></button>)}<button type="button" onClick={() => imageInputRef.current?.click()}><ImagePlus size={19} /><span>Imagem</span></button><input ref={imageInputRef} hidden type="file" accept="image/png,image/jpeg" onChange={(event) => event.target.files?.[0] && void addImage(event.target.files[0])} /></aside>
-      <aside className="studio-pages"><div className="studio-pages-heading"><strong>Páginas</strong><span>{pages.length}</span></div><div className="studio-page-actions"><button type="button" onClick={() => movePage(-1)} disabled={currentPage === 0}><ArrowUp size={13} /></button><button type="button" onClick={() => movePage(1)} disabled={currentPage === pages.length - 1}><ArrowDown size={13} /></button><button type="button" onClick={duplicatePage}>Duplicar</button><button type="button" onClick={insertBlankPage}>Em branco</button><button type="button" onClick={deletePage} disabled={pages.length <= 1}>Excluir</button></div><div className="studio-page-list">{pages.map((item,index) => <button type="button" key={item.id} className={index === currentPage ? "active" : ""} onClick={() => { setCurrentPage(index); setSelectedId(null); setSearchHit(null); }}><img src={item.previewUrl} alt={`Página ${index + 1}`} /><span>{index + 1}</span>{item.blank ? <small>em branco</small> : null}</button>)}</div></aside>
-      <main className={`studio-canvas-wrap ${grid ? "show-grid" : ""}`}>{status === "loading" ? <div className="studio-loading"><LoaderCircle className="spin" size={26} /><strong>Preparando Studio</strong><p>{message}</p></div> : null}{page ? <div className="studio-stage" ref={stageRef} style={{ width: page.width * zoom, height: page.height * zoom }} onPointerDown={beginStage} onPointerMove={moveStage} onPointerUp={endStage} onPointerCancel={endStage}><img className="studio-page-image" src={page.previewUrl} alt={`Página ${currentPage + 1}`} draggable={false} />{guideX !== null ? <span className="studio-guide vertical" style={{ left: guideX * page.scale * zoom }} /> : null}{guideY !== null ? <span className="studio-guide horizontal" style={{ bottom: guideY * page.scale * zoom }} /> : null}{searchHit?.pageId === page.id ? <span className="studio-search-hit" style={{ left: searchHit.x * page.scale * zoom, top: (pdfSize(page).height - searchHit.y - searchHit.height) * page.scale * zoom, width: searchHit.width * page.scale * zoom, height: searchHit.height * page.scale * zoom }} /> : null}{pageObjects.map((object) => <button key={object.id} type="button" className={`studio-object kind-${object.kind} ${selectedId === object.id ? "selected" : ""} ${object.locked ? "locked" : ""}`} style={objectStyle(object,page,zoom)} title={objectLabel(object)} onPointerDown={(event) => beginDrag(event,object,"move")} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag}>{isTextObject(object) ? <span className="studio-text" style={{ color: object.color, fontSize: object.fontSize * page.scale * zoom, fontFamily: object.fontFamily === "Times" ? "Georgia,serif" : object.fontFamily === "Courier" ? "monospace" : "Arial,sans-serif", fontWeight: object.bold ? 800 : 400, fontStyle: object.italic ? "italic" : "normal" }}>{object.text}</span> : null}{object.kind === "highlight" ? <span className="studio-area" style={{ background: object.fill }} /> : null}{object.kind === "redact" ? <span className="studio-area studio-redaction">REDACTED</span> : null}{object.kind === "rect" ? <span className="studio-shape-rect" style={{ borderColor: object.stroke, borderWidth: object.strokeWidth }} /> : null}{object.kind === "ellipse" ? <span className="studio-shape-ellipse" style={{ borderColor: object.stroke, borderWidth: object.strokeWidth }} /> : null}{object.kind === "line" || object.kind === "arrow" ? <svg className="studio-line" viewBox="0 0 100 100" preserveAspectRatio="none"><line x1="0" y1={object.flipY ? 0 : 100} x2="100" y2={object.flipY ? 100 : 0} stroke={object.stroke} strokeWidth={Math.max(1,object.strokeWidth * 2)} vectorEffect="non-scaling-stroke" />{object.kind === "arrow" ? <polyline points={object.flipY ? "84,78 100,100 78,84" : "80,16 100,0 84,22"} fill="none" stroke={object.stroke} strokeWidth={Math.max(1,object.strokeWidth * 2)} vectorEffect="non-scaling-stroke" /> : null}</svg> : null}{object.kind === "pen" ? <svg className="studio-pen" viewBox={`0 0 ${Math.max(1,object.width)} ${Math.max(1,object.height)}`} preserveAspectRatio="none"><polyline points={object.points.map((point) => `${point.x * object.width},${(1-point.y) * object.height}`).join(" ")} fill="none" stroke={object.stroke} strokeWidth={object.strokeWidth} vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" /></svg> : null}{object.kind === "image" || object.kind === "signature" ? <img src={object.dataUrl} alt={objectLabel(object)} draggable={false} /> : null}{selectedId === object.id && !object.locked && object.kind !== "pen" ? <span className="studio-resize-handle" onPointerDown={(event) => beginDrag(event,object,"resize")} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} /> : null}</button>)}</div> : null}<div className="studio-canvas-status"><span>{tool === "select" ? "Selecione um elemento para editar" : `Ferramenta ${tool}: clique e arraste na página`}</span><span>Página {currentPage + 1} de {pages.length}</span></div></main>
-      <aside className="studio-properties"><div className="studio-properties-head"><strong>Propriedades</strong>{selected ? <button type="button" onClick={deleteSelected}><Trash2 size={14} /> Excluir</button> : null}</div>{selected ? <div className="studio-properties-content"><div className="studio-object-summary"><span>{objectLabel(selected)}</span><div><button type="button" onClick={duplicateSelected}><CopyPlus size={14} /> Duplicar</button><button type="button" onClick={() => updateSelected({ locked: !selected.locked } as Partial<StudioObject>)}><LockKeyhole size={14} /> {selected.locked ? "Desbloquear" : "Bloquear"}</button><button type="button" onClick={() => updateSelected({ hidden: !selected.hidden } as Partial<StudioObject>)}><CircleOff size={14} /> {selected.hidden ? "Mostrar" : "Ocultar"}</button></div></div>{isTextObject(selected) ? <><label><span>Conteúdo</span><textarea value={selected.text} disabled={selected.locked} onChange={(event) => setObjects((current) => current.map((object) => object.id === selected.id && isTextObject(object) ? { ...object, text: event.target.value } : object))} /></label><div className="studio-two-cols"><label><span>Fonte</span><select value={selected.fontFamily} disabled={selected.locked} onChange={(event) => updateSelected({ fontFamily: event.target.value as FontFamily } as Partial<StudioObject>)}><option>Helvetica</option><option>Times</option><option>Courier</option></select></label><label><span>Tamanho</span><input type="number" min="6" max="120" value={selected.fontSize} disabled={selected.locked} onChange={(event) => updateSelected({ fontSize: Number(event.target.value) || 12 } as Partial<StudioObject>)} /></label></div><div className="studio-format-row"><button type="button" className={selected.bold ? "active" : ""} onClick={() => updateSelected({ bold: !selected.bold } as Partial<StudioObject>)}>B</button><button type="button" className={selected.italic ? "active" : ""} onClick={() => updateSelected({ italic: !selected.italic } as Partial<StudioObject>)}><em>I</em></button></div><label><span>Cor do texto</span><input type="color" value={selected.color} disabled={selected.locked} onChange={(event) => updateSelected({ color: event.target.value } as Partial<StudioObject>)} /></label></> : null}{(selected.kind === "rect" || selected.kind === "ellipse" || selected.kind === "line" || selected.kind === "arrow" || selected.kind === "pen") ? <div className="studio-two-cols"><label><span>Cor</span><input type="color" value={selected.stroke} onChange={(event) => updateSelected({ stroke: event.target.value } as Partial<StudioObject>)} /></label><label><span>Espessura</span><input type="number" min="1" max="16" value={selected.strokeWidth} onChange={(event) => updateSelected({ strokeWidth: Number(event.target.value) || 1 } as Partial<StudioObject>)} /></label></div> : null}{selected.kind === "highlight" ? <label><span>Cor do destaque</span><input type="color" value={selected.fill} onChange={(event) => updateSelected({ fill: event.target.value } as Partial<StudioObject>)} /></label> : null}<div className="studio-two-cols">{(isTextObject(selected) || selected.kind === "image" || selected.kind === "signature" || selected.kind === "rect") ? <label><span>Rotação</span><input type="number" min="-180" max="180" value={selected.rotation} onChange={(event) => updateSelected({ rotation: Number(event.target.value) || 0 } as Partial<StudioObject>)} /></label> : <span /> }<label><span>Opacidade</span><input type="range" min="0.1" max="1" step="0.05" value={selected.opacity} onChange={(event) => updateSelected({ opacity: Number(event.target.value) } as Partial<StudioObject>)} /></label></div></div> : <div className="studio-empty-properties"><MousePointer2 size={26} /><strong>Nada selecionado</strong><p>Escolha uma ferramenta à esquerda ou clique em uma camada da página.</p></div>}<div className="studio-find-replace"><div><Search size={15} /><strong>Localizar texto</strong></div><input value={searchQuery} onChange={(event) => { setSearchQuery(event.target.value); setSearchIndex(-1); }} placeholder="Buscar no PDF" /><button type="button" onClick={findNextText}>Localizar próxima ocorrência</button><small>Para substituir texto já existente com sanitização, use o Modo preciso.</small></div><div className="studio-stamps"><strong>Carimbos</strong><select value={stampText} onChange={(event) => setStampText(event.target.value)}><option>APROVADO</option><option>ASSINADO</option><option>CONFIDENCIAL</option><option>REVISADO</option><option>URGENTE</option><option>CANCELADO</option></select><button type="button" onClick={() => setTool("stamp")}>Inserir carimbo</button></div><div className="studio-signature"><strong>Assinatura</strong><SignaturePad onChange={setSignatureDataUrl} /><button type="button" disabled={!signatureDataUrl} onClick={() => setTool("signature")}>Inserir na página</button></div><div className="studio-layers"><div><strong>Camadas</strong><span>{layers.length}</span></div>{layers.length ? layers.map((object) => <button type="button" className={selectedId === object.id ? "active" : ""} key={object.id} onClick={() => setSelectedId(object.id)}><span>{objectLabel(object)}</span><small>{object.locked ? "Bloqueada" : object.hidden ? "Oculta" : "Editável"}</small></button>) : <small>Nenhuma camada nesta página.</small>}</div></aside>
+      <aside className="studio-pages"><div className="studio-pages-heading"><strong>Páginas</strong><span key={`page-count-${pageCount}`} aria-live="polite">{pageCount}</span></div><div className="studio-page-actions"><button type="button" onClick={() => movePage(-1)} disabled={currentPage === 0}><ArrowUp size={13} /></button><button type="button" onClick={() => movePage(1)} disabled={currentPage === pageCount - 1}><ArrowDown size={13} /></button><button type="button" onClick={duplicatePage}>Duplicar</button><button type="button" onClick={insertBlankPage}>Em branco</button><button type="button" onClick={deletePage} disabled={pageCount <= 1}>Excluir</button></div><div className="studio-page-list">{pages.map((item,index) => <button type="button" key={item.id} className={index === currentPage ? "active" : ""} onClick={() => { setCurrentPage(index); setSelectedId(null); setSearchHit(null); }}><img src={item.previewUrl} alt={`Página ${index + 1}`} /><span>{index + 1}</span>{item.blank ? <small>em branco</small> : null}</button>)}</div></aside>
+      <main className={`studio-canvas-wrap ${grid ? "show-grid" : ""}`}>{status === "loading" ? <div className="studio-loading"><LoaderCircle className="spin" size={26} /><strong>Preparando Studio</strong><p>{message}</p></div> : null}{page ? <div className="studio-stage" ref={stageRef} style={{ width: page.width * zoom, height: page.height * zoom }} onPointerDown={beginStage} onPointerMove={moveStage} onPointerUp={endStage} onPointerCancel={endStage}><img className="studio-page-image" src={page.previewUrl} alt={`Página ${currentPage + 1}`} draggable={false} />{guideX !== null ? <span className="studio-guide vertical" style={{ left: guideX * page.scale * zoom }} /> : null}{guideY !== null ? <span className="studio-guide horizontal" style={{ bottom: guideY * page.scale * zoom }} /> : null}{searchHit?.pageId === page.id ? <span className="studio-search-hit" style={{ left: searchHit.x * page.scale * zoom, top: (pdfSize(page).height - searchHit.y - searchHit.height) * page.scale * zoom, width: searchHit.width * page.scale * zoom, height: searchHit.height * page.scale * zoom }} /> : null}{pageObjects.map((object) => <button key={object.id} type="button" className={`studio-object kind-${object.kind} ${selectedId === object.id ? "selected" : ""} ${object.locked ? "locked" : ""}`} style={objectStyle(object,page,zoom)} title={objectLabel(object)} onPointerDown={(event) => beginDrag(event,object,"move")} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag}>{isTextObject(object) ? <span className="studio-text" style={{ color: object.color, fontSize: object.fontSize * page.scale * zoom, fontFamily: previewFontFamily(object.fontFamily), fontWeight: object.bold ? 800 : 400, fontStyle: object.italic ? "italic" : "normal" }}>{object.text}</span> : null}{object.kind === "highlight" ? <span className="studio-area" style={{ background: object.fill }} /> : null}{object.kind === "redact" ? <span className="studio-area studio-redaction">REDACTED</span> : null}{object.kind === "rect" ? <span className="studio-shape-rect" style={{ borderColor: object.stroke, borderWidth: object.strokeWidth }} /> : null}{object.kind === "ellipse" ? <span className="studio-shape-ellipse" style={{ borderColor: object.stroke, borderWidth: object.strokeWidth }} /> : null}{object.kind === "line" || object.kind === "arrow" ? <svg className="studio-line" viewBox="0 0 100 100" preserveAspectRatio="none"><line x1="0" y1={object.flipY ? 0 : 100} x2="100" y2={object.flipY ? 100 : 0} stroke={object.stroke} strokeWidth={Math.max(1,object.strokeWidth * 2)} vectorEffect="non-scaling-stroke" />{object.kind === "arrow" ? <polyline points={object.flipY ? "84,78 100,100 78,84" : "80,16 100,0 84,22"} fill="none" stroke={object.stroke} strokeWidth={Math.max(1,object.strokeWidth * 2)} vectorEffect="non-scaling-stroke" /> : null}</svg> : null}{object.kind === "pen" ? <svg className="studio-pen" viewBox={`0 0 ${Math.max(1,object.width)} ${Math.max(1,object.height)}`} preserveAspectRatio="none"><polyline points={object.points.map((point) => `${point.x * object.width},${(1-point.y) * object.height}`).join(" ")} fill="none" stroke={object.stroke} strokeWidth={object.strokeWidth} vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" /></svg> : null}{object.kind === "image" || object.kind === "signature" ? <img src={object.dataUrl} alt={objectLabel(object)} draggable={false} /> : null}{selectedId === object.id && !object.locked && object.kind !== "pen" ? <span className="studio-resize-handle" onPointerDown={(event) => beginDrag(event,object,"resize")} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} /> : null}</button>)}</div> : null}<div className="studio-canvas-status"><span>{tool === "select" ? "Selecione um elemento para editar" : `Ferramenta ${tool}: clique e arraste na página`}</span><span key={`page-status-${page?.id || "empty"}-${currentPage}-${pageCount}`} aria-live="polite">Página {page ? currentPage + 1 : 0} de {pageCount}</span></div></main>
+      <aside className="studio-properties"><div className="studio-properties-head"><strong>Propriedades</strong>{selected ? <button type="button" onClick={deleteSelected}><Trash2 size={14} /> Excluir</button> : null}</div>{selected ? <div className="studio-properties-content"><div className="studio-object-summary"><span>{objectLabel(selected)}</span><div><button type="button" onClick={duplicateSelected}><CopyPlus size={14} /> Duplicar</button><button type="button" onClick={() => updateSelected({ locked: !selected.locked } as Partial<StudioObject>)}><LockKeyhole size={14} /> {selected.locked ? "Desbloquear" : "Bloquear"}</button><button type="button" onClick={() => updateSelected({ hidden: !selected.hidden } as Partial<StudioObject>)}><CircleOff size={14} /> {selected.hidden ? "Mostrar" : "Ocultar"}</button></div></div>{isTextObject(selected) ? <><label><span>Conteúdo</span><textarea value={selected.text} disabled={selected.locked} onChange={(event) => setObjects((current) => current.map((object) => object.id === selected.id && isTextObject(object) ? { ...object, text: event.target.value } : object))} /></label><div className="studio-two-cols"><label><span>Fonte</span><select value={selected.fontFamily} disabled={selected.locked} onChange={(event) => { setFontNotice(""); updateSelected({ fontFamily: event.target.value as FontFamily } as Partial<StudioObject>); }}><optgroup label="PDF seguro"><option>Helvetica</option><option>Times</option><option>Courier</option></optgroup><optgroup label="Google Fonts · Premium">{GOOGLE_FONT_FAMILIES.map((family) => <option key={family} value={family}>{family}</option>)}</optgroup></select></label><label><span>Tamanho</span><input type="number" min="6" max="120" value={selected.fontSize} disabled={selected.locked} onChange={(event) => updateSelected({ fontSize: Number(event.target.value) || 12 } as Partial<StudioObject>)} /></label></div><div className="studio-format-row"><button type="button" className={selected.bold ? "active" : ""} onClick={() => updateSelected({ bold: !selected.bold } as Partial<StudioObject>)}>B</button><button type="button" className={selected.italic ? "active" : ""} onClick={() => updateSelected({ italic: !selected.italic } as Partial<StudioObject>)}><em>I</em></button></div><label><span>Cor do texto</span><input type="color" value={selected.color} disabled={selected.locked} onChange={(event) => updateSelected({ color: event.target.value } as Partial<StudioObject>)} /></label></> : null}{(selected.kind === "rect" || selected.kind === "ellipse" || selected.kind === "line" || selected.kind === "arrow" || selected.kind === "pen") ? <div className="studio-two-cols"><label><span>Cor</span><input type="color" value={selected.stroke} onChange={(event) => updateSelected({ stroke: event.target.value } as Partial<StudioObject>)} /></label><label><span>Espessura</span><input type="number" min="1" max="16" value={selected.strokeWidth} onChange={(event) => updateSelected({ strokeWidth: Number(event.target.value) || 1 } as Partial<StudioObject>)} /></label></div> : null}{selected.kind === "highlight" ? <label><span>Cor do destaque</span><input type="color" value={selected.fill} onChange={(event) => updateSelected({ fill: event.target.value } as Partial<StudioObject>)} /></label> : null}<div className="studio-two-cols">{(isTextObject(selected) || selected.kind === "image" || selected.kind === "signature" || selected.kind === "rect") ? <label><span>Rotação</span><input type="number" min="-180" max="180" value={selected.rotation} onChange={(event) => updateSelected({ rotation: Number(event.target.value) || 0 } as Partial<StudioObject>)} /></label> : <span /> }<label><span>Opacidade</span><input type="range" min="0.1" max="1" step="0.05" value={selected.opacity} onChange={(event) => updateSelected({ opacity: Number(event.target.value) } as Partial<StudioObject>)} /></label></div>{fontNotice ? <small className="studio-font-notice" role="status">{fontNotice}</small> : null}</div> : <div className="studio-empty-properties"><MousePointer2 size={26} /><strong>Nada selecionado</strong><p>Escolha uma ferramenta à esquerda ou clique em uma camada da página.</p></div>}<div className="studio-find-replace"><div><Search size={15} /><strong>Localizar texto</strong></div><input value={searchQuery} onChange={(event) => { setSearchQuery(event.target.value); setSearchIndex(-1); }} placeholder="Buscar no PDF" /><button type="button" onClick={findNextText}>Localizar próxima ocorrência</button><input value={replacementText} onChange={(event) => setReplacementText(event.target.value)} placeholder="Substituir por" /><button type="button" onClick={replaceNextText}>Substituir ocorrência</button><small>A substituição é local: o conteúdo anterior é rasterizado e sanitizado no PDF exportado.</small></div><div className="studio-stamps"><strong>Carimbos</strong><select value={stampText} onChange={(event) => setStampText(event.target.value)}><option>APROVADO</option><option>ASSINADO</option><option>CONFIDENCIAL</option><option>REVISADO</option><option>URGENTE</option><option>CANCELADO</option></select><button type="button" onClick={() => setTool("stamp")}>Inserir carimbo</button></div><div className="studio-signature"><strong>Assinatura</strong><SignaturePad onChange={setSignatureDataUrl} /><button type="button" disabled={!signatureDataUrl} onClick={() => setTool("signature")}>Inserir na página</button></div><div className="studio-layers"><div><strong>Camadas</strong><span>{layers.length}</span></div>{layers.length ? layers.map((object) => <button type="button" className={selectedId === object.id ? "active" : ""} key={object.id} onClick={() => setSelectedId(object.id)}><span>{objectLabel(object)}</span><small>{object.locked ? "Bloqueada" : object.hidden ? "Oculta" : "Editável"}</small></button>) : <small>Nenhuma camada nesta página.</small>}</div></aside>
     </div>
     <footer className={`studio-status ${status === "error" ? "error" : ""}`}><span>{status === "exporting" ? <LoaderCircle className="spin" size={16} /> : <CheckCircle2 size={16} />}{message}</span><span><ShieldCheck size={15} /> Processamento local e privado</span></footer>
   </section>;

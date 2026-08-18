@@ -461,7 +461,7 @@ body:has(.reference-editor-page) .minimal-site-footer{display:none!important}
   align-items:center!important;
   gap:5px!important;
 }
-.studio-view-controls>button{display:none!important}
+.studio-view-controls>button{display:inline-flex!important;align-items:center!important;gap:5px!important;min-height:30px!important;padding:0 8px!important;border:1px solid #e4e7ec!important;border-radius:8px!important;background:#fafbfc!important;color:#3e4653!important;font-size:9px!important;font-weight:800!important}
 .studio-view-controls>div{
   min-height:38px!important;
   display:flex!important;
@@ -800,8 +800,8 @@ body:has(.reference-editor-page) .minimal-site-footer{display:none!important}
   font-size:8.5px!important;
   font-weight:750!important;
 }
-.studio-find-replace{display:none!important}
-.studio-stamps{display:none!important}
+.studio-find-replace{display:block!important}
+.studio-stamps{display:block!important}
 .studio-layers>div:first-child{
   display:flex!important;
   align-items:center!important;
@@ -895,10 +895,10 @@ html[data-limpdf-theme="dark"] .studio-pages{background:#171a20!important;border
   .sidebar-item-wrap>a.active::before{left:-13px!important}
   .reference-main{width:calc(100% - 90px)!important;margin-left:90px!important;padding:16px 10px 22px!important}
   .reference-editor-page .reference-tool-heading{padding-right:190px!important}
-  .studio-body{grid-template-columns:145px minmax(330px,1fr)!important;grid-template-areas:"toolbar toolbar" "pages canvas"!important}
-  .studio-properties{display:none!important}
+  .studio-body{grid-template-columns:145px minmax(330px,1fr)!important;grid-template-rows:auto minmax(670px,1fr) auto!important;grid-template-areas:"toolbar toolbar" "pages canvas" "properties properties"!important}
+  .studio-properties{display:block!important;max-height:420px!important;border-top:1px solid #e6e9ee!important;border-left:0!important}
   .studio-topbar{grid-template-columns:minmax(180px,1fr) auto auto!important}
-  .studio-view-controls{display:none!important}
+  .studio-view-controls{display:flex!important;grid-column:1 / -1!important;justify-content:flex-start!important;overflow-x:auto!important}
 }
 
 @media (max-width:620px){
@@ -911,6 +911,7 @@ html[data-limpdf-theme="dark"] .studio-pages{background:#171a20!important;border
   .studio-history{display:none!important}
   .studio-top-actions .secondary-button{display:none!important}
   .studio-body{grid-template-columns:118px minmax(280px,1fr)!important}
+  .studio-properties{max-height:360px!important}
   .studio-tools{padding:7px!important}
   .studio-tools>button{height:34px!important;min-height:34px!important;padding:0 8px!important}
   .studio-pages{padding:9px 7px!important}

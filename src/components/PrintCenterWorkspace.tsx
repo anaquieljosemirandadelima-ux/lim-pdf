@@ -22,6 +22,7 @@ const MODE_COPY: Record<PrintMode, { label: string; description: string }> = {
 export function PrintCenterWorkspace() {
   const inputRef = useRef<HTMLInputElement>(null);
   const processingRef = useRef(false);
+  const outputReadyRef = useRef(false);
   const [file, setFile] = useState<File | null>(null);
   const [pageCount, setPageCount] = useState(0);
   const [thumbnails, setThumbnails] = useState<Thumbnail[]>([]);
@@ -53,7 +54,7 @@ export function PrintCenterWorkspace() {
       });
       setThumbnails(next);
       setStatus("ready");
-      if (!processingRef.current) setMessage("Arquivo pronto para configurar.");
+      if (!processingRef.current && !outputReadyRef.current) setMessage("Arquivo pronto para configurar.");
     } catch (error) {
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "Não foi possível ler este PDF.");
@@ -65,12 +66,14 @@ export function PrintCenterWorkspace() {
     if (!isPdfFile(selected)) { setStatus("error"); setMessage("Selecione um arquivo PDF."); return; }
     if (!isFileWithinLimit(selected, MAX_LOCAL_PDF_BYTES)) { setStatus("error"); setMessage(`O PDF ultrapassa ${formatFileSizeLimit()}.`); return; }
     setFile(selected);
+    outputReadyRef.current = false;
     setOutputUrl(null);
     setOutputName("");
     void inspect(selected);
   }
 
   function clearFile() {
+    outputReadyRef.current = false;
     setFile(null); setPageCount(0); setThumbnails([]); setOutputUrl(null); setOutputName(""); setStatus("idle"); setMessage("");
     if (inputRef.current) inputRef.current.value = "";
   }
@@ -151,6 +154,7 @@ export function PrintCenterWorkspace() {
       const result = await job.promise;
       const blob = new Blob([result.bytes.buffer as ArrayBuffer], { type: "application/pdf" });
       if (outputUrl) URL.revokeObjectURL(outputUrl);
+      outputReadyRef.current = true;
       setOutputUrl(URL.createObjectURL(blob));
       setOutputName(result.name);
       setMessage("PDF pronto. Revise o plano e abra a saída para imprimir no computador.");

@@ -88,7 +88,11 @@ async function main() {
 
     const globalSearch = uxPage.locator(".sidebar-search #header-tool-search");
     assert.equal(await uxPage.locator(".sidebar-search #header-tool-search").count(), 1, "O buscador global deve permanecer na sidebar no desktop.");
-    assert.equal(await uxPage.locator(".header-search-slot #header-tool-search").count(), 1, "O fallback do cabeçalho deve existir no DOM para viewports responsivos.");
+    assert.equal(await uxPage.locator(".header-search-slot #responsive-tool-search").count(), 1, "O fallback do cabeçalho deve existir no DOM com ID único para viewports responsivos.");
+    const comboboxIds = await uxPage.locator('input[role="combobox"]').evaluateAll((elements) => elements.map((element) => element.id));
+    assert.equal(new Set(comboboxIds).size, comboboxIds.length, "Os comboboxes da sidebar e do cabeçalho não podem partilhar IDs.");
+    const listboxIds = await uxPage.locator('[role="listbox"]').evaluateAll((elements) => elements.map((element) => element.id));
+    assert.equal(new Set(listboxIds).size, listboxIds.length, "Os listboxes da busca não podem partilhar IDs.");
     assert.equal(await uxPage.locator(".header-search-slot").evaluate((element) => getComputedStyle(element).display), "none", "O fallback do cabeçalho deve permanecer oculto no desktop.");
     await globalSearch.fill("zzzzxyz");
     const emptyResults = uxPage.getByRole("listbox");
@@ -110,7 +114,7 @@ async function main() {
       await responsiveContext.addInitScript(() => localStorage.setItem("limpdf-consent-v1", "essential"));
       const responsivePage = await responsiveContext.newPage();
       await responsivePage.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded", timeout: 45_000 });
-      const responsiveSearch = responsivePage.locator(".header-search-slot #header-tool-search");
+      const responsiveSearch = responsivePage.locator(".header-search-slot #responsive-tool-search");
       await responsiveSearch.waitFor({ state: "visible", timeout: 10_000 });
       assert.equal(await responsivePage.locator(".sidebar-search #header-tool-search").count(), 1, "A sidebar deve manter um único componente estrutural de busca.");
       assert.equal(await responsivePage.locator(".sidebar-search").evaluate((element) => getComputedStyle(element).display), "none", `Busca da sidebar deve ficar oculta em ${viewport.width}px.`);

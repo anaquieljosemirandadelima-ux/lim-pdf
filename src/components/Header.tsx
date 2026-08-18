@@ -75,7 +75,7 @@ export function Header() {
   return (
     <header className="site-header reference-header" ref={headerRef}>
       <div className="reference-header-inner">
-        <div className="header-search-slot"><HeaderToolSearch /></div>
+        <div className="header-search-slot"><HeaderToolSearch idPrefix="responsive-tool-search" /></div>
         <div className="header-actions">
           <Link className="header-utility-button" href="/ferramentas" aria-label="Ajuda e ferramentas" title="Ajuda">
             <HelpCircle size={18} aria-hidden="true" />

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { HeaderToolSearch } from "@/components/HeaderToolSearch";
 import { Logo } from "@/components/Logo";
 import { navigationGroups, type NavigationGroup } from "@/lib/navigation";
 
@@ -76,6 +77,7 @@ export function AppSidebar() {
   return (
     <aside className="reference-sidebar" aria-label="Navegação principal">
       <div className="sidebar-brand"><Logo /></div>
+      <div className="sidebar-search"><HeaderToolSearch /></div>
       <nav className="sidebar-navigation" aria-label="Explorar o LIM PDF">
         <div className="sidebar-nav-section">
           <span className="sidebar-nav-heading">Começar</span>

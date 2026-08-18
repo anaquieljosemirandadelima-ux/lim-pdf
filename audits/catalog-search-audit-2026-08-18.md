@@ -44,3 +44,10 @@ Com `zzzzxyz`, o buscador global apresenta `Nenhum resultado`, exemplos úteis (
 ## Auditoria visual multiviewport
 
 A auditoria automatizada passou em 22 capturas nos viewports desktop, tablet e mobile, sem overflow horizontal, erros de página ou regressões nos painéis editoriais. O catálogo desktop mostra as sete jornadas e o inventário canónico com maior clareza. No mobile, a sidebar permanece compacta e o conteúdo continua navegável; a densidade vertical é alta, mas não há corte de conteúdo nem overflow horizontal.
+
+
+## Correção de posição em QA local
+
+No build local da correção, o buscador global voltou para o bloco `sidebar-search`, imediatamente abaixo do logótipo e antes da navegação Começar/Jornadas. O cabeçalho ficou reservado aos controlos de ajuda, tema e idioma.
+
+A consulta `centro` no campo `header-tool-search` abriu o dropdown no próprio lado esquerdo da sidebar, com uma opção correta para Centro de impressão e a ação de ver todas as ferramentas. Não foi renderizada uma segunda instância do buscador no cabeçalho. O catálogo e as sete jornadas permaneceram acessíveis no mesmo viewport.

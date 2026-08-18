@@ -28,7 +28,7 @@ for (const route of routes) {
   if (response.status < 200 || response.status >= 400) throw new Error(`${route} returned ${response.status}`);
   const text = await response.text();
   if (!text.trim()) throw new Error(`${route} returned empty content`);
-  if (route === "/ferramentas" && (!text.includes("Todas as ferramentas") || !text.includes("Ferramentas profissionais") || !text.includes("Preflight PDF"))) throw new Error("catalog missing professional/priority content");
+  if (route === "/ferramentas" && (!text.includes("Todas as ferramentas") || !text.includes("O LIM PDF é 100% gratuito") || !text.includes("Preflight PDF"))) throw new Error("catalog missing free-catalog priority content");
   if (route === "/ferramentas/editar-pdf") {
     for (const marker of ["Editar PDF", "Abrindo o editor", "application/ld+json"]) if (!text.includes(marker)) throw new Error(`editor route missing ${marker}`);
     for (const forbidden of ["Modo preciso", "Visual, rápido e direto", "Atalhos do editor"]) if (text.includes(forbidden)) throw new Error(`editor route still exposes old mode UI: ${forbidden}`);

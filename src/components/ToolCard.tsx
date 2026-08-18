@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { ToolIcon } from "@/components/ToolIcon";
-import type { AnyToolDefinition } from "@/lib/all-tools";
+import type { CatalogToolDefinition } from "@/lib/catalog-groups";
 import { getProductToolLabel, getProductToolMeta } from "@/lib/product-catalog";
 
 interface ToolCardProps {
-  tool: AnyToolDefinition;
+  tool: CatalogToolDefinition;
 }
 
 export function ToolCard({ tool }: ToolCardProps) {

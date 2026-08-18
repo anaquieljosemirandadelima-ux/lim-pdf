@@ -28,33 +28,6 @@ const MB = 1024 * 1024;
 const DEFAULT_RECOMMENDED_BYTES = 100 * MB;
 const LARGE_RECOMMENDED_BYTES = 250 * MB;
 
-const premiumSlugs = new Set<string>([
-  "pdf-para-word",
-  "pdf-para-excel",
-  "word-para-pdf",
-  "excel-para-pdf",
-  "pdf-para-markdown",
-  "comparar-pdfs",
-  "ocr-pdf",
-  "processamento-lote-pdf",
-  "anotacoes-pdf",
-  "pdf-a",
-  "numeracao-bates",
-  "extrair-imagens-pdf",
-  "limpar-documento-digitalizado",
-  "otimizar-pdf-avancado",
-  "editar-metadados-pdf",
-]);
-
-const professionalSlugs = new Set<string>([
-  "assinatura-digital-pdf",
-  "criar-formulario-pdf",
-  "comparar-pdfs",
-  "pdf-a",
-  "numeracao-bates",
-  "processamento-lote-pdf",
-]);
-
 const intentBySlug: Record<string, ProductIntent> = {
   "juntar-pdf": "organizar",
   "dividir-pdf": "organizar",
@@ -140,11 +113,9 @@ const veryHighMemorySlugs = new Set<string>([
 const batchSlugs = new Set<string>(["juntar-pdf", "alternar-pdfs", "sobrepor-pdfs", "processamento-lote-pdf", "imagens-para-pdf"]);
 
 export function getProductToolMeta(slug: string): ProductToolMeta {
-  const recommendedPlan: RecommendedPlan = professionalSlugs.has(slug)
-    ? "professional"
-    : premiumSlugs.has(slug)
-      ? "premium"
-      : "free";
+  // Todas as capacidades publicadas fazem parte da edição gratuita. Os valores
+  // legados de plano permanecem apenas para compatibilidade de tipos antigos.
+  const recommendedPlan: RecommendedPlan = "free";
   const memoryProfile: MemoryProfile = veryHighMemorySlugs.has(slug)
     ? "very-high"
     : highMemorySlugs.has(slug)
@@ -153,9 +124,7 @@ export function getProductToolMeta(slug: string): ProductToolMeta {
         ? "medium"
         : "low";
   const recommendedBytes = memoryProfile === "very-high" ? DEFAULT_RECOMMENDED_BYTES : memoryProfile === "high" ? LARGE_RECOMMENDED_BYTES : 500 * MB;
-  const labels = ["Processamento local"];
-  if (recommendedPlan === "premium") labels.push("Premium recomendado");
-  if (recommendedPlan === "professional") labels.push("Profissional");
+  const labels = ["Gratuito", "Processamento local"];
   if (batchSlugs.has(slug)) labels.push("Lote");
   if (memoryProfile === "very-high") labels.push("Alta memória");
   return {
@@ -178,9 +147,7 @@ export const productToolMeta = new Map<string, ProductToolMeta>([
 export const productTools: Array<AnyToolDefinition | ProToolDefinition> = [...allTools, ...proTools];
 
 export function getProductToolLabel(slug: string) {
-  const meta = productToolMeta.get(slug) ?? getProductToolMeta(slug);
-  if (meta.recommendedPlan === "professional") return "Profissional";
-  if (meta.recommendedPlan === "premium") return "Premium recomendado";
+  void slug;
   return "Gratuito";
 }
 
@@ -195,5 +162,5 @@ export const productIntentLabels: Record<ProductIntent, string> = {
   formularios: "Formulários e dados",
   seguranca: "Proteger e assinar",
   otimizar: "Otimizar e reduzir",
-  automacao: "Automação profissional",
+  automacao: "Comparar e processar em lote",
 };

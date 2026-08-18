@@ -1,12 +1,12 @@
-import type { AllToolSlug } from "@/lib/all-tools";
+import type { CatalogToolSlug } from "@/lib/catalog-groups";
 
 export const TOOL_EXPERIENCE_RECENTS_KEY = "limpdf:tool-recents:v2";
 export const TOOL_EXPERIENCE_FAVORITES_KEY = "limpdf:tool-favorites:v2";
 export const TOOL_EXPERIENCE_CHANGE_EVENT = "limpdf:tool-experience-change";
 
-const fallback: AllToolSlug[] = ["editar-pdf", "compactar-pdf", "proteger-pdf"];
+const fallback: CatalogToolSlug[] = ["editar-pdf", "compactar-pdf", "proteger-pdf"];
 
-const nextSteps: Partial<Record<AllToolSlug, AllToolSlug[]>> = {
+const nextSteps: Partial<Record<CatalogToolSlug, CatalogToolSlug[]>> = {
   "editar-pdf": ["compactar-pdf", "proteger-pdf", "assinar-pdf"],
   "juntar-pdf": ["organizar-paginas", "compactar-pdf", "proteger-pdf"],
   "dividir-pdf": ["juntar-pdf", "compactar-pdf", "editar-pdf"],
@@ -48,17 +48,37 @@ const nextSteps: Partial<Record<AllToolSlug, AllToolSlug[]>> = {
   "desbloquear-pdf": ["editar-pdf", "compactar-pdf", "proteger-pdf"],
   "permissoes-pdf": ["proteger-pdf", "remover-metadados", "compactar-pdf"],
   "marcar-confidencial": ["proteger-pdf", "remover-metadados", "compactar-pdf"],
+  "converter-pdf": ["pdf-para-word", "pdf-para-markdown", "imagens-para-pdf"],
+  "ocr-pdf": ["editar-pdf", "pdf-para-word", "preflight-pdf"],
+  "dimensionar-pdf": ["criar-livreto-pdf", "paginas-por-folha", "preflight-pdf"],
+  "preflight-pdf": ["criar-livreto-pdf", "proteger-pdf", "assinar-pdf"],
+  "bookmarks-pdf": ["links-pdf", "anotacoes-pdf", "preflight-pdf"],
+  "links-pdf": ["bookmarks-pdf", "anotacoes-pdf", "editar-pdf"],
+  "anotacoes-pdf": ["editar-pdf", "links-pdf", "assinar-pdf"],
+  "criar-formulario-pdf": ["preencher-formulario-pdf", "achatar-formulario-pdf", "assinatura-digital-pdf"],
+  "assinatura-digital-pdf": ["criar-formulario-pdf", "proteger-pdf", "preflight-pdf"],
+  "comparar-pdfs": ["processamento-lote-pdf", "editar-pdf", "preflight-pdf"],
+  "processamento-lote-pdf": ["comparar-pdfs", "compactar-pdf", "proteger-pdf"],
+  "reparar-pdf": ["limpar-documento-digitalizado", "preflight-pdf", "compactar-pdf"],
+  "limpar-documento-digitalizado": ["ocr-pdf", "reparar-pdf", "compactar-pdf"],
+  "otimizar-pdf-avancado": ["preflight-pdf", "compactar-pdf", "pdf-a"],
+  "editar-metadados-pdf": ["remover-metadados", "pdf-a", "proteger-pdf"],
+  "pdf-a": ["editar-metadados-pdf", "preflight-pdf", "proteger-pdf"],
+  "numeracao-bates": ["pdf-a", "proteger-pdf", "preflight-pdf"],
+  "extrair-imagens-pdf": ["pdf-para-jpg", "imagens-para-pdf", "compactar-pdf"],
+  "pdf-para-powerpoint": ["powerpoint-para-pdf", "editar-pdf", "compactar-pdf"],
+  "powerpoint-para-pdf": ["pdf-para-powerpoint", "editar-pdf", "compactar-pdf"],
 };
 
-export function getNextToolSlugs(slug: AllToolSlug) {
+export function getNextToolSlugs(slug: CatalogToolSlug) {
   return nextSteps[slug] || fallback.filter((item) => item !== slug).slice(0, 3);
 }
 
-export function readStoredToolSlugs(key: string): AllToolSlug[] {
+export function readStoredToolSlugs(key: string): CatalogToolSlug[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = JSON.parse(window.localStorage.getItem(key) || "[]") as unknown;
-    return Array.isArray(raw) ? raw.filter((value): value is AllToolSlug => typeof value === "string") : [];
+    return Array.isArray(raw) ? raw.filter((value): value is CatalogToolSlug => typeof value === "string") : [];
   } catch {
     return [];
   }
@@ -69,7 +89,7 @@ function announceToolExperienceChange(key: string) {
   window.dispatchEvent(new CustomEvent(TOOL_EXPERIENCE_CHANGE_EVENT, { detail: { key } }));
 }
 
-export function recordRecentTool(slug: AllToolSlug) {
+export function recordRecentTool(slug: CatalogToolSlug) {
   if (typeof window === "undefined") return;
   try {
     const current = readStoredToolSlugs(TOOL_EXPERIENCE_RECENTS_KEY).filter((item) => item !== slug);
@@ -80,7 +100,7 @@ export function recordRecentTool(slug: AllToolSlug) {
   }
 }
 
-export function toggleFavoriteTool(slug: AllToolSlug) {
+export function toggleFavoriteTool(slug: CatalogToolSlug) {
   const current = readStoredToolSlugs(TOOL_EXPERIENCE_FAVORITES_KEY);
   const next = current.includes(slug) ? current.filter((item) => item !== slug) : [slug, ...current].slice(0, 16);
   try {

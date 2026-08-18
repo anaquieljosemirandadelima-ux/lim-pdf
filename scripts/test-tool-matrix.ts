@@ -65,7 +65,8 @@ async function main() {
   assert.ok(ocr.includes("Tesseract") && ocr.includes("parseTsvWords") && ocr.includes("drawText") && ocr.includes("MAX_RASTER_PIXELS"), "OCR deve criar camada pesquisável com limite de memória.");
 
   for (const marker of ["Organizar PDF", "OCR e digitalização", "Assinar PDF", "Formulários PDF", "Segurança PDF"]) assert.ok(sidebar.includes(marker), `Sidebar sem nicho ${marker}`);
-  assert.ok(search.includes("searchScore") && search.includes("aliases") && search.includes("Ctrl K") && search.includes("navigationGroups") && search.includes("proTools"), "Busca global deve cobrir intenção, categorias e suíte profissional.");
+  assert.ok(sidebar.includes("Tudo gratuito no LIM PDF") && sidebar.includes("100% gratuito"), "Sidebar deve comunicar o produto gratuito.");
+  assert.ok(search.includes("searchScore") && search.includes("aliases") && search.includes("Ctrl K") && search.includes("navigationGroups") && search.includes("catalogToolBySlug"), "Busca global deve cobrir intenção, categorias e catálogo unificado.");
   assert.ok(consent.includes("Cookies no LIM PDF") && consent.includes("Só essenciais") && consent.includes("Opções"), "Consentimento deve permanecer compacto e configurável.");
   assert.ok(footer.includes("LIM PDF pertence ao LIM Group") && footer.includes("/guias") && footer.includes("/premium") && footer.includes("/sobre") && footer.includes("/contato"), "Rodapé deve identificar o LIM Group e expor a navegação editorial e institucional.");
   assert.ok(adRoute.includes("AdSenseLoader") && !adRoute.includes("purgeAdSenseFromInteractiveRoute"), "AdSense não pode ser removido das rotas de ferramentas.");

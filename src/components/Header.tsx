@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ChevronDown, Globe2, HelpCircle, Moon, Sun } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { HeaderToolSearch } from "@/components/HeaderToolSearch";
 import { getLanguage, supportedLanguages, type LanguageCode } from "@/lib/i18n";
 import { useLanguage } from "@/lib/use-language";
 
@@ -74,24 +75,27 @@ export function Header() {
   return (
     <header className="site-header reference-header" ref={headerRef}>
       <div className="reference-header-inner">
-        <Link className="header-utility-button" href="/ferramentas" aria-label="Ajuda e ferramentas" title="Ajuda">
-          <HelpCircle size={18} />
-        </Link>
-        <button className="header-utility-button" type="button" aria-label={darkMode ? "Usar tema claro" : "Usar tema escuro"} title="Aparência" onClick={toggleTheme}>
-          {darkMode ? <Moon size={18} /> : <Sun size={18} />}
-        </button>
-        <div className={`reference-language ${languageOpen ? "open" : ""}`}>
-          <button type="button" aria-label="Selecionar idioma" aria-expanded={languageOpen} onClick={() => setLanguageOpen((value) => !value)}>
-            <Globe2 size={18} />
-            <span>{currentLanguage.nativeLabel}</span>
-            <ChevronDown size={15} />
+        <div className="header-search-slot"><HeaderToolSearch /></div>
+        <div className="header-actions">
+          <Link className="header-utility-button" href="/ferramentas" aria-label="Ajuda e ferramentas" title="Ajuda">
+            <HelpCircle size={18} aria-hidden="true" />
+          </Link>
+          <button className="header-utility-button" type="button" aria-label={darkMode ? "Usar tema claro" : "Usar tema escuro"} title="Aparência" onClick={toggleTheme}>
+            {darkMode ? <Moon size={18} aria-hidden="true" /> : <Sun size={18} aria-hidden="true" />}
           </button>
-          <div className="reference-language-menu" role="menu">
-            {supportedLanguages.map((language) => (
-              <button key={language.code} type="button" role="menuitemradio" aria-checked={selectedLanguage === language.code} className={selectedLanguage === language.code ? "active" : ""} onClick={() => selectLanguage(language.code)}>
-                {language.nativeLabel}
-              </button>
-            ))}
+          <div className={`reference-language ${languageOpen ? "open" : ""}`}>
+            <button type="button" aria-label="Selecionar idioma" aria-expanded={languageOpen} onClick={() => setLanguageOpen((value) => !value)}>
+              <Globe2 size={18} aria-hidden="true" />
+              <span>{currentLanguage.nativeLabel}</span>
+              <ChevronDown size={15} aria-hidden="true" />
+            </button>
+            <div className="reference-language-menu" role="menu">
+              {supportedLanguages.map((language) => (
+                <button key={language.code} type="button" role="menuitemradio" aria-checked={selectedLanguage === language.code} className={selectedLanguage === language.code ? "active" : ""} onClick={() => selectLanguage(language.code)}>
+                  {language.nativeLabel}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>

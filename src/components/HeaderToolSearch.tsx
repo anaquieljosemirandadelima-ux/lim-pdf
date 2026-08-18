@@ -1,10 +1,10 @@
 "use client";
 
-import { ArrowRight, Search, X } from "lucide-react";
+import { ArrowRight, Grid2X2, Search, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { allTools } from "@/lib/all-tools";
-import { catalogToolBySlug } from "@/lib/catalog-groups";
+import { catalogToolBySlug, getCatalogGroupForTool } from "@/lib/catalog-groups";
 import { toolText, uiText } from "@/lib/i18n-content";
 import { navigationGroups } from "@/lib/navigation";
 import type { ToolSlug } from "@/lib/tools";
@@ -68,11 +68,16 @@ function searchScore(item: SearchItem, rawQuery: string) {
   return score;
 }
 
+function resultId(item: SearchItem) {
+  return `global-search-result-${item.kind}-${item.id.replace(/[^a-z0-9_-]/gi, "-")}`;
+}
+
 export function HeaderToolSearch() {
   const router = useRouter();
   const language = useLanguage();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const text = uiText[language];
@@ -82,12 +87,13 @@ export function HeaderToolSearch() {
       const localized = baseToolSlugs.has(tool.slug)
         ? toolText(language, tool.slug as ToolSlug, tool)
         : { name: tool.name, shortDescription: tool.shortDescription };
+      const group = getCatalogGroupForTool(tool.slug);
       return {
         id: `tool:${tool.slug}`,
         name: localized.name,
         description: localized.shortDescription,
         href: `/ferramentas/${tool.slug}`,
-        category: tool.category,
+        category: group?.title || tool.category,
         keywords: [...tool.keywords, ...(aliases[tool.slug] ?? [])],
         kind: "tool" as const,
       };
@@ -97,7 +103,7 @@ export function HeaderToolSearch() {
       name: group.title,
       description: group.description,
       href: `/categorias/${group.slug}`,
-      category: "Categoria",
+      category: "Jornada",
       keywords: [group.label, group.slug, ...group.tools],
       kind: "category" as const,
     }));
@@ -120,6 +126,7 @@ export function HeaderToolSearch() {
       .slice(0, 8)
       .map((result) => result.item);
   }, [items, query]);
+
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -150,18 +157,56 @@ export function HeaderToolSearch() {
   }, []);
 
   function navigate(item?: SearchItem) {
-    const target = item ?? results[0];
-    if (target) router.push(target.href);
-    else router.push(`/ferramentas?busca=${encodeURIComponent(query.trim())}`);
-    setQuery("");
+    const target = item ?? results[activeIndex] ?? results[0];
+    if (target) {
+      router.push(target.href);
+      setQuery("");
+    } else {
+      navigateToCatalog();
+      return;
+    }
     setOpen(false);
+    setActiveIndex(-1);
     inputRef.current?.blur();
   }
 
+  function navigateToCatalog() {
+    const trimmedQuery = query.trim();
+    router.push(`/ferramentas${trimmedQuery ? `?busca=${encodeURIComponent(trimmedQuery)}` : ""}`);
+    setOpen(false);
+    setActiveIndex(-1);
+    inputRef.current?.blur();
+  }
+
+  function handleKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setOpen(true);
+      setActiveIndex((index) => (results.length ? (index + 1) % results.length : -1));
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setOpen(true);
+      setActiveIndex((index) => (results.length ? (index <= 0 ? results.length - 1 : index - 1) : -1));
+    }
+    if (event.key === "Enter" && activeIndex >= 0) {
+      event.preventDefault();
+      navigate(results[activeIndex]);
+    }
+  }
+
   return (
-    <form ref={formRef} className={`header-search global-tool-search ${open ? "open" : ""}`} role="search" onSubmit={(event) => { event.preventDefault(); navigate(); }}>
+    <form
+      ref={formRef}
+      className={`header-search global-tool-search ${open ? "open" : ""}`}
+      role="search"
+      onSubmit={(event) => {
+        event.preventDefault();
+        navigate();
+      }}
+    >
       <label htmlFor="header-tool-search">
-        <Search size={18} />
+        <Search size={18} aria-hidden="true" />
         <input
           ref={inputRef}
           id="header-tool-search"
@@ -169,26 +214,78 @@ export function HeaderToolSearch() {
           aria-autocomplete="list"
           aria-expanded={open}
           aria-controls="global-search-results"
+          aria-activedescendant={activeIndex >= 0 ? resultId(results[activeIndex]) : undefined}
           value={query}
-          onChange={(event) => { setQuery(event.target.value); setOpen(true); }}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setActiveIndex(-1);
+            setOpen(true);
+          }}
           onFocus={() => setOpen(true)}
+          onKeyDown={handleKeyDown}
           placeholder={text.searchPlaceholder}
           autoComplete="off"
         />
-        {query ? <button className="search-clear" type="button" aria-label="Limpar busca" onClick={() => { setQuery(""); inputRef.current?.focus(); }}><X size={15} /></button> : <kbd>Ctrl K</kbd>}
-      </label>
-      <button className="search-submit" type="submit" aria-label="Abrir ferramenta pesquisada"><ArrowRight size={17} /></button>
-      {open ? <div className="global-search-results" id="global-search-results" role="listbox" aria-label="Resultados da busca">
-        <div className="global-search-heading"><span>{query.trim() ? "Resultados" : "Acesso rápido"}</span><small>{results.length ? `${results.length} opção(ões)` : "Nenhum resultado"}</small></div>
-        {results.length ? results.map((item) => (
-          <button type="button" role="option" aria-selected="false" key={item.id} onClick={() => navigate(item)}>
-            <span className={`search-result-icon ${item.kind}`}><Search size={15} /></span>
-            <span><strong>{item.name}</strong><small>{item.description}</small></span>
-            <em>{item.kind === "category" ? "Categoria" : item.category}</em>
+        {query ? (
+          <button
+            className="search-clear"
+            type="button"
+            aria-label="Limpar busca"
+            onClick={() => {
+              setQuery("");
+              setActiveIndex(-1);
+              setOpen(true);
+              inputRef.current?.focus();
+            }}
+          >
+            <X size={15} aria-hidden="true" />
           </button>
-        )) : <div className="global-search-empty"><strong>Não encontrei essa ferramenta.</strong><span>Tente a ação que você quer fazer: “juntar”, “assinar”, “diminuir”, “Word”, “OCR”…</span></div>}
-        <button className="search-view-all" type="button" onClick={() => router.push(`/ferramentas?busca=${encodeURIComponent(query.trim())}`)}>Ver todas as ferramentas <ArrowRight size={14} /></button>
-      </div> : null}
+        ) : (
+          <kbd>Ctrl K</kbd>
+        )}
+      </label>
+      <button className="search-submit" type="submit" aria-label="Abrir ferramenta pesquisada">
+        <ArrowRight size={17} aria-hidden="true" />
+      </button>
+      {open ? (
+        <div className="global-search-results" id="global-search-results" role="listbox" aria-label="Resultados da busca">
+          <div className="global-search-heading">
+            <span>{query.trim() ? "Resultados" : "Acesso rápido"}</span>
+            <small>{results.length ? `${results.length} opção(ões)` : "Nenhum resultado"}</small>
+          </div>
+          {results.length ? (
+            results.map((item, index) => (
+              <button
+                type="button"
+                role="option"
+                id={resultId(item)}
+                aria-selected={activeIndex === index}
+                className={activeIndex === index ? "active" : ""}
+                key={item.id}
+                onMouseEnter={() => setActiveIndex(index)}
+                onClick={() => navigate(item)}
+              >
+                <span className={`search-result-icon ${item.kind}`}>
+                  {item.kind === "category" ? <Grid2X2 size={15} aria-hidden="true" /> : <Search size={15} aria-hidden="true" />}
+                </span>
+                <span>
+                  <strong>{item.name}</strong>
+                  <small>{item.description}</small>
+                </span>
+                <span className="search-result-kind">{item.kind === "category" ? "Jornada" : item.category}</span>
+              </button>
+            ))
+          ) : (
+            <div className="global-search-empty">
+              <strong>Não encontrei essa ferramenta.</strong>
+              <span>Tente “juntar”, “assinar”, “diminuir”, “Word” ou “OCR”.</span>
+            </div>
+          )}
+          <button className="search-view-all" type="button" onClick={navigateToCatalog}>
+            Ver todas as ferramentas <ArrowRight size={14} aria-hidden="true" />
+          </button>
+        </div>
+      ) : null}
     </form>
   );
 }

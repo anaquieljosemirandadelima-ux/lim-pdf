@@ -75,6 +75,24 @@ async function main() {
     assert.ok((await searchResults.getByText(/Compactar PDF/i).count()) > 0, "Busca por intenção 'diminuir pdf' deve encontrar Compactar PDF.");
     await uxPage.waitForTimeout(240);
     await uxPage.screenshot({ path: join(outDir, "busca-desktop-1440.png"), fullPage: true });
+
+    await uxPage.goto(`${baseUrl}/ferramentas`, { waitUntil: "domcontentloaded", timeout: 45_000 });
+    const catalogSearch = uxPage.getByRole("textbox", { name: "Buscar no catálogo de ferramentas" });
+    await catalogSearch.fill("centro");
+    const catalogSummary = uxPage.locator(".catalog-results-summary");
+    await catalogSummary.waitFor({ state: "visible", timeout: 10_000 });
+    assert.match(await catalogSummary.innerText(), /1 ferramenta.*centro/i, "Busca local deve mostrar contagem e termo pesquisado.");
+    assert.equal(await uxPage.getByRole("link", { name: /Centro de impressão/i }).count(), 1, "Busca local deve encontrar exatamente Centro de impressão.");
+    await uxPage.getByRole("button", { name: "Limpar filtros" }).click();
+    assert.match(await catalogSummary.innerText(), /62 ferramentas.*Todas/i, "Limpar filtros deve restaurar o inventário canónico completo.");
+
+    const globalSearch = uxPage.locator("#header-tool-search");
+    await globalSearch.fill("zzzzxyz");
+    const emptyResults = uxPage.getByRole("listbox");
+    await emptyResults.waitFor({ state: "visible", timeout: 10_000 });
+    assert.ok((await emptyResults.getByText("Nenhum resultado", { exact: true }).count()) > 0, "Busca global deve ter estado vazio explícito.");
+    await globalSearch.press("Escape");
+    assert.equal(await emptyResults.count(), 0, "Escape deve fechar o dropdown global.");
     await uxContext.close();
 
     const reducedContext = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: "reduce" });

@@ -25,6 +25,7 @@ import "./limpdf-refresh.css";
 import "./limpdf-final-fixes.css";
 import "./editor-reference-2026.css";
 import "./sidebar-hotfix.css";
+import "./catalog-discovery-2026.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://limpdf.com.br";
 const adsenseClient = ADSENSE_CLIENT;

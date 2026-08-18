@@ -16,6 +16,7 @@ async function main() {
   assert.equal(new Set(proTools.map((tool) => tool.slug)).size, proTools.length, "Slugs profissionais devem ser únicos.");
   assert.equal(allTools.length + proTools.length + STANDALONE_FLOWS, 62, "A navegação pública deve fechar 62 fluxos úteis.");
 
+  const navigation = await source("src/lib/navigation.ts");
   const [route, generic, sequential, advanced, editorSwitcher, editor, sitemap, telemetryBridge, telemetryLib, telemetryApi, converter, ocr, sidebar, search, consent, footer, adRoute, proRegistry, proEngines, proWorkspace, linksWorkspace, navigationWorkspace, preflight] = await Promise.all([
     source("src/app/ferramentas/[slug]/page.tsx"),
     source("src/components/PdfToolWorkspace.tsx"),
@@ -64,7 +65,7 @@ async function main() {
   assert.ok(converter.includes("DataTransfer") && converter.includes("Converter para") && converter.includes("pdf-para-markdown"), "Conversor deve preservar o arquivo e oferecer Markdown ao trocar a saída.");
   assert.ok(ocr.includes("Tesseract") && ocr.includes("parseTsvWords") && ocr.includes("drawText") && ocr.includes("MAX_RASTER_PIXELS"), "OCR deve criar camada pesquisável com limite de memória.");
 
-  for (const marker of ["Organizar PDF", "OCR e digitalização", "Assinar PDF", "Formulários PDF", "Segurança PDF"]) assert.ok(sidebar.includes(marker), `Sidebar sem nicho ${marker}`);
+  for (const marker of ["Organizar", "Editar", "Converter", "Formulários", "Segurança", "Otimizar", "Automação"]) assert.ok(navigation.includes(`: "${marker}"`) && sidebar.includes("navigationGroups.map"), `Sidebar sem jornada canónica ${marker}`);
   assert.ok(sidebar.includes("Tudo gratuito no LIM PDF") && sidebar.includes("100% gratuito"), "Sidebar deve comunicar o produto gratuito.");
   assert.ok(search.includes("searchScore") && search.includes("aliases") && search.includes("Ctrl K") && search.includes("navigationGroups") && search.includes("catalogToolBySlug"), "Busca global deve cobrir intenção, categorias e catálogo unificado.");
   assert.ok(consent.includes("Cookies no LIM PDF") && consent.includes("Só essenciais") && consent.includes("Opções"), "Consentimento deve permanecer compacto e configurável.");

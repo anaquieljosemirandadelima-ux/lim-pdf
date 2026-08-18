@@ -67,7 +67,7 @@ async function main() {
   for (const marker of ["Organizar PDF", "OCR e digitalização", "Assinar PDF", "Formulários PDF", "Segurança PDF"]) assert.ok(sidebar.includes(marker), `Sidebar sem nicho ${marker}`);
   assert.ok(search.includes("searchScore") && search.includes("aliases") && search.includes("Ctrl K") && search.includes("navigationGroups") && search.includes("proTools"), "Busca global deve cobrir intenção, categorias e suíte profissional.");
   assert.ok(consent.includes("Cookies no LIM PDF") && consent.includes("Só essenciais") && consent.includes("Opções"), "Consentimento deve permanecer compacto e configurável.");
-  assert.ok(footer.includes("LIM PDF pertence ao LIM Group") && footer.includes("/guias") && footer.includes("/sobre") && footer.includes("/contato"), "Rodapé deve identificar o LIM Group e expor a navegação editorial e institucional.");
+  assert.ok(footer.includes("LIM PDF pertence ao LIM Group") && footer.includes("/guias") && footer.includes("/premium") && footer.includes("/sobre") && footer.includes("/contato"), "Rodapé deve identificar o LIM Group e expor a navegação editorial e institucional.");
   assert.ok(adRoute.includes("AdSenseLoader") && !adRoute.includes("purgeAdSenseFromInteractiveRoute"), "AdSense não pode ser removido das rotas de ferramentas.");
 
   for (const slug of ["assinatura-digital-pdf", "links-pdf", "criar-formulario-pdf", "bookmarks-pdf", "comparar-pdfs", "reparar-pdf", "pdf-a", "pdf-para-powerpoint", "powerpoint-para-pdf", "extrair-imagens-pdf", "limpar-documento-digitalizado", "otimizar-pdf-avancado", "anotacoes-pdf", "processamento-lote-pdf", "numeracao-bates", "editar-metadados-pdf"]) assert.ok(proRegistry.includes(`"${slug}"`), `Registro profissional sem ${slug}`);
@@ -79,7 +79,7 @@ async function main() {
 
   assert.ok(sitemap.includes("proTools"), "Sitemap deve derivar URLs profissionais do registro real.");
   assert.ok(!sitemap.includes('"/faq"'), "FAQ antiga não pode voltar.");
-  for (const required of ["/sobre", "/guias", "/contato"]) assert.ok(sitemap.includes(`"${required}"`), `Sitemap sem ${required}`);
+  for (const required of ["/sobre", "/guias", "/premium", "/contato"]) assert.ok(sitemap.includes(`"${required}"`), `Sitemap sem ${required}`);
   for (const marker of ["/ferramentas/ocr-pdf", "/ferramentas/converter-pdf", "/ferramentas/dimensionar-pdf", "/ferramentas/preflight-pdf"]) assert.ok(sitemap.includes(`"${marker}"`), `Sitemap sem ${marker}`);
 
   assert.ok(telemetryBridge.includes("file.size") && !telemetryBridge.includes("file.name"), "Telemetria cliente não pode coletar nome de arquivo.");

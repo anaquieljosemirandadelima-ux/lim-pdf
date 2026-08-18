@@ -8,6 +8,7 @@ export function SiteFooter() {
       <span>© {new Date().getFullYear()} LIM PDF · LIM PDF pertence ao LIM Group.</span>
       <nav aria-label="Navegação institucional do LIM PDF">
         <Link href="/guias">Guias</Link>
+        <Link href="/premium">Premium</Link>
         <Link href="/sobre">Sobre</Link>
         <Link href="/contato">Contacto</Link>
         <Link href="/privacidade">Privacidade</Link>

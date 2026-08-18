@@ -96,6 +96,11 @@ async function main() {
     assert.ok((await emptyResults.getByText("Nenhum resultado", { exact: true }).count()) > 0, "Busca global deve ter estado vazio explícito.");
     const desktopResultsBox = await emptyResults.boundingBox();
     assert.ok(desktopResultsBox && desktopResultsBox.x >= 0 && desktopResultsBox.x + desktopResultsBox.width <= 1442, `Dropdown desktop fora da janela: ${JSON.stringify(desktopResultsBox)}`);
+    const desktopScrollbar = await emptyResults.evaluate((element) => ({
+      overflowY: getComputedStyle(element).overflowY,
+      scrollbarWidth: getComputedStyle(element).scrollbarWidth,
+    }));
+    assert.equal(desktopScrollbar.scrollbarWidth, "none", `Dropdown desktop não pode exibir scrollbar nativa: ${JSON.stringify(desktopScrollbar)}`);
     await globalSearch.press("Escape");
     assert.equal(await emptyResults.count(), 0, "Escape deve fechar o dropdown global.");
     await uxContext.close();
@@ -115,6 +120,11 @@ async function main() {
       assert.ok((await responsiveResults.getByText(/Compactar PDF/i).count()) > 0, `Busca responsiva deve encontrar Compactar PDF em ${viewport.width}px.`);
       const responsiveResultsBox = await responsiveResults.boundingBox();
       assert.ok(responsiveResultsBox && responsiveResultsBox.x >= 0 && responsiveResultsBox.x + responsiveResultsBox.width <= viewport.width + 2, `Dropdown responsivo fora da janela em ${viewport.width}px: ${JSON.stringify(responsiveResultsBox)}`);
+      const responsiveScrollbar = await responsiveResults.evaluate((element) => ({
+        overflowY: getComputedStyle(element).overflowY,
+        scrollbarWidth: getComputedStyle(element).scrollbarWidth,
+      }));
+      assert.equal(responsiveScrollbar.scrollbarWidth, "none", `Dropdown responsivo não pode exibir scrollbar nativa em ${viewport.width}px: ${JSON.stringify(responsiveScrollbar)}`);
       await responsiveContext.close();
     }
 

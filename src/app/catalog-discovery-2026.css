@@ -66,6 +66,21 @@
   border-radius: 0 0 12px 12px !important;
 }
 
+/* O dropdown pode continuar rolável, mas nunca deve exibir uma barra nativa. */
+.global-search-results {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  overscroll-behavior: contain;
+}
+
+.global-search-results::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 .reference-catalog-head {
   display: grid !important;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 380px) !important;

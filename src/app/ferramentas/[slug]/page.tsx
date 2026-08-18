@@ -5,6 +5,7 @@ import { AdvancedToolWorkspace } from "@/components/AdvancedToolWorkspace";
 import { MemorySafePdfWorkspace } from "@/components/MemorySafePdfWorkspace";
 import { PdfEditorExperienceSwitcher } from "@/components/PdfEditorExperienceSwitcher";
 import { PdfToolWorkspace } from "@/components/PdfToolWorkspace";
+import { PrintCenterWorkspace } from "@/components/PrintCenterWorkspace";
 import { PremiumToolExperience } from "@/components/PremiumToolExperience";
 import { ProLinksWorkspace } from "@/components/ProLinksWorkspace";
 import { ProNavigationWorkspace } from "@/components/ProNavigationWorkspace";
@@ -129,6 +130,10 @@ export default async function ToolPage({ params }: ToolPageProps) {
   }
 
   const baseTool = tool as ToolDefinition;
+  if (baseTool.slug === "criar-livreto-pdf") {
+    return <section className="reference-tool-page reference-print-page">{schemas}<ToolTelemetryBridge toolSlug={baseTool.slug} />{heading}<div className="reference-workspace-wrap"><PrintCenterWorkspace /></div><ToolEditorialPanel tool={baseTool} />{inlineAd}</section>;
+  }
+
   if (baseTool.slug === "editar-pdf") {
     return <section className="reference-tool-page reference-editor-page">{schemas}<ToolTelemetryBridge toolSlug={baseTool.slug} />{heading}<div className="reference-editor-wrap"><PdfEditorExperienceSwitcher /></div><ToolEditorialPanel tool={baseTool} />{inlineAd}</section>;
   }

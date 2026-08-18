@@ -142,8 +142,27 @@ async function processEditor(page: Page) {
   await validateOutput("editar-pdf", target);
 }
 
+async function processPrintCenter(page: Page) {
+  await navigate(page, "/ferramentas/criar-livreto-pdf");
+  assert.match(await page.title(), /Centro de impressão/i);
+  await page.waitForTimeout(1_000);
+  await page.locator(".print-center-workspace input[type=file]").setInputFiles(fixture("basic.pdf"));
+  await page.locator(".print-center-options").waitFor({ state: "visible", timeout: 60_000 });
+  await page.locator(".print-center-options select").first().selectOption("booklet");
+  await page.getByRole("button", { name: /Gerar PDF para impressão/i }).click();
+  await page.locator(".print-output-actions").waitFor({ state: "visible", timeout: 90_000 });
+  const [download] = await Promise.all([
+    page.waitForEvent("download", { timeout: 60_000 }),
+    page.getByRole("link", { name: /Baixar PDF/i }).click(),
+  ]);
+  const target = join(downloadDir, `criar-livreto-pdf-${download.suggestedFilename()}`);
+  await download.saveAs(target);
+  await validateOutput("criar-livreto-pdf", target);
+}
+
 async function processTool(page: Page, slug: AllToolSlug) {
   if (slug === "editar-pdf") return processEditor(page);
+  if (slug === "criar-livreto-pdf") return processPrintCenter(page);
   await navigate(page, `/ferramentas/${slug}`);
   await page.locator("h1").first().waitFor({ state: "visible", timeout: 30_000 });
   await page.locator(".premium-experience").waitFor({ state: "visible", timeout: 30_000 });

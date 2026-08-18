@@ -18,7 +18,7 @@ const professionalRoutes = [
   "/ferramentas/editar-metadados-pdf",
 ];
 const routes = [
-  "/", "/ferramentas", "/ferramentas/editar-pdf", "/ferramentas/converter-pdf", "/ferramentas/ocr-pdf", "/ferramentas/dimensionar-pdf", "/ferramentas/preflight-pdf", "/ferramentas/juntar-pdf", "/ferramentas/compactar-pdf", "/ferramentas/preencher-formulario-pdf",
+  "/", "/ferramentas", "/ferramentas/editar-pdf", "/ferramentas/converter-pdf", "/ferramentas/ocr-pdf", "/ferramentas/dimensionar-pdf", "/ferramentas/preflight-pdf", "/ferramentas/criar-livreto-pdf", "/ferramentas/juntar-pdf", "/ferramentas/compactar-pdf", "/ferramentas/preencher-formulario-pdf",
   ...professionalRoutes,
   "/privacidade", "/cookies", "/termos", "/seguranca", "/acessibilidade", "/guias", "/guias/editar-pdf-sem-perder-formatacao", "/guias/ocr-pdf-escaneado", "/guias/comprimir-pdf", "/guias/redacao-segura-pdf", "/guias/juntar-pdf", "/guias/converter-pdf-para-word", "/guias/assinar-pdf-digitalmente", "/guias/proteger-pdf-com-senha", "/sobre", "/premium", "/contato", "/sitemap.xml", "/robots.txt", "/ads.txt", "/.well-known/security.txt",
 ];
@@ -36,6 +36,7 @@ for (const route of routes) {
   if (route === "/ferramentas/converter-pdf" && (!text.includes("Converter para") || !text.includes("Word") || !text.includes("Excel"))) throw new Error("unified converter missing format controls");
   if (route === "/ferramentas/ocr-pdf" && (!text.includes("OCR PDF") || !text.includes("Idiomas do reconhecimento"))) throw new Error("OCR route missing workspace markers");
   if (route === "/ferramentas/preflight-pdf" && (!text.includes("Preflight PDF") || !text.includes("Executar preflight"))) throw new Error("preflight route missing diagnosis UI");
+  if (route === "/ferramentas/criar-livreto-pdf" && (!text.includes("Centro de impressão") || !text.includes("Prepare um PDF"))) throw new Error("print center route missing local print UI");
   if (professionalRoutes.includes(route) && !text.includes("pro-pdf-workspace")) throw new Error(`${route} missing professional workspace`);
   if (route === "/sitemap.xml") {
     for (const marker of ["/ferramentas/converter-pdf", "/ferramentas/ocr-pdf", "/ferramentas/dimensionar-pdf", "/ferramentas/preflight-pdf", "/ferramentas/assinatura-digital-pdf", "/ferramentas/links-pdf", "/ferramentas/comparar-pdfs"]) if (!text.includes(marker)) throw new Error(`sitemap missing ${marker}`);
@@ -65,4 +66,4 @@ if (oversizedMetric.status !== 413) throw new Error(`telemetry oversized payload
 const wrongContentType = await fetch(`${base}/api/telemetry`, { method: "POST", headers: { "content-type": "text/plain" }, body: metricPayload });
 if (wrongContentType.status !== 415) throw new Error(`telemetry wrong content-type returned ${wrongContentType.status}`);
 
-console.log(JSON.stringify({ ok: true, suite: "routes", checked: routes.length, professionalRoutes: professionalRoutes.length, removed: 3, editorialRoutes: true, telemetry: true, publicFlows: 61, unifiedEditor: true, seoFocused: true }));
+console.log(JSON.stringify({ ok: true, suite: "routes", checked: routes.length, professionalRoutes: professionalRoutes.length, removed: 3, editorialRoutes: true, telemetry: true, publicFlows: 62, unifiedEditor: true, seoFocused: true }));

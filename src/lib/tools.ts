@@ -269,12 +269,12 @@ export const tools: ToolDefinition[] = [
     faq: [{ question: "O conteúdo fica deformado?", answer: "Somente se você escolher esticar. No modo ajustar, a proporção original é mantida e o conteúdo é centralizado." }, privacyFaq],
   },
   {
-    slug: "criar-livreto-pdf", name: "Criar livreto PDF", shortDescription: "Reorganize páginas para impressão dobrada.",
-    description: "Gere um PDF imposto em formato livreto, com pares de páginas para frente e verso e páginas em branco quando necessário.", category: "Otimizar e proteger", icon: "BookOpen", accent: "orange", accept: "application/pdf", multiple: false,
+    slug: "criar-livreto-pdf", name: "Centro de impressão", shortDescription: "Prepare livreto, N-up e saída para imprimir.",
+    description: "Prepare um PDF para impressão normal, livreto dobrado ou várias páginas por folha, com preview local e saída pronta para o computador.", category: "Otimizar e proteger", icon: "BookOpen", accent: "orange", accept: "application/pdf", multiple: false,
     keywords: ["livreto pdf", "booklet pdf", "imposição pdf", "imprimir livreto", "caderno pdf"],
-    intro: "Prepare o arquivo para impressão frente e verso com dobra central. A ferramenta calcula a ordem das páginas, completa múltiplos de quatro e monta duas páginas por folha.",
-    useCases: ["Criar apostila dobrada", "Preparar manual grampeado ao centro", "Imprimir caderno simples", "Revisar ordem de frente e verso antes da impressão"],
-    limitations: ["A saída usa imposição simples de duas páginas por lado", "Confira a opção de virar pela borda curta ou longa na sua impressora antes de imprimir o lote final"],
+    intro: "Prepare o arquivo para impressão normal, livreto dobrado ou várias páginas por folha. O preview mostra a ordem de saída e o processamento permanece no navegador.",
+    useCases: ["Criar apostila dobrada", "Imprimir várias páginas por folha", "Preparar saída A4, A3 ou Carta", "Revisar a ordem antes da impressão"],
+    limitations: ["A escolha final de impressora, bandeja e duplex continua na caixa de impressão do sistema", "Confira a opção de virar pela borda curta ou longa na sua impressora antes de imprimir"],
     faq: [{ question: "A ferramenta adiciona páginas em branco?", answer: "Sim. Quando o total não fecha múltiplo de quatro, páginas em branco são adicionadas ao final para manter a ordem correta do livreto." }, privacyFaq],
   },
   {

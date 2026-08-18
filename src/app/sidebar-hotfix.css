@@ -22,36 +22,6 @@
   max-width:150px!important;
 }
 
-.sidebar-search{
-  width:100%!important;
-  margin:3px 0 14px!important;
-}
-.sidebar-search .global-tool-search,
-.sidebar-search .global-tool-search>label{
-  width:100%!important;
-  max-width:none!important;
-}
-.sidebar-search .global-tool-search>label{
-  height:40px!important;
-  padding:0 12px!important;
-  box-sizing:border-box!important;
-}
-.sidebar-search .global-tool-search>label>svg{
-  width:17px!important;
-  height:17px!important;
-  flex:0 0 17px!important;
-}
-.sidebar-search .global-tool-search input{
-  width:100%!important;
-  min-width:0!important;
-  text-align:left!important;
-  font-size:11.5px!important;
-}
-.sidebar-search .global-tool-search kbd,
-.sidebar-search .search-submit{
-  display:none!important;
-}
-
 .sidebar-navigation{
   width:100%!important;
   min-width:0!important;
@@ -211,9 +181,6 @@
   .sidebar-brand .brand-logo-image{
     width:138px!important;
     max-width:138px!important;
-  }
-  .sidebar-search{
-    margin:2px 0 9px!important;
   }
   .sidebar-navigation{
     gap:2px!important;

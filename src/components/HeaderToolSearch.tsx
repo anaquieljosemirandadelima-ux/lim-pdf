@@ -217,7 +217,9 @@ export function HeaderToolSearch({ idPrefix = "header-tool-search" }: HeaderTool
           ref={inputRef}
           id={inputId}
           role="combobox"
+          aria-label="Buscar ferramentas"
           aria-autocomplete="list"
+          aria-haspopup="listbox"
           aria-expanded={open}
           aria-controls={resultsId}
           aria-activedescendant={activeIndex >= 0 ? resultId(results[activeIndex], idPrefix) : undefined}

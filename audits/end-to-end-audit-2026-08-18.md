@@ -2,7 +2,7 @@
 
 ## Estado de execução
 
-A branch `main` está no commit `ae410a8` (`fix: improve responsive discovery layout (#24)`). O working tree contém as melhorias de auditoria ainda não publicadas — correção da corrida do Centro de Impressão, IDs ARIA únicos do buscador e este relatório. Rotas e scripts de QA existentes foram levantados.
+A branch `main` está no commit `2fe9598` (`fix: harden audited PDF workflows and search accessibility`). As correções da auditoria — corrida do Centro de Impressão, IDs ARIA únicos do buscador e regressões visuais — já estão publicadas; o working tree contém apenas as evidências finais acrescentadas a este relatório. Rotas e scripts de QA existentes foram levantados.
 
 ## QA executado
 
@@ -62,3 +62,15 @@ Foi adicionado um `outputReadyRef` em `PrintCenterWorkspace.tsx` para impedir qu
 Como o buscador é montado na sidebar e no cabeçalho responsivo, ambos os componentes estavam a emitir `id="header-tool-search"`, `id="global-search-results"` e IDs iguais nas opções. Isso podia quebrar a associação label/combobox/listbox e gerar resultados ambíguos quando Ctrl+K focava as duas instâncias.
 
 O buscador do cabeçalho passou a usar `responsive-tool-search` e `responsive-tool-search-results`; os IDs das opções também passaram a incluir o prefixo da instância. A auditoria visual continua a passar com 22 capturas e o P0 passou novamente, incluindo Centro de Impressão e Preflight.
+
+## Verificação pós-PR #25 — propagação pendente
+
+Após abrir `https://limpdf.com.br/?release=2fe9598`, a medição DOM ainda encontrou `header-tool-search` em duas instâncias e `uniqueIds: false`, com a sidebar desktop em `272px` e o slot de cabeçalho oculto. Isso indica que a produção ainda está a servir o bundle anterior ao commit `2fe9598` ou que o deployment da main ainda não terminou; a validação final do fix de IDs deve ser repetida depois de o Vercel publicar o novo build.
+
+## Deployment final da auditoria
+
+A consulta ao Vercel confirmou o deployment de produção do commit `2fe95987f3cb6866e60eec45957ca7a94f2c4146` em estado `READY`, com destino `production` e URL de inspeção `https://vercel.com/anaquieljosemirandadelima-3691s-projects/lim-pdf/BxFpSuGsux41Lsb9LXkcYuUb1wLf`. A medição anterior com IDs antigos ocorreu antes de o novo bundle chegar ao domínio; deve ser repetida agora com cache-bust.
+
+## Validação final de produção — PR #25
+
+Após o deployment READY do commit `2fe9598`, `https://limpdf.com.br/?release=2fe9598-final` passou a emitir `responsive-tool-search` no slot do cabeçalho e `header-tool-search` na sidebar. A medição confirmou `uniqueIds: true`, `uniqueListboxes: true`, `sidebarDisplay: flex`, `sidebarWidth: 272px` e `headerSearchDisplay: none` no viewport desktop. O bundle final já contém a correção de acessibilidade; o fallback do cabeçalho permanece reservado para tablet/mobile.

@@ -22,6 +22,7 @@
     "test:ocr-browser": "tsx scripts/test-ocr-searchable-browser.ts",
     "test:telemetry-consent": "tsx scripts/test-telemetry-consent.ts",
     "test:visual": "tsx scripts/visual-audit.ts",
+    "test:a11y:search": "tsx scripts/test-search-accessibility.ts",
     "test:perf:build": "tsx scripts/performance-budget.ts build",
     "test:perf:browser": "tsx scripts/performance-budget.ts browser",
     "check": "npm run lint && npm test && npm run build && npm run test:perf:build"

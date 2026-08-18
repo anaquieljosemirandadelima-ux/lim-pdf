@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ChevronDown, Globe2, HelpCircle, Moon, Sun } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { HeaderToolSearch } from "@/components/HeaderToolSearch";
 import { getLanguage, supportedLanguages, type LanguageCode } from "@/lib/i18n";
 import { useLanguage } from "@/lib/use-language";
 
@@ -74,6 +75,7 @@ export function Header() {
   return (
     <header className="site-header reference-header" ref={headerRef}>
       <div className="reference-header-inner">
+        <div className="header-search-slot"><HeaderToolSearch /></div>
         <div className="header-actions">
           <Link className="header-utility-button" href="/ferramentas" aria-label="Ajuda e ferramentas" title="Ajuda">
             <HelpCircle size={18} aria-hidden="true" />

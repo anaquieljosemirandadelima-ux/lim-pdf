@@ -56,8 +56,8 @@ async function main() {
     assert.match(generic, new RegExp(`"${tool.slug}"\\s*:`), `Dispatcher genérico sem ${tool.slug}`);
   }
 
-  assert.ok(editorSwitcher.includes("PdfEditorWorkspaceHardened") && !editorSwitcher.includes("PdfEditorStudio"), "Editar PDF deve usar somente um editor.");
-  assert.ok(!editorSwitcher.includes("Modo preciso") && !editorSwitcher.includes("Studio") && !editorSwitcher.includes("EditorCommandBar"), "O seletor de modos antigo não pode voltar.");
+  assert.ok(editorSwitcher.includes("PdfEditorStudio") && !editorSwitcher.includes("PdfEditorWorkspaceHardened"), "Editar PDF deve usar somente o Studio Premium público.");
+  assert.ok(!editorSwitcher.includes("Modo preciso") && !editorSwitcher.includes("EditorCommandBar") && editorSwitcher.includes("data-editor-experience=\"studio-premium\""), "O seletor de modos antigo não pode voltar.");
   for (const capability of ["addText", "addImage", "addRedaction", "addHighlight", "addComment", "addSignature", "duplicatePage", "insertBlankPage", "deletePage", "copySelected", "duplicateSelected", "pasteSelected", "alignSelected", "distributeSelected", "moveLayer", "exportPdf", "undo", "redo", "text-replacement"]) assert.ok(editor.includes(capability), `Editor unificado deve manter ${capability}`);
   assert.ok(!route.includes("editor /><div className=\"reference-editor-wrap\""), "Editar PDF não deve renderizar a camada antiga de Foco/Tela cheia/Comandos.");
 

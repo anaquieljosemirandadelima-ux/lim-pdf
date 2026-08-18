@@ -99,29 +99,35 @@ async function processEditor(page: Page) {
   await fileInput.waitFor({ state: "attached", timeout: 30_000 });
   await fileInput.setInputFiles(fixture("basic.pdf"));
   try {
-    await page.locator(".pdf-editor-shell").waitFor({ state: "visible", timeout: 60_000 });
+    await page.locator(".studio-shell").waitFor({ state: "visible", timeout: 60_000 });
   } catch (error) {
     const visibleStatus = await page.locator(".editor-upload-card,.status-message,.editor-mode-loading").allTextContents().catch(() => []);
     throw new Error(`Editor não abriu após o upload. Estado visível: ${JSON.stringify(visibleStatus)}`, { cause: error });
   }
-  await page.locator(".editor-pages > button").first().waitFor({ state: "visible", timeout: 60_000 });
-  await page.locator(".editor-stage").waitFor({ state: "visible", timeout: 60_000 });
+  await page.locator(".studio-page-list > button").first().waitFor({ state: "visible", timeout: 60_000 });
+  await page.locator(".studio-stage").waitFor({ state: "visible", timeout: 60_000 });
+  const expectedPageCount = (await PDFDocument.load(await readFile(fixture("basic.pdf")))).getPageCount();
+  assert.equal(await page.locator(".studio-pages-heading > span").textContent(), String(expectedPageCount), "Studio deve exibir o total correto de páginas após o upload");
+  assert.match((await page.locator(".studio-canvas-status").textContent()) || "", new RegExp(`Página 1 de ${expectedPageCount}`), "Status do Studio deve exibir a página atual e o total correto");
 
-  for (const label of ["Selecionar", "Adicionar texto", "Destacar", "Redigir", "Comentário", "Assinatura", "Adicionar imagem"]) {
+  for (const label of ["Selecionar", "Texto", "Destacar", "Redigir", "Comentário", "Assinar", "Imagem"]) {
     assert.ok(await page.getByRole("button", { name: label, exact: true }).count(), `Editor unificado sem ferramenta ${label}`);
   }
 
-  await page.getByRole("button", { name: "Adicionar texto", exact: true }).click();
-  await page.locator(".editor-object-text").last().waitFor({ state: "visible" });
+  await page.getByRole("button", { name: "Texto", exact: true }).click();
+  await page.locator(".studio-stage").click({ position: { x: 120, y: 120 } });
+  await page.locator(".studio-object.kind-text").last().waitFor({ state: "visible" });
   await page.getByRole("button", { name: "Destacar", exact: true }).click();
-  await page.locator(".editor-object-highlight").last().waitFor({ state: "visible" });
+  await page.locator(".studio-stage").click({ position: { x: 220, y: 180 } });
+  await page.locator(".studio-object.kind-highlight").last().waitFor({ state: "visible" });
   await page.getByRole("button", { name: "Comentário", exact: true }).click();
-  await page.locator(".editor-object-comment").last().waitFor({ state: "visible" });
+  await page.locator(".studio-stage").click({ position: { x: 300, y: 230 } });
+  await page.locator(".studio-object.kind-comment").last().waitFor({ state: "visible" });
 
   await page.getByRole("button", { name: "Duplicar", exact: true }).first().click();
-  assert.ok(await page.locator(".editor-pages > button").count() >= 2, "Editor não duplicou a página");
-  await page.getByRole("button", { name: "Em branco", exact: true }).click();
-  assert.ok(await page.locator(".editor-pages > button").count() >= 3, "Editor não inseriu página em branco");
+  assert.ok(await page.locator(".studio-page-list > button").count() >= 2, "Editor não duplicou a página");
+  await page.locator(".studio-page-actions > button").nth(3).click();
+  assert.ok(await page.locator(".studio-page-list > button").count() >= 3, "Editor não inseriu página em branco");
 
   await page.keyboard.press("Control+K");
   assert.equal(await page.evaluate(() => document.activeElement?.id), "header-tool-search", "Ctrl+K deve abrir a busca global, não uma paleta de comandos do editor");

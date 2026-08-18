@@ -131,6 +131,18 @@ async function pdfTextRows(file: File) {
   return pages;
 }
 
+function markdownBlob(pages: PositionedText[][][]) {
+  const lines = ["# Conteúdo extraído do PDF", ""];
+  pages.forEach((rows, pageIndex) => {
+    lines.push(`## Página ${pageIndex + 1}`, "");
+    rows.forEach((row) => {
+      const text = sanitizePdfText(row.map((item) => item.text).join(" ").replace(/\s+/g, " ").trim());
+      if (text) lines.push(text, "");
+    });
+  });
+  return new Blob([lines.join("\n")], { type: "text/markdown;charset=utf-8" });
+}
+
 function docxBlob(pages: PositionedText[][][]) {
   const body = pages.map((rows, pageIndex) => {
     const paragraphs = rows.map((row) => {
@@ -491,6 +503,10 @@ export function AdvancedToolWorkspace({ tool }: { tool: AnyToolDefinition }) {
         if (!pages.some((rows) => rows.length)) throw new Error("Nenhum texto ou tabela foi detectado. Este PDF pode precisar de OCR.");
         const zip = xlsxBlob(pages);
         downloadBlob(new Blob([await zip.arrayBuffer()], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), `${baseName(file)}.xlsx`);
+      } else if (slug === "pdf-para-markdown") {
+        const pages = await pdfTextRows(file);
+        if (!pages.some((rows) => rows.length)) throw new Error("Nenhum texto foi detectado. Este PDF pode ser apenas imagem e precisar de OCR.");
+        downloadBlob(markdownBlob(pages), `${baseName(file)}.md`);
       } else if (slug === "word-para-pdf") {
         downloadBytes(await docxToPdf(file), `${baseName(file)}.pdf`);
       } else if (slug === "excel-para-pdf") {
@@ -586,7 +602,7 @@ export function AdvancedToolWorkspace({ tool }: { tool: AnyToolDefinition }) {
             <label><span>Modificar documento</span><select value={allowModifying ? "sim" : "nao"} onChange={(event) => setAllowModifying(event.target.value === "sim")}><option value="sim">Permitir</option><option value="nao">Bloquear</option></select></label>
           </> : null}
 
-          {(slug === "pdf-para-word" || slug === "pdf-para-excel") ? <div className="option-full privacy-note"><ShieldCheck size={16} /> PDFs digitais preservam melhor o conteúdo. PDFs escaneados precisam de camada de texto/OCR para conversão editável.</div> : null}
+          {(slug === "pdf-para-word" || slug === "pdf-para-excel" || slug === "pdf-para-markdown") ? <div className="option-full privacy-note"><ShieldCheck size={16} /> PDFs digitais preservam melhor o conteúdo. PDFs escaneados precisam de camada de texto/OCR antes da conversão.</div> : null}
           {(slug === "word-para-pdf" || slug === "excel-para-pdf") ? <div className="option-full privacy-note"><ShieldCheck size={16} /> A conversão preserva o conteúdo textual e os dados das células. Recursos avançados do Office podem ser simplificados.</div> : null}
         </div>
       ) : null}

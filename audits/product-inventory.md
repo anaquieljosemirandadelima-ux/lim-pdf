@@ -4,9 +4,9 @@ Gerado a partir de src/lib/all-tools.ts, src/lib/pro-tools.ts e src/lib/product-
 
 ## Resumo
 
-- Ferramentas únicas: **57**
+- Ferramentas únicas: **58**
 - Recomendadas para gratuito: **42**
-- Recomendadas para Premium: **9**
+- Recomendadas para Premium: **10**
 - Recomendadas para Profissional: **6**
 
 ## Matriz de ferramentas
@@ -47,6 +47,7 @@ Gerado a partir de src/lib/all-tools.ts, src/lib/pro-tools.ts e src/lib/product-
 | adicionar-fundo-pdf | Adicionar fundo ao PDF | Editar PDF | free | Editar e revisar | local | low | não | Aplique uma cor atrás do conteúdo das páginas. |
 | pdf-para-word | PDF para Word | Converter de PDF | premium | Converter arquivos | local | high | não | Converta o texto do PDF em documento Word editável. |
 | pdf-para-excel | PDF para Excel | Converter de PDF | premium | Converter arquivos | local | very-high | não | Extraia linhas e colunas do PDF para planilhas XLSX. |
+| pdf-para-markdown | PDF para Markdown | Converter de PDF | premium | Converter arquivos | local | low | não | Converta o texto do PDF em Markdown estruturado. |
 | word-para-pdf | Word para PDF | Converter para PDF | premium | Converter arquivos | local | low | não | Converta documentos DOCX em PDF. |
 | excel-para-pdf | Excel para PDF | Converter para PDF | premium | Converter arquivos | local | low | não | Converta planilhas XLSX em PDF. |
 | destacar-texto | Destacar texto | Editar PDF | free | Editar e revisar | local | low | não | Localize um termo e aplique marcação amarela no PDF. |
@@ -76,7 +77,7 @@ Gerado a partir de src/lib/all-tools.ts, src/lib/pro-tools.ts e src/lib/product-
 | Intenção | Quantidade |
 |---|---:|
 | Automação profissional | 4 |
-| Converter arquivos | 11 |
+| Converter arquivos | 12 |
 | Editar e revisar | 12 |
 | Formulários e dados | 3 |
 | Organizar páginas | 12 |

@@ -61,6 +61,7 @@ export const navigationGroups: NavigationGroup[] = [
     tools: [
       "pdf-para-word",
       "pdf-para-excel",
+      "pdf-para-markdown",
       "pdf-para-jpg",
       "pdf-para-png",
       "extrair-texto-pdf",

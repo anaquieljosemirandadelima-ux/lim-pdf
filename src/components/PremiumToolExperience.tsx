@@ -23,14 +23,14 @@ import {
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { allToolBySlug, type AllToolSlug } from "@/lib/all-tools";
+import { catalogToolBySlug, type CatalogToolSlug } from "@/lib/catalog-groups";
 import { getNextToolSlugs, recordRecentTool } from "@/lib/tool-experience";
 
 type Accent = "blue" | "orange" | "green" | "purple" | "teal" | "rose";
 
 type PremiumToolExperienceProps = {
   toolName: string;
-  toolSlug: AllToolSlug;
+  toolSlug: CatalogToolSlug;
   accent: Accent;
   editor?: boolean;
 };
@@ -149,7 +149,7 @@ export function PremiumToolExperience({ toolName, toolSlug, accent, editor = fal
   }, [commands, query]);
 
   const nextTools = useMemo(() => getNextToolSlugs(toolSlug).flatMap((slug) => {
-    const tool = allToolBySlug.get(slug);
+    const tool = catalogToolBySlug.get(slug);
     return tool ? [tool] : [];
   }), [toolSlug]);
 

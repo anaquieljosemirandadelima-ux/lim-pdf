@@ -82,12 +82,12 @@ export function AppSidebar() {
       </nav>
 
       <section className="sidebar-recommendation" aria-label="Sugestão de ferramenta">
-        <div className="sidebar-development-note" role="note" aria-label="LIM PDF em desenvolvimento">
+        <div className="sidebar-development-note" role="note" aria-label="LIM PDF gratuito">
           <span className="sidebar-development-orb" aria-hidden="true" />
           <span className="sidebar-development-copy">
-            <strong>LIM PDF está evoluindo</strong>
-            <span className="sidebar-development-text">Novas funções e melhorias estão chegando.</span>
-            <span className="sidebar-development-chip">Em desenvolvimento</span>
+            <strong>Tudo gratuito no LIM PDF</strong>
+            <span className="sidebar-development-text">Processamento local, sem assinatura obrigatória e sem bloquear downloads.</span>
+            <span className="sidebar-development-chip">100% gratuito</span>
           </span>
         </div>
 

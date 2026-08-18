@@ -4,9 +4,9 @@ import { ArrowRight, Search, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { allTools } from "@/lib/all-tools";
+import { catalogToolBySlug } from "@/lib/catalog-groups";
 import { toolText, uiText } from "@/lib/i18n-content";
 import { navigationGroups } from "@/lib/navigation";
-import { proTools } from "@/lib/pro-tools";
 import type { ToolSlug } from "@/lib/tools";
 import { useLanguage } from "@/lib/use-language";
 
@@ -78,7 +78,7 @@ export function HeaderToolSearch() {
   const text = uiText[language];
 
   const items = useMemo<SearchItem[]>(() => {
-    const tools = [...allTools, ...proTools].map((tool) => {
+    const tools = [...catalogToolBySlug.values()].map((tool) => {
       const localized = baseToolSlugs.has(tool.slug)
         ? toolText(language, tool.slug as ToolSlug, tool)
         : { name: tool.name, shortDescription: tool.shortDescription };

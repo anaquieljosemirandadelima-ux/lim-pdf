@@ -1,5 +1,10 @@
 import { MAX_LOCAL_PDF_BYTES } from "@/lib/file-validation";
 
+/**
+ * Os nomes de plano abaixo permanecem por compatibilidade com versões antigas.
+ * O produto público do LIM PDF é gratuito: todos os planos legados apontam
+ * para a mesma política local e não existem bloqueios de pagamento.
+ */
 export type ProductPlan = "free" | "premium" | "professional" | "team" | "enterprise";
 export type PremiumCapability =
   | "local-processing"
@@ -26,70 +31,50 @@ type PlanEntitlements = {
   ads: "shown" | "not-shown";
 };
 
-const MB = 1024 * 1024;
+const FREE_CAPABILITIES: readonly PremiumCapability[] = [
+  "local-processing",
+  "large-files",
+  "batch-processing",
+  "ocr-batch",
+  "pdf-comparison",
+  "permanent-redaction",
+  "pdf-a-compliance",
+  "security-report",
+  "pades-signatures",
+];
+
+const FREE_ENTITLEMENTS: PlanEntitlements = {
+  label: "Gratuito",
+  description: "Todas as ferramentas publicadas, com processamento local e sem paywall.",
+  maxFileBytes: Math.max(MAX_LOCAL_PDF_BYTES, 500 * 1024 * 1024),
+  maxBatchFiles: 20,
+  maxLocalHistoryItems: 12,
+  capabilities: FREE_CAPABILITIES,
+  ads: "shown",
+};
 
 export const PLAN_ENTITLEMENTS: Record<ProductPlan, PlanEntitlements> = {
-  free: {
-    label: "Gratuito",
-    description: "Ferramentas essenciais para uso ocasional, com processamento local.",
-    maxFileBytes: MAX_LOCAL_PDF_BYTES,
-    maxBatchFiles: 20,
-    maxLocalHistoryItems: 12,
-    capabilities: ["local-processing", "large-files"],
-    ads: "shown",
-  },
-  premium: {
-    label: "Premium",
-    description: "Automação e produtividade para quem trabalha com PDFs com frequência.",
-    maxFileBytes: 500 * MB,
-    maxBatchFiles: 100,
-    maxLocalHistoryItems: 50,
-    capabilities: ["local-processing", "large-files", "batch-processing", "ocr-batch", "pdf-comparison", "permanent-redaction", "security-report"],
-    ads: "not-shown",
-  },
-  professional: {
-    label: "Profissional",
-    description: "Conformidade, assinatura e ferramentas para escritórios e documentos críticos.",
-    maxFileBytes: 500 * MB,
-    maxBatchFiles: 250,
-    maxLocalHistoryItems: 100,
-    capabilities: ["local-processing", "large-files", "batch-processing", "ocr-batch", "pdf-comparison", "permanent-redaction", "pdf-a-compliance", "security-report", "pades-signatures"],
-    ads: "not-shown",
-  },
-  team: {
-    label: "Equipe",
-    description: "Presets e fluxos compartilhados para pequenas equipes.",
-    maxFileBytes: 500 * MB,
-    maxBatchFiles: 500,
-    maxLocalHistoryItems: 200,
-    capabilities: ["local-processing", "large-files", "batch-processing", "ocr-batch", "pdf-comparison", "permanent-redaction", "pdf-a-compliance", "security-report", "pades-signatures", "shared-presets", "team-workspaces"],
-    ads: "not-shown",
-  },
-  enterprise: {
-    label: "Enterprise",
-    description: "Governança, identidade e implantação conforme a política da organização.",
-    maxFileBytes: 500 * MB,
-    maxBatchFiles: 1000,
-    maxLocalHistoryItems: 500,
-    capabilities: ["local-processing", "large-files", "batch-processing", "ocr-batch", "pdf-comparison", "permanent-redaction", "pdf-a-compliance", "security-report", "pades-signatures", "shared-presets", "team-workspaces", "cloud-storage", "sso-and-audit"],
-    ads: "not-shown",
-  },
+  free: FREE_ENTITLEMENTS,
+  premium: FREE_ENTITLEMENTS,
+  professional: FREE_ENTITLEMENTS,
+  team: FREE_ENTITLEMENTS,
+  enterprise: FREE_ENTITLEMENTS,
 };
 
 export const PREMIUM_CAPABILITY_LABELS: Record<PremiumCapability, string> = {
   "local-processing": "Processamento local",
-  "large-files": "Arquivos grandes",
+  "large-files": "Arquivos de até 500 MB",
   "batch-processing": "Processamento em lote",
   "ocr-batch": "OCR em lote",
   "pdf-comparison": "Comparação de PDFs",
   "permanent-redaction": "Redação permanente",
-  "pdf-a-compliance": "Conformidade PDF/A",
-  "security-report": "Relatório de segurança",
+  "pdf-a-compliance": "Preparação PDF/A",
+  "security-report": "Relatórios de segurança",
   "pades-signatures": "Assinaturas PAdES",
-  "shared-presets": "Presets compartilhados",
-  "team-workspaces": "Espaços de equipe",
-  "cloud-storage": "Armazenamento em nuvem",
-  "sso-and-audit": "SSO e auditoria corporativa",
+  "shared-presets": "Presets locais",
+  "team-workspaces": "Espaços de equipe locais",
+  "cloud-storage": "Armazenamento em nuvem opcional",
+  "sso-and-audit": "SSO e auditoria externa",
 };
 
 export function planHasCapability(plan: ProductPlan, capability: PremiumCapability) {
@@ -97,5 +82,6 @@ export function planHasCapability(plan: ProductPlan, capability: PremiumCapabili
 }
 
 export function getPlanEntitlements(plan: ProductPlan) {
-  return PLAN_ENTITLEMENTS[plan];
+  void plan;
+  return FREE_ENTITLEMENTS;
 }

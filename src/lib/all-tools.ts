@@ -3,6 +3,7 @@ import { tools as baseTools, type ToolCategory, type ToolDefinition, type ToolIc
 export type AdvancedToolSlug =
   | "pdf-para-word"
   | "pdf-para-excel"
+  | "pdf-para-markdown"
   | "word-para-pdf"
   | "excel-para-pdf"
   | "destacar-texto"
@@ -56,6 +57,22 @@ export const advancedTools: AnyToolDefinition[] = [
     useCases: ["Extrair relatórios financeiros", "Reaproveitar tabelas", "Importar listas para planilha", "Organizar dados de documentos"],
     limitations: ["Tabelas sem linhas regulares podem exigir reorganização", "PDFs escaneados precisam ter camada de texto para extração automática"],
     faq: [{ question: "Cada página vira uma planilha?", answer: "Sim. O arquivo XLSX cria uma aba por página para preservar a separação do documento." }, privacyFaq],
+  },
+  {
+    slug: "pdf-para-markdown",
+    name: "PDF para Markdown",
+    shortDescription: "Converta o texto do PDF em Markdown estruturado.",
+    description: "Extraia o conteúdo textual do PDF, preserve títulos, linhas e páginas e gere um arquivo Markdown editável diretamente no navegador.",
+    category: "Converter de PDF",
+    icon: "FileOutput",
+    accent: "teal",
+    accept: "application/pdf,.pdf",
+    multiple: false,
+    keywords: ["pdf para markdown", "pdf para md", "converter pdf markdown", "extrair markdown pdf"],
+    intro: "Transforme PDFs digitais em Markdown para documentação, conhecimento interno, blogs e fluxos de edição técnica.",
+    useCases: ["Migrar relatórios para documentação", "Criar rascunhos de artigos", "Reaproveitar manuais", "Preparar conteúdo para GitHub ou CMS"],
+    limitations: ["PDFs somente com imagem precisam ter camada de texto/OCR", "Tabelas, colunas e layouts visuais podem exigir revisão manual", "A saída preserva o conteúdo textual, não a aparência completa da página"],
+    faq: [{ question: "O arquivo Markdown mantém a formatação do PDF?", answer: "Ele preserva texto, títulos inferidos, linhas e separação de páginas; layouts complexos podem exigir ajustes manuais." }, { question: "O PDF é enviado ao servidor?", answer: "Não. A conversão é executada localmente no navegador." }, privacyFaq],
   },
   {
     slug: "word-para-pdf",

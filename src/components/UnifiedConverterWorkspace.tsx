@@ -12,12 +12,13 @@ import { formatFileSizeLimit, getFileSizeGuidance, isFileWithinLimit, isPdfFile,
 import { clearTemporaryFiles } from "@/lib/temporary-cache";
 import type { ToolDefinition } from "@/lib/tools";
 
-export const converterOutputSlugs = ["pdf-para-word", "pdf-para-excel", "pdf-para-jpg", "pdf-para-png", "extrair-texto-pdf"] as const;
+export const converterOutputSlugs = ["pdf-para-word", "pdf-para-excel", "pdf-para-markdown", "pdf-para-jpg", "pdf-para-png", "extrair-texto-pdf"] as const;
 export type ConverterOutputSlug = typeof converterOutputSlugs[number];
 
 const outputOptions: Array<{ slug: ConverterOutputSlug; label: string; detail: string; icon: typeof FileOutput }> = [
   { slug: "pdf-para-word", label: "Word", detail: ".docx editável", icon: FileText },
   { slug: "pdf-para-excel", label: "Excel", detail: ".xlsx com dados", icon: FileOutput },
+  { slug: "pdf-para-markdown", label: "Markdown", detail: ".md editável", icon: FileOutput },
   { slug: "pdf-para-jpg", label: "JPG", detail: "imagens compactas", icon: Image },
   { slug: "pdf-para-png", label: "PNG", detail: "imagens nítidas", icon: Image },
   { slug: "extrair-texto-pdf", label: "Texto", detail: "conteúdo extraído", icon: FileText },
@@ -111,7 +112,7 @@ export function UnifiedConverterWorkspace({ initialOutput = "pdf-para-word" }: {
 
     {file && getFileSizeGuidance(file).tier !== "standard" ? <div className="large-file-notice" role="status"><FileText size={16} /><span><strong>Arquivo grande</strong><small>{getFileSizeGuidance(file).message} A troca de formato permanece local no navegador.</small></span></div> : null}
 
-    {file ? <div className="unified-converter-host" ref={hostRef}>{output === "pdf-para-word" || output === "pdf-para-excel" ? <AdvancedToolWorkspace tool={tool} /> : isMemorySafe(output) ? <MemorySafePdfWorkspace tool={tool as ToolDefinition} /> : <PdfToolWorkspace tool={tool as ToolDefinition} />}</div> : <div className="converter-empty-state"><FileOutput size={25} /><strong>O botão de conversão aparece aqui após selecionar o PDF.</strong><p>O formato escolhido fica visível no mesmo bloco para você não precisar procurar a ação mais abaixo.</p></div>}
+    {file ? <div className="unified-converter-host" ref={hostRef}>{output === "pdf-para-word" || output === "pdf-para-excel" || output === "pdf-para-markdown" ? <AdvancedToolWorkspace tool={tool} /> : isMemorySafe(output) ? <MemorySafePdfWorkspace tool={tool as ToolDefinition} /> : <PdfToolWorkspace tool={tool as ToolDefinition} />}</div> : <div className="converter-empty-state"><FileOutput size={25} /><strong>O botão de conversão aparece aqui após selecionar o PDF.</strong><p>O formato escolhido fica visível no mesmo bloco para você não precisar procurar a ação mais abaixo.</p></div>}
 
     <div className="converter-other-directions"><span>Quer converter para PDF?</span><Link href="/ferramentas/word-para-pdf">Word → PDF <ArrowRight size={13} /></Link><Link href="/ferramentas/excel-para-pdf">Excel → PDF <ArrowRight size={13} /></Link><Link href="/ferramentas/imagens-para-pdf">Imagens → PDF <ArrowRight size={13} /></Link></div>
   </section>;

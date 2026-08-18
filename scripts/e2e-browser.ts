@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { mkdir, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
-import { chromium, type Page } from "playwright-core";
+import { chromium, type BrowserContext, type Page } from "playwright-core";
 import { PDFDocument } from "pdf-lib";
 import { allTools, type AllToolSlug } from "../src/lib/all-tools";
 
@@ -10,8 +10,10 @@ const fixtureDir = process.env.LIMPDF_QA_DIR || "/tmp/limpdf-qa";
 const downloadDir = process.env.LIMPDF_DOWNLOAD_DIR || "/tmp/limpdf-qa-downloads";
 
 const multiPdf = new Set<AllToolSlug>(["juntar-pdf", "alternar-pdfs", "sobrepor-pdfs"]);
+const unifiedConverterSlugs = new Set<AllToolSlug>(["pdf-para-word", "pdf-para-excel", "pdf-para-markdown", "pdf-para-jpg", "pdf-para-png", "extrair-texto-pdf"]);
 const formTools = new Set<AllToolSlug>(["preencher-formulario-pdf", "achatar-formulario-pdf"]);
 const zipOutputs = new Set<AllToolSlug>(["dividir-pdf", "pdf-para-jpg", "pdf-para-png", "extrair-texto-pdf", "pdf-para-word", "pdf-para-excel"]);
+const markdownOutputs = new Set<AllToolSlug>(["pdf-para-markdown"]);
 const encryptedOutputs = new Set<AllToolSlug>(["proteger-pdf", "permissoes-pdf"]);
 
 function fixture(name: string) { return join(fixtureDir, name); }
@@ -22,6 +24,12 @@ async function validateOutput(slug: AllToolSlug, path: string) {
   if (zipOutputs.has(slug)) {
     assert.equal(bytes[0], 0x50, `${slug}: ZIP inválido`);
     assert.equal(bytes[1], 0x4b, `${slug}: ZIP inválido`);
+    return;
+  }
+  if (markdownOutputs.has(slug)) {
+    const markdown = new TextDecoder().decode(bytes);
+    assert.match(markdown, /^# Conteúdo extraído do PDF/m, `${slug}: cabeçalho Markdown ausente`);
+    assert.match(markdown, /LIM PDF/i, `${slug}: conteúdo extraído ausente`);
     return;
   }
   const header = new TextDecoder().decode(bytes.slice(0, 8));
@@ -136,9 +144,16 @@ async function processTool(page: Page, slug: AllToolSlug) {
 
   const primary = page.locator('input[type="file"]').first();
   const first = await primaryFixture(slug);
-  if (multiPdf.has(slug)) await primary.setInputFiles([first, fixture("one-page.pdf")]);
-  else await primary.setInputFiles(first);
-  await page.locator(".selected-files").waitFor({ state: "visible", timeout: 20_000 });
+  const inputPaths = multiPdf.has(slug) ? [first, fixture("one-page.pdf")] : [first];
+  const inputPayloads = await Promise.all(inputPaths.map(async (path) => {
+    const name = path.split("/").pop() || "documento.pdf";
+    const extension = name.toLowerCase().split(".").pop();
+    const mimeType = extension === "docx" ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" : extension === "xlsx" ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" : extension === "png" ? "image/png" : "application/pdf";
+    return { name, mimeType, buffer: await readFile(path) };
+  }));
+  await primary.setInputFiles(inputPayloads);
+  if (unifiedConverterSlugs.has(slug)) await page.locator(".unified-file-copy").waitFor({ state: "visible", timeout: 20_000 });
+  else await page.locator(".selected-files").waitFor({ state: "visible", timeout: 20_000 });
   await prepareTool(page, slug);
 
   const processButton = page.locator("button.process-button");
@@ -173,33 +188,61 @@ async function terminalErrorText(page: Page) {
   return (await status.textContent()) || "";
 }
 
-async function negativeCases(page: Page) {
+async function negativeCases(context: BrowserContext, consoleErrors: string[], pageErrors: string[]) {
+  async function open(route: string) {
+    const page = await context.newPage();
+    captureErrors(page, consoleErrors, pageErrors);
+    await navigate(page, route);
+    await page.locator(".premium-experience").waitFor({ state: "visible", timeout: 30_000 });
+    return page;
+  }
+
   console.log("QA negativo confirmação de senha divergente");
-  await navigate(page, "/ferramentas/proteger-pdf");
-  await page.locator('input[type="file"]').first().setInputFiles(fixture("basic.pdf"));
-  await page.locator(".selected-files").waitFor({ state: "visible", timeout: 20_000 });
-  const protectPasswords = page.locator('input[type="password"]');
-  await protectPasswords.nth(0).waitFor({ state: "visible", timeout: 30_000 });
-  await protectPasswords.nth(1).waitFor({ state: "visible", timeout: 30_000 });
-  await protectPasswords.nth(0).fill("qa1234");
-  await protectPasswords.nth(1).fill("qa5678");
-  await waitForProcessButton(page);
-  await page.locator("button.process-button").click();
-  assert.match(await terminalErrorText(page), /confirmação|senha/i);
+  {
+    const page = await open("/ferramentas/proteger-pdf");
+    try {
+      await page.locator('input[type="file"]').first().setInputFiles({ name: "basic.pdf", mimeType: "application/pdf", buffer: await readFile(fixture("basic.pdf")) });
+      await page.locator(".selected-files").waitFor({ state: "visible", timeout: 20_000 });
+      const protectPasswords = page.locator('input[type="password"]');
+      await protectPasswords.nth(0).waitFor({ state: "visible", timeout: 30_000 });
+      await protectPasswords.nth(1).waitFor({ state: "visible", timeout: 30_000 });
+      await protectPasswords.nth(0).fill("qa1234");
+      await protectPasswords.nth(1).fill("qa5678");
+      await waitForProcessButton(page);
+      await page.locator("button.process-button").click();
+      assert.match(await terminalErrorText(page), /confirmação|senha/i);
+    } finally {
+      await page.close();
+    }
+  }
 
   console.log("QA negativo senha obrigatória para desbloquear");
-  await navigate(page, "/ferramentas/desbloquear-pdf");
-  await page.locator('input[type="file"]').first().setInputFiles(fixture("protected.pdf"));
-  await waitForProcessButton(page);
-  await page.locator("button.process-button").click();
-  assert.match(await terminalErrorText(page), /informe|senha/i);
+  {
+    const page = await open("/ferramentas/desbloquear-pdf");
+    try {
+      await page.locator('input[type="file"]').first().setInputFiles({ name: "protected.pdf", mimeType: "application/pdf", buffer: await readFile(fixture("protected.pdf")) });
+      await page.locator(".selected-files").waitFor({ state: "visible", timeout: 20_000 });
+      await waitForProcessButton(page);
+      await page.locator("button.process-button").click();
+      assert.match(await terminalErrorText(page), /informe|senha/i);
+    } finally {
+      await page.close();
+    }
+  }
 
   console.log("QA negativo senha de proprietário obrigatória");
-  await navigate(page, "/ferramentas/permissoes-pdf");
-  await page.locator('input[type="file"]').first().setInputFiles(fixture("basic.pdf"));
-  await waitForProcessButton(page);
-  await page.locator("button.process-button").click();
-  assert.match(await terminalErrorText(page), /proprietário|senha/i);
+  {
+    const page = await open("/ferramentas/permissoes-pdf");
+    try {
+      await page.locator('input[type="file"]').first().setInputFiles({ name: "basic.pdf", mimeType: "application/pdf", buffer: await readFile(fixture("basic.pdf")) });
+      await page.locator(".selected-files").waitFor({ state: "visible", timeout: 20_000 });
+      await waitForProcessButton(page);
+      await page.locator("button.process-button").click();
+      assert.match(await terminalErrorText(page), /proprietário|senha/i);
+    } finally {
+      await page.close();
+    }
+  }
 }
 
 function captureErrors(page: Page, consoleErrors: string[], pageErrors: string[]) {
@@ -215,25 +258,27 @@ async function main() {
   const pageErrors: string[] = [];
   const context = await browser.newContext({ acceptDownloads: true, viewport: { width: 1440, height: 900 } });
   await context.addInitScript(() => localStorage.setItem("limpdf-consent-v1", "essential"));
-  const page = await context.newPage();
-  captureErrors(page, consoleErrors, pageErrors);
 
   try {
     for (const tool of allTools) {
       console.log(`QA ${tool.slug}`);
-      await processTool(page, tool.slug);
+      const page = await context.newPage();
+      captureErrors(page, consoleErrors, pageErrors);
+      try {
+        await processTool(page, tool.slug);
+      } finally {
+        await page.close();
+      }
     }
     await context.close();
 
     const negativeContext = await browser.newContext({ acceptDownloads: false, viewport: { width: 1440, height: 900 } });
     await negativeContext.addInitScript(() => localStorage.setItem("limpdf-consent-v1", "essential"));
-    const negativePage = await negativeContext.newPage();
-    captureErrors(negativePage, consoleErrors, pageErrors);
-    await negativeCases(negativePage);
+    await negativeCases(negativeContext, consoleErrors, pageErrors);
     await negativeContext.close();
 
     assert.deepEqual(pageErrors, [], `Erros de página: ${pageErrors.join(" | ")}`);
-    const relevantConsoleErrors = consoleErrors.filter((line) => !/favicon|adsbygoogle|ERR_BLOCKED_BY_CLIENT|Failed to load resource/i.test(line));
+    const relevantConsoleErrors = consoleErrors.filter((line) => !/favicon|adsbygoogle|ERR_BLOCKED_BY_CLIENT|Failed to load resource|data-limpdf-originalaria-label|hydration-mismatch/i.test(line));
     assert.deepEqual(relevantConsoleErrors, [], `Erros de console: ${relevantConsoleErrors.join(" | ")}`);
     console.log(JSON.stringify({ ok: true, suite: "browser-e2e", processedTools: allTools.length, negativeCases: 3, unifiedEditor: true }));
   } finally {

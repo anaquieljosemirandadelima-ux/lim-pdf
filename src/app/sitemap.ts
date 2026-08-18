@@ -11,6 +11,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const staticRoutes = [
     "",
     "/ferramentas",
+    "/premium",
     "/ferramentas/converter-pdf",
     "/ferramentas/ocr-pdf",
     "/ferramentas/dimensionar-pdf",
@@ -30,7 +31,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       url: `${base}${route}`,
       lastModified: CONTENT_UPDATED_AT,
       changeFrequency: route === "" || route === "/ferramentas" ? "weekly" as const : "monthly" as const,
-      priority: route === "" ? 1 : route === "/ferramentas" ? .97 : route.startsWith("/ferramentas/") ? .94 : .56,
+      priority: route === "" ? 1 : route === "/ferramentas" ? .97 : route === "/premium" ? .93 : route.startsWith("/ferramentas/") ? .94 : .56,
     })),
     ...guides.map((guide) => ({
       url: `${base}/guias/${guide.slug}`,

@@ -6,17 +6,31 @@ import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { ToolIcon } from "@/components/ToolIcon";
 import { allToolBySlug, type AllToolSlug, type AnyToolDefinition } from "@/lib/all-tools";
 import { proTools } from "@/lib/pro-tools";
+import { getProductToolLabel, getProductToolMeta } from "@/lib/product-catalog";
 import { recordRecentTool, toggleFavoriteTool, TOOL_EXPERIENCE_CHANGE_EVENT, TOOL_EXPERIENCE_FAVORITES_KEY, TOOL_EXPERIENCE_RECENTS_KEY } from "@/lib/tool-experience";
 
-const sections: Array<{ id: "converter" | "editar" | "organizar" | "proteger" | "outros"; title: string; accent: string; icon: typeof Repeat2; tools: AllToolSlug[] }> = [
-  { id: "converter", title: "Converter", accent: "blue", icon: Repeat2, tools: ["pdf-para-word", "pdf-para-excel", "pdf-para-jpg", "pdf-para-png", "word-para-pdf", "excel-para-pdf", "imagens-para-pdf", "extrair-texto-pdf", "pdf-em-escala-de-cinza"] },
-  { id: "editar", title: "Editar", accent: "purple", icon: PencilLine, tools: ["editar-pdf", "assinar-pdf", "adicionar-texto-pdf", "adicionar-imagem-pdf", "destacar-texto", "marca-dagua-pdf", "marcar-confidencial", "cabecalho-rodape-pdf"] },
-  { id: "organizar", title: "Organizar", accent: "orange", icon: Grid2X2, tools: ["juntar-pdf", "dividir-pdf", "extrair-paginas", "organizar-paginas", "excluir-paginas", "girar-pdf", "duplicar-paginas", "inserir-pagina-em-branco", "alternar-pdfs", "sobrepor-pdfs"] },
-  { id: "proteger", title: "Proteger e otimizar", accent: "green", icon: ShieldCheck, tools: ["proteger-pdf", "desbloquear-pdf", "permissoes-pdf", "compactar-pdf", "remover-metadados", "achatar-formulario-pdf", "recortar-pdf", "redimensionar-pdf", "preencher-formulario-pdf"] },
-  { id: "outros", title: "Outros", accent: "teal", icon: Sparkles, tools: ["numerar-paginas", "adicionar-fundo-pdf", "espelhar-pdf", "criar-livreto-pdf", "paginas-por-folha"] },
-];
+type CatalogTab = "todas" | "organizar" | "editar" | "converter" | "formularios" | "assinar" | "seguranca" | "otimizar" | "profissional";
+type CatalogSection = Exclude<CatalogTab, "todas" | "profissional">;
 
-type CatalogTab = "todas" | "converter" | "editar" | "organizar" | "proteger" | "outros" | "profissional";
+const sectionIcons: Record<CatalogSection, typeof Repeat2> = {
+  organizar: Grid2X2,
+  editar: PencilLine,
+  converter: Repeat2,
+  formularios: FileOutput,
+  assinar: PencilLine,
+  seguranca: ShieldCheck,
+  otimizar: Sparkles,
+};
+
+const sections: Array<{ id: CatalogSection; title: string; accent: string; icon: typeof Repeat2; tools: AllToolSlug[] }> = [
+  { id: "organizar", title: "Organizar páginas", accent: "blue", icon: sectionIcons.organizar, tools: ["juntar-pdf", "dividir-pdf", "extrair-paginas", "excluir-paginas", "organizar-paginas", "girar-pdf", "duplicar-paginas", "inserir-pagina-em-branco", "alternar-pdfs", "sobrepor-pdfs"] },
+  { id: "editar", title: "Editar e revisar", accent: "green", icon: sectionIcons.editar, tools: ["editar-pdf", "adicionar-texto-pdf", "adicionar-imagem-pdf", "destacar-texto", "marca-dagua-pdf", "marcar-confidencial", "cabecalho-rodape-pdf", "numerar-paginas", "adicionar-fundo-pdf", "espelhar-pdf"] },
+  { id: "converter", title: "Converter arquivos", accent: "teal", icon: sectionIcons.converter, tools: ["pdf-para-word", "pdf-para-excel", "pdf-para-markdown", "pdf-para-jpg", "pdf-para-png", "extrair-texto-pdf", "word-para-pdf", "excel-para-pdf", "imagens-para-pdf", "pdf-em-escala-de-cinza"] },
+  { id: "formularios", title: "Formulários e dados", accent: "purple", icon: sectionIcons.formularios, tools: ["preencher-formulario-pdf", "achatar-formulario-pdf"] },
+  { id: "assinar", title: "Assinar documentos", accent: "rose", icon: sectionIcons.assinar, tools: ["assinar-pdf"] },
+  { id: "seguranca", title: "Proteger e privacidade", accent: "blue", icon: sectionIcons.seguranca, tools: ["proteger-pdf", "desbloquear-pdf", "permissoes-pdf", "remover-metadados", "marcar-confidencial"] },
+  { id: "otimizar", title: "Otimizar e reduzir", accent: "orange", icon: sectionIcons.otimizar, tools: ["compactar-pdf", "recortar-pdf", "redimensionar-pdf", "criar-livreto-pdf", "paginas-por-folha"] },
+];
 
 const queryAliases: Record<string, string[]> = {
   compactar: ["comprimir", "diminuir", "reduzir", "menor"],
@@ -52,11 +66,13 @@ function useToolStorage(key: string) {
 }
 
 function ToolItem({ tool, favorite, onFavorite }: { tool: AnyToolDefinition; favorite: boolean; onFavorite: (slug: AllToolSlug) => void }) {
-  return <div className={`reference-catalog-tool-wrap ${favorite ? "favorite" : ""}`}><Link href={`/ferramentas/${tool.slug}`} className="reference-catalog-tool" onClick={() => recordRecentTool(tool.slug)}><span className={`reference-catalog-icon accent-${tool.accent}`}><ToolIcon icon={tool.icon} /></span><span className="reference-catalog-copy"><strong>{tool.name}</strong><small>{tool.shortDescription}</small></span><ArrowRight size={17} /></Link><button className="reference-favorite-button" type="button" aria-label={favorite ? `Remover ${tool.name} dos favoritos` : `Adicionar ${tool.name} aos favoritos`} aria-pressed={favorite} onClick={() => onFavorite(tool.slug)}><Sparkles size={15} /></button></div>;
+  const meta = getProductToolMeta(tool.slug);
+  return <div className={`reference-catalog-tool-wrap ${favorite ? "favorite" : ""}`}><Link href={`/ferramentas/${tool.slug}`} className="reference-catalog-tool" onClick={() => recordRecentTool(tool.slug)}><span className={`reference-catalog-icon accent-${tool.accent}`}><ToolIcon icon={tool.icon} /></span><span className="reference-catalog-copy"><strong>{tool.name}</strong><small>{tool.shortDescription}</small><span className="reference-tool-meta"><span>{getProductToolLabel(tool.slug)}</span>{meta.processingMode === "local" ? <span>Local</span> : null}{meta.supportsBatch ? <span>Lote</span> : null}</span></span><ArrowRight size={17} /></Link><button className="reference-favorite-button" type="button" aria-label={favorite ? `Remover ${tool.name} dos favoritos` : `Adicionar ${tool.name} aos favoritos`} aria-pressed={favorite} onClick={() => onFavorite(tool.slug)}><Sparkles size={15} /></button></div>;
 }
 
 function ProToolItem({ tool }: { tool: (typeof proTools)[number] }) {
-  return <Link href={`/ferramentas/${tool.slug}`} className="reference-pro-tool-card"><span className={`reference-catalog-icon accent-${tool.accent}`}><ToolIcon icon={tool.icon} /></span><span><strong>{tool.name}</strong><small>{tool.shortDescription}</small></span><ArrowRight size={17} /></Link>;
+  const meta = getProductToolMeta(tool.slug);
+  return <Link href={`/ferramentas/${tool.slug}`} className="reference-pro-tool-card"><span className={`reference-catalog-icon accent-${tool.accent}`}><ToolIcon icon={tool.icon} /></span><span><strong>{tool.name}</strong><small>{tool.shortDescription}</small><span className="reference-tool-meta"><span>{getProductToolLabel(tool.slug)}</span>{meta.processingMode === "local" ? <span>Local</span> : null}{meta.supportsBatch ? <span>Lote</span> : null}</span></span><ArrowRight size={17} /></Link>;
 }
 
 export function ToolCatalog({ initialQuery = "" }: { initialQuery?: string }) {
@@ -69,13 +85,14 @@ export function ToolCatalog({ initialQuery = "" }: { initialQuery?: string }) {
 
   const filteredSections = useMemo(() => sections.filter((section) => active === "todas" || section.id === active).map((section) => ({ ...section, resolved: resolveTools(section.tools).filter((tool) => matchesQuery(tool, normalizedQuery)) })).filter((section) => section.resolved.length > 0), [active, normalizedQuery]);
   const filteredProTools = useMemo(() => proTools.filter((tool) => matchesQuery(tool, normalizedQuery)), [normalizedQuery]);
-  const tabs = [["todas", "Todas", Grid2X2], ["converter", "Converter", Repeat2], ["editar", "Editar", PencilLine], ["organizar", "Organizar", Grid2X2], ["proteger", "Proteger", ShieldCheck], ["profissional", "Profissional", Sparkles], ["outros", "Outros", Grid2X2]] as const;
+  const tabs = [["todas", "Todas", Grid2X2], ["organizar", "Organizar", Grid2X2], ["editar", "Editar", PencilLine], ["converter", "Converter", Repeat2], ["formularios", "Formulários", FileOutput], ["assinar", "Assinar", PencilLine], ["seguranca", "Segurança", ShieldCheck], ["otimizar", "Otimizar", Sparkles], ["profissional", "Profissional", Sparkles]] as const;
   const favoriteTools = resolveTools(favorites);
   const recentTools = resolveTools(recents.filter((slug) => !favorites.includes(slug))).slice(0, 6);
   const showCore = active !== "profissional";
   const showPro = active === "todas" || active === "profissional";
 
   return <div className="reference-catalog"><div className="reference-catalog-head"><div><h1>Todas as ferramentas</h1><p>Comece pela tarefa principal e abra os controles avançados só quando precisar.</p></div><label className="reference-search"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar: juntar, assinar, diminuir, Word..." /></label></div>
+    {!normalizedQuery && active === "todas" ? <Link className="catalog-premium-banner" href="/premium"><span className="catalog-premium-banner-icon"><Sparkles size={18} /></span><span><strong>Conheça a experiência Premium</strong><small>Arquivos grandes, automação, lote, segurança e fluxos profissionais.</small></span><ArrowRight size={17} /></Link> : null}
     {!normalizedQuery && active === "todas" ? <section className="catalog-priority-actions" aria-label="Ações principais"><Link href="/ferramentas/converter-pdf"><span><Repeat2 size={19} /></span><div><strong>Converter PDF</strong><small>Escolha a saída depois do upload</small></div><ArrowRight size={17} /></Link><Link href="/ferramentas/editar-pdf"><span><PencilLine size={19} /></span><div><strong>Editar PDF</strong><small>Texto, imagens, páginas e revisão em um só editor</small></div><ArrowRight size={17} /></Link><Link href="/ferramentas/ocr-pdf"><span><FileOutput size={19} /></span><div><strong>OCR PDF</strong><small>Torne digitalizações pesquisáveis</small></div><ArrowRight size={17} /></Link><Link href="/ferramentas/preflight-pdf"><span><ShieldCheck size={19} /></span><div><strong>Preflight PDF</strong><small>Cheque o arquivo antes de entregar</small></div><ArrowRight size={17} /></Link></section> : null}
     {!normalizedQuery && active === "todas" && (favoriteTools.length || recentTools.length) ? <section className="reference-personal-tools" aria-label="Acesso rápido">{favoriteTools.length ? <div><header><span><Sparkles size={17} /></span><strong>Favoritas</strong><small>Ficam sempre à mão neste dispositivo.</small></header><div className="reference-personal-grid">{favoriteTools.slice(0, 6).map((tool) => <ToolItem key={tool.slug} tool={tool} favorite onFavorite={handleFavorite} />)}</div></div> : null}{recentTools.length ? <div><header><span><Repeat2 size={17} /></span><strong>Recentes</strong><small>Continue de onde parou.</small></header><div className="reference-personal-grid">{recentTools.map((tool) => <ToolItem key={tool.slug} tool={tool} favorite={false} onFavorite={handleFavorite} />)}</div></div> : null}</section> : null}
     <div className="reference-catalog-tabs" role="tablist" aria-label="Filtrar ferramentas por categoria">{tabs.map(([id, label, Icon]) => <button key={id} type="button" className={active === id ? "active" : ""} onClick={() => setActive(id)}><Icon size={16} /> {label}</button>)}</div>

@@ -22,7 +22,7 @@ interface ToolPageProps { params: Promise<{ slug: string }> }
 type PublicSlug = AllToolSlug | ProToolSlug;
 
 const memorySafeToolSlugs = new Set<ToolSlug>(["pdf-para-jpg", "pdf-para-png", "compactar-pdf", "pdf-em-escala-de-cinza"]);
-const converterOutputSet = new Set<AllToolSlug>(["pdf-para-word", "pdf-para-excel", "pdf-para-jpg", "pdf-para-png", "extrair-texto-pdf"]);
+const converterOutputSet = new Set<AllToolSlug>(["pdf-para-word", "pdf-para-excel", "pdf-para-markdown", "pdf-para-jpg", "pdf-para-png", "extrair-texto-pdf"]);
 
 const pageDescriptions: Partial<Record<PublicSlug, string>> = {
   "editar-pdf": "Edite textos, imagens, páginas e anotações do seu PDF com rapidez e precisão.",
@@ -33,6 +33,7 @@ const pageDescriptions: Partial<Record<PublicSlug, string>> = {
   "pdf-para-png": "Converta páginas do seu PDF em imagens PNG e troque a saída sem reenviar o arquivo.",
   "pdf-para-word": "Converta o texto do PDF em Word editável e mude a saída no mesmo fluxo.",
   "pdf-para-excel": "Extraia dados do PDF para Excel e mude a saída no mesmo fluxo.",
+  "pdf-para-markdown": "Converta o texto do PDF em Markdown estruturado diretamente no navegador.",
   "proteger-pdf": "Adicione senha e criptografia AES-256 ao seu PDF.",
   "desbloquear-pdf": "Remova a senha quando você possui a credencial correta.",
   "permissoes-pdf": "Controle impressão, cópia e modificação do documento.",

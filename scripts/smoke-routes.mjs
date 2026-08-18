@@ -20,7 +20,7 @@ const professionalRoutes = [
 const routes = [
   "/", "/ferramentas", "/ferramentas/editar-pdf", "/ferramentas/converter-pdf", "/ferramentas/ocr-pdf", "/ferramentas/dimensionar-pdf", "/ferramentas/preflight-pdf", "/ferramentas/juntar-pdf", "/ferramentas/compactar-pdf", "/ferramentas/preencher-formulario-pdf",
   ...professionalRoutes,
-  "/privacidade", "/cookies", "/termos", "/seguranca", "/acessibilidade", "/guias", "/guias/editar-pdf-sem-perder-formatacao", "/guias/ocr-pdf-escaneado", "/guias/comprimir-pdf", "/guias/redacao-segura-pdf", "/guias/juntar-pdf", "/guias/converter-pdf-para-word", "/guias/assinar-pdf-digitalmente", "/guias/proteger-pdf-com-senha", "/sobre", "/contato", "/sitemap.xml", "/robots.txt", "/ads.txt", "/.well-known/security.txt",
+  "/privacidade", "/cookies", "/termos", "/seguranca", "/acessibilidade", "/guias", "/guias/editar-pdf-sem-perder-formatacao", "/guias/ocr-pdf-escaneado", "/guias/comprimir-pdf", "/guias/redacao-segura-pdf", "/guias/juntar-pdf", "/guias/converter-pdf-para-word", "/guias/assinar-pdf-digitalmente", "/guias/proteger-pdf-com-senha", "/sobre", "/premium", "/contato", "/sitemap.xml", "/robots.txt", "/ads.txt", "/.well-known/security.txt",
 ];
 
 for (const route of routes) {
@@ -39,7 +39,7 @@ for (const route of routes) {
   if (professionalRoutes.includes(route) && !text.includes("pro-pdf-workspace")) throw new Error(`${route} missing professional workspace`);
   if (route === "/sitemap.xml") {
     for (const marker of ["/ferramentas/converter-pdf", "/ferramentas/ocr-pdf", "/ferramentas/dimensionar-pdf", "/ferramentas/preflight-pdf", "/ferramentas/assinatura-digital-pdf", "/ferramentas/links-pdf", "/ferramentas/comparar-pdfs"]) if (!text.includes(marker)) throw new Error(`sitemap missing ${marker}`);
-    for (const required of ["/sobre", "/guias", "/contato", "/guias/editar-pdf-sem-perder-formatacao", "/guias/ocr-pdf-escaneado"]) {
+    for (const required of ["/sobre", "/guias", "/premium", "/contato", "/guias/editar-pdf-sem-perder-formatacao", "/guias/ocr-pdf-escaneado"]) {
       const locSuffix = `${required}</loc>`;
       if (!text.includes(locSuffix)) throw new Error(`sitemap missing editorial route ${required}`);
     }

@@ -186,7 +186,64 @@
   }
 }
 
+@media (max-width: 900px) and (min-width: 621px) {
+  .reference-sidebar {
+    width: 72px !important;
+    padding: 12px 8px !important;
+    border-radius: 18px !important;
+  }
+
+  .sidebar-brand {
+    min-height: 42px !important;
+    padding: 0 0 8px !important;
+    justify-content: center !important;
+  }
+
+  .sidebar-brand .logo,
+  .sidebar-brand .brand-logo-image {
+    width: 52px !important;
+    max-width: 52px !important;
+  }
+
+  .sidebar-nav-heading,
+  .sidebar-recommendation {
+    display: none !important;
+  }
+
+  .sidebar-item-wrap > a {
+    justify-content: center !important;
+    gap: 0 !important;
+    padding: 0 !important;
+  }
+
+  .sidebar-item-wrap > a .sidebar-hover-label {
+    display: none !important;
+  }
+
+  .reference-main {
+    width: calc(100% - 92px) !important;
+    margin-left: 92px !important;
+    padding: 18px 16px 24px !important;
+  }
+}
+
 @media (max-width: 620px) {
+  .reference-sidebar {
+    display: none !important;
+  }
+
+  .reference-main {
+    width: 100% !important;
+    margin-left: 0 !important;
+    padding: 12px 12px 24px !important;
+  }
+
+  .reference-header {
+    left: 10px !important;
+    right: 10px !important;
+    width: auto !important;
+  }
+
   .reference-header-inner {
     grid-template-columns: minmax(0, 1fr) auto !important;
     gap: 8px !important;

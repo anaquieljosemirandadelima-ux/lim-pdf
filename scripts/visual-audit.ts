@@ -113,7 +113,20 @@ async function main() {
       const responsiveSearch = responsivePage.locator(".header-search-slot #header-tool-search");
       await responsiveSearch.waitFor({ state: "visible", timeout: 10_000 });
       assert.equal(await responsivePage.locator(".sidebar-search #header-tool-search").count(), 1, "A sidebar deve manter um único componente estrutural de busca.");
-      assert.equal(await responsivePage.locator(".sidebar-search").evaluate((element) => getComputedStyle(element).display), "none", `Sidebar deve ficar oculta em ${viewport.width}px.`);
+      assert.equal(await responsivePage.locator(".sidebar-search").evaluate((element) => getComputedStyle(element).display), "none", `Busca da sidebar deve ficar oculta em ${viewport.width}px.`);
+      const responsiveSidebar = responsivePage.locator(".reference-sidebar");
+      const responsiveSidebarLayout = await responsiveSidebar.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return { display: style.display, width: Number.parseFloat(style.width) };
+      });
+      if (viewport.width <= 620) {
+        assert.equal(responsiveSidebarLayout.display, "none", `Sidebar inteira deve ficar oculta em ${viewport.width}px.`);
+      } else {
+        assert.notEqual(responsiveSidebarLayout.display, "none", `Sidebar compacta deve permanecer acessível em ${viewport.width}px.`);
+        assert.ok(responsiveSidebarLayout.width <= 90, `Sidebar tablet deve ser compacta em ${viewport.width}px: ${JSON.stringify(responsiveSidebarLayout)}`);
+      }
+      const responsiveMainBox = await responsivePage.locator(".reference-main").boundingBox();
+      assert.ok(responsiveMainBox && responsiveMainBox.width >= viewport.width - (viewport.width <= 620 ? 30 : 110), `Conteúdo principal deve ocupar a largura disponível em ${viewport.width}px: ${JSON.stringify(responsiveMainBox)}`);
       await responsiveSearch.fill("diminuir pdf");
       const responsiveResults = responsivePage.getByRole("listbox");
       await responsiveResults.waitFor({ state: "visible", timeout: 10_000 });

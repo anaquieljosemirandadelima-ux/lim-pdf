@@ -68,12 +68,18 @@ function searchScore(item: SearchItem, rawQuery: string) {
   return score;
 }
 
-function resultId(item: SearchItem) {
-  return `global-search-result-${item.kind}-${item.id.replace(/[^a-z0-9_-]/gi, "-")}`;
+function resultId(item: SearchItem, instanceId: string) {
+  return `global-search-result-${instanceId}-${item.kind}-${item.id.replace(/[^a-z0-9_-]/gi, "-")}`;
 }
 
-export function HeaderToolSearch() {
+type HeaderToolSearchProps = {
+  idPrefix?: string;
+};
+
+export function HeaderToolSearch({ idPrefix = "header-tool-search" }: HeaderToolSearchProps) {
   const router = useRouter();
+  const inputId = idPrefix;
+  const resultsId = `${idPrefix}-results`;
   const language = useLanguage();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -205,16 +211,16 @@ export function HeaderToolSearch() {
         navigate();
       }}
     >
-      <label htmlFor="header-tool-search">
+      <label htmlFor={inputId}>
         <Search size={18} aria-hidden="true" />
         <input
           ref={inputRef}
-          id="header-tool-search"
+          id={inputId}
           role="combobox"
           aria-autocomplete="list"
           aria-expanded={open}
-          aria-controls="global-search-results"
-          aria-activedescendant={activeIndex >= 0 ? resultId(results[activeIndex]) : undefined}
+          aria-controls={resultsId}
+          aria-activedescendant={activeIndex >= 0 ? resultId(results[activeIndex], idPrefix) : undefined}
           value={query}
           onChange={(event) => {
             setQuery(event.target.value);
@@ -248,7 +254,7 @@ export function HeaderToolSearch() {
         <ArrowRight size={17} aria-hidden="true" />
       </button>
       {open ? (
-        <div className="global-search-results" id="global-search-results" role="listbox" aria-label="Resultados da busca">
+        <div className="global-search-results" id={resultsId} role="listbox" aria-label="Resultados da busca">
           <div className="global-search-heading">
             <span>{query.trim() ? "Resultados" : "Acesso rápido"}</span>
             <small>{results.length ? `${results.length} opção(ões)` : "Nenhum resultado"}</small>
@@ -258,7 +264,7 @@ export function HeaderToolSearch() {
               <button
                 type="button"
                 role="option"
-                id={resultId(item)}
+                id={resultId(item, idPrefix)}
                 aria-selected={activeIndex === index}
                 className={activeIndex === index ? "active" : ""}
                 key={item.id}

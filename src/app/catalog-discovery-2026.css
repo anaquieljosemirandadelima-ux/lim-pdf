@@ -324,3 +324,62 @@
     margin: 6px 8px 0 !important;
   }
 }
+
+
+/* Position correction: keep the global search in its original sidebar corner. */
+.reference-header-inner {
+  grid-template-columns: 1fr !important;
+  justify-items: end !important;
+}
+
+.reference-header-inner .header-actions {
+  grid-column: 1 !important;
+  justify-self: end !important;
+}
+
+.header-search-slot {
+  display: none !important;
+}
+
+.sidebar-search {
+  position: relative !important;
+  margin: 4px 8px 14px !important;
+  z-index: 420 !important;
+}
+
+.sidebar-search .global-tool-search {
+  display: block !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+}
+
+.sidebar-search .global-search-results {
+  top: 47px !important;
+  left: 0 !important;
+  right: auto !important;
+  width: 330px !important;
+  max-width: calc(100vw - 42px) !important;
+  border-radius: 14px !important;
+  z-index: 420 !important;
+}
+
+@media (max-width: 860px) and (min-width: 621px) {
+  .reference-header-inner {
+    grid-template-columns: 1fr !important;
+  }
+
+  .sidebar-search {
+    display: none !important;
+  }
+}
+
+@media (max-width: 620px) {
+  .reference-header-inner {
+    grid-template-columns: 1fr !important;
+  }
+
+  .sidebar-search {
+    display: none !important;
+  }
+}

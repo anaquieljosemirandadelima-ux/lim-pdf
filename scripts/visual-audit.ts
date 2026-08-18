@@ -87,6 +87,8 @@ async function main() {
     assert.match(await catalogSummary.innerText(), /62 ferramentas.*Todas/i, "Limpar filtros deve restaurar o inventário canónico completo.");
 
     const globalSearch = uxPage.locator("#header-tool-search");
+    assert.equal(await uxPage.locator(".sidebar-search #header-tool-search").count(), 1, "O buscador global deve permanecer na sidebar no desktop.");
+    assert.equal(await uxPage.locator(".header-search-slot").count(), 0, "O cabeçalho não deve renderizar uma segunda posição para o buscador global.");
     await globalSearch.fill("zzzzxyz");
     const emptyResults = uxPage.getByRole("listbox");
     await emptyResults.waitFor({ state: "visible", timeout: 10_000 });

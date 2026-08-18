@@ -24,13 +24,20 @@ const availableNow = [
   "Interface com foco acessível, reduced motion e estados de processamento claros",
 ];
 
+const premiumCapabilityMap = [
+  { title: "Editor Studio 2.0", text: "Edite páginas, textos, imagens, formas e carimbos; use Google Fonts com incorporação local e substituição segura." },
+  { title: "Comparação visual e textual", text: "Compare duas versões, identifique palavras adicionadas ou removidas e gere um PDF lado a lado com mapa de diferenças." },
+  { title: "OCR com lote e confiança", text: "Torne digitalizações pesquisáveis, faça pré-processamento local e receba métricas para revisar resultados." },
+  { title: "Preflight e PDF/A preparatório", text: "Cheque dimensões, texto, formulários, anotações e metadados antes de enviar; prepare uma cópia de arquivamento sem declarar certificação automática." },
+  { title: "Formulários, anotações e assinatura", text: "Crie campos AcroForm, adicione anotações nativas e aplique assinatura digital PAdES básica com os limites técnicos explícitos." },
+  { title: "Lote, 500 MB e privacidade", text: "Processe conjuntos sequencialmente, com orientação de memória e processamento local nas ferramentas compatíveis." },
+];
+
 const premiumRoadmap = [
-  { title: "Comparação de PDFs", text: "Veja diferenças entre versões, páginas adicionadas e alterações de conteúdo." },
-  { title: "Redação permanente", text: "Encontre e cubra dados sensíveis de forma irreversível, com relatório de revisão." },
-  { title: "OCR e processamento em lote", text: "Torne digitalizações pesquisáveis e processe conjuntos de documentos com fila e progresso." },
-  { title: "PDF para Excel avançado", text: "Reconheça tabelas e preserve colunas para reaproveitar dados em planilhas." },
-  { title: "PDF/A e conformidade", text: "Valide e prepare documentos para arquivamento, impressão e entrega profissional." },
-  { title: "Segurança e auditoria", text: "Inspecione metadados, scripts, anexos, permissões e sinais de risco antes de compartilhar." },
+  { title: "Relatórios exportáveis em todas as áreas", text: "Unificar preflight, OCR, lote e revisão em relatórios reutilizáveis com resumo, avisos e evidências." },
+  { title: "Presets e fila de trabalho local", text: "Guardar configurações recorrentes no dispositivo e retomar operações interrompidas sem enviar documentos ao servidor." },
+  { title: "Reconhecimento avançado de tabelas", text: "Aprofundar a conversão para Excel com detecção de colunas e revisão visual antes do download." },
+  { title: "Integrações opcionais com consentimento", text: "Adicionar armazenamento ou colaboração em nuvem somente quando houver consentimento explícito e separação clara do modo local." },
 ];
 
 const plans: Array<{ plan: ProductPlan; name: string; label: string; features: string[] }> = [
@@ -57,13 +64,18 @@ export default function PremiumPage() {
       </section>
 
       <section className="premium-section">
-        <div className="section-heading"><span className="editorial-kicker">Já disponível</span><h2>Uma base Premium já está no produto</h2><p>A versão publicada já recebeu melhorias de capacidade e interação. O plano continua a evoluir por tranches verificáveis, sem esconder recursos incompletos atrás de promessas.</p></div>
+        <div className="section-heading"><span className="editorial-kicker">Já disponível</span><h2>Uma base Premium já está no produto</h2><p>A versão publicada já recebeu melhorias de capacidade e interação. O catálogo não esconde recursos incompletos atrás de promessas: cada capacidade abaixo corresponde a uma ferramenta testada e publicada.</p></div>
         <div className="premium-feature-grid">{availableNow.map((feature) => <article className="premium-feature-card" key={feature}><Check size={20} /><p>{feature}</p></article>)}</div>
       </section>
 
       <section className="premium-section premium-section-muted">
-        <div className="section-heading"><span className="editorial-kicker">Próximos recursos</span><h2>O que torna o Premium realmente útil</h2><p>O foco não é cobrar apenas por tamanho de arquivo. É oferecer economia de tempo, previsibilidade, segurança e automação para tarefas recorrentes.</p></div>
-        <div className="premium-roadmap-grid">{premiumRoadmap.map((feature) => <article className="premium-roadmap-card" key={feature.title}><span className="premium-roadmap-number">{premiumRoadmap.indexOf(feature) + 1}</span><div><h3>{feature.title}</h3><p>{feature.text}</p></div></article>)}</div>
+        <div className="section-heading"><span className="editorial-kicker">Capacidades publicadas</span><h2>O que já torna o LIM PDF profissional</h2><p>O foco não é cobrar apenas por tamanho de arquivo. É oferecer economia de tempo, previsibilidade, segurança e automação para tarefas recorrentes, mantendo o processamento local sempre que possível.</p></div>
+        <div className="premium-roadmap-grid">{premiumCapabilityMap.map((feature) => <article className="premium-roadmap-card" key={feature.title}><span className="premium-roadmap-number"><Check size={16} /></span><div><h3>{feature.title}</h3><p>{feature.text}</p></div></article>)}</div>
+      </section>
+
+      <section className="premium-section">
+        <div className="section-heading"><span className="editorial-kicker">Próxima evolução</span><h2>O que ainda está sendo aprofundado</h2><p>As próximas entregas ampliam previsibilidade e integração, sem duplicar as ferramentas que já existem.</p></div>
+        <div className="premium-roadmap-grid">{premiumRoadmap.map((feature, index) => <article className="premium-roadmap-card" key={feature.title}><span className="premium-roadmap-number">{index + 1}</span><div><h3>{feature.title}</h3><p>{feature.text}</p></div></article>)}</div>
       </section>
 
       <section className="premium-section">

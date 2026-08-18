@@ -962,3 +962,21 @@ body.modal-open{overflow:hidden}
   .quick-actions,.tool-center-groups,.catalog-tool-grid,.tool-center-group:nth-child(n+5) .catalog-tool-grid{grid-template-columns:1fr}
   .tool-center-group:nth-child(n+5){grid-column:auto}
 }
+
+/* Premium workflow and reporting refinements */
+.catalog-workflows-heading>small{color:var(--muted);font-size:9px;line-height:1.4;text-align:right}
+.workflow-card ol{position:relative;z-index:1;margin:0;padding:0;list-style:none;display:grid;gap:4px}
+.workflow-card li{font-size:9.5px;color:var(--muted);line-height:1.35}
+.workflow-card li a{color:var(--ink);font-weight:750;text-decoration:underline;text-decoration-color:#e7c9cb;text-underline-offset:2px}
+.workflow-card li a:hover{color:var(--blue)}
+.workflow-card>span{display:flex;align-items:center;gap:5px}
+.catalog-workflows-heading{gap:14px}
+.preflight-report-actions{display:flex;justify-content:flex-end;margin:10px 0 0}
+.preflight-report-actions .secondary-button{min-height:36px;padding:8px 12px;font-size:10px}
+.pro-field-row{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:6px 0;border-top:1px solid var(--line)}
+.pro-field-row>span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pro-field-actions{display:flex;align-items:center;gap:4px;flex:none}
+.pro-field-actions button{display:grid;place-items:center;width:27px;height:27px;padding:0;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--muted);cursor:pointer}
+.pro-field-actions button:hover:not(:disabled){border-color:#ef969d;color:#d10b15;background:#fff7f7}
+.pro-field-actions button:disabled{opacity:.4;cursor:not-allowed}
+@media(max-width:560px){.catalog-workflows-heading{display:block}.catalog-workflows-heading>small{display:block;margin-top:5px;text-align:left}.preflight-report-actions{justify-content:stretch}.preflight-report-actions .secondary-button{width:100%}.pro-field-row{align-items:flex-start}.pro-field-actions{margin-top:-3px}}

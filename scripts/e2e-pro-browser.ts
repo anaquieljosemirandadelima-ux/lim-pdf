@@ -29,11 +29,15 @@ async function outputFor(page: Page, slug: ProToolSlug, timeout = 100_000) {
 }
 
 async function openTool(page: Page, slug: ProToolSlug, files: string | string[]) {
+  console.log(`QA pro ${slug}`);
   const response = await page.goto(`${baseUrl}/ferramentas/${slug}`, { waitUntil: "domcontentloaded", timeout: 45_000 });
   assert.equal(response?.status(), 200, `${slug}: HTTP ${response?.status()}`);
   await page.locator(".pro-pdf-workspace").waitFor({ state: "visible", timeout: 30_000 });
-  await page.locator('.drop-zone input[type="file"]').first().setInputFiles(files);
-  await page.locator(".selected-files").waitFor({ state: "visible", timeout: 20_000 });
+  await page.waitForTimeout(750);
+  const fileInput = page.locator('.drop-zone input[type="file"]').first();
+  await fileInput.setInputFiles(files);
+  await fileInput.dispatchEvent("change");
+  await page.locator(".selected-files, .selected-file-row").first().waitFor({ state: "visible", timeout: 30_000 });
 }
 
 async function fillInput(page: Page, labelText: string, value: string) {

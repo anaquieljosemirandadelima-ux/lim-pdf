@@ -15,7 +15,7 @@ function getSnapshot(): ConsentSnapshot {
     return "essential";
   }
 }
-function getServerSnapshot(): ConsentSnapshot { return "essential"; }
+function getServerSnapshot(): ConsentSnapshot { return "missing"; }
 function subscribe(callback: () => void) {
   const handler = () => callback();
   window.addEventListener("limpdf:consent-change", handler);

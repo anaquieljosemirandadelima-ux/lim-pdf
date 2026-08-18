@@ -1,9 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { CheckCircle2, CircleOff, FileText, ListChecks, LoaderCircle, ShieldCheck, Trash2, UploadCloud } from "lucide-react";
+import { CheckCircle2, CircleOff, Download, FileText, ListChecks, LoaderCircle, ShieldCheck, Trash2, UploadCloud } from "lucide-react";
 import { PDFDocument } from "pdf-lib";
-import { humanSize } from "@/lib/browser-files";
+import { downloadBlob, humanSize } from "@/lib/browser-files";
 import { formatFileSizeLimit, getFileSizeGuidance, isFileWithinLimit, isPdfFile, MAX_LOCAL_PDF_BYTES } from "@/lib/file-validation";
 import { loadPdfJsDocument } from "@/lib/pdf-render";
 
@@ -30,6 +30,13 @@ export function PreflightWorkspace() {
   function clearFile() {
     setFile(null); setFindings([]); setStatus({ type: "idle" });
     if (inputRef.current) inputRef.current.value = "";
+  }
+
+  function downloadReport() {
+    if (!file || !findings.length) return;
+    const lines = ["LIM PDF — relatório de preflight", `Arquivo: ${file.name}`, `Tamanho: ${humanSize(file.size)}`, `Gerado em: ${new Date().toLocaleString("pt-BR")}`, "", ...findings.map((finding) => `[${finding.severity.toUpperCase()}] ${finding.title}\n${finding.detail}`)];
+    const filename = `${file.name.replace(/\.pdf$/i, "") || "documento"}-preflight.txt`;
+    downloadBlob(new Blob([lines.join("\n\n")], { type: "text/plain;charset=utf-8" }), filename);
   }
 
   async function analyze() {
@@ -91,6 +98,6 @@ export function PreflightWorkspace() {
     <button className="process-button" type="button" disabled={!file || status.type === "processing"} onClick={() => void analyze()}>{status.type === "processing" ? <><LoaderCircle className="spin" size={18} /> Analisando…</> : <><ListChecks size={18} /> Executar preflight</>}</button>
     {status.type === "success" ? <div className="status-message success"><CheckCircle2 size={18} /><span>{status.message}</span></div> : null}
     {status.type === "error" ? <div className="status-message error"><span>{status.message}</span></div> : null}
-    {findings.length ? <div className="preflight-results">{findings.map((finding) => <article className={`preflight-${finding.severity}`} key={finding.title}>{finding.severity === "ok" ? <CheckCircle2 size={19} /> : finding.severity === "warn" ? <CircleOff size={19} /> : <ShieldCheck size={19} />}<div><strong>{finding.title}</strong><p>{finding.detail}</p></div></article>)}</div> : null}
+    {findings.length ? <><div className="preflight-report-actions"><button className="secondary-button" type="button" onClick={downloadReport}><Download size={16} /> Baixar relatório</button></div><div className="preflight-results">{findings.map((finding) => <article className={`preflight-${finding.severity}`} key={finding.title}>{finding.severity === "ok" ? <CheckCircle2 size={19} /> : finding.severity === "warn" ? <CircleOff size={19} /> : <ShieldCheck size={19} />}<div><strong>{finding.title}</strong><p>{finding.detail}</p></div></article>)}</div></> : null}
   </section>;
 }

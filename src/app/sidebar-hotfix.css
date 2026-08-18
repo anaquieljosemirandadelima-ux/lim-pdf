@@ -4,7 +4,7 @@
   width:272px!important;
   min-height:0!important;
   padding:16px 14px 14px!important;
-  overflow:hidden!important;
+  overflow:visible!important;
   display:flex!important;
   flex-direction:column!important;
 }

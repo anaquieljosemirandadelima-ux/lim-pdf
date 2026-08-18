@@ -86,16 +86,37 @@ async function main() {
     await uxPage.getByRole("button", { name: "Limpar filtros" }).click();
     assert.match(await catalogSummary.innerText(), /62 ferramentas.*Todas/i, "Limpar filtros deve restaurar o inventário canónico completo.");
 
-    const globalSearch = uxPage.locator("#header-tool-search");
+    const globalSearch = uxPage.locator(".sidebar-search #header-tool-search");
     assert.equal(await uxPage.locator(".sidebar-search #header-tool-search").count(), 1, "O buscador global deve permanecer na sidebar no desktop.");
-    assert.equal(await uxPage.locator(".header-search-slot").count(), 0, "O cabeçalho não deve renderizar uma segunda posição para o buscador global.");
+    assert.equal(await uxPage.locator(".header-search-slot #header-tool-search").count(), 1, "O fallback do cabeçalho deve existir no DOM para viewports responsivos.");
+    assert.equal(await uxPage.locator(".header-search-slot").evaluate((element) => getComputedStyle(element).display), "none", "O fallback do cabeçalho deve permanecer oculto no desktop.");
     await globalSearch.fill("zzzzxyz");
     const emptyResults = uxPage.getByRole("listbox");
     await emptyResults.waitFor({ state: "visible", timeout: 10_000 });
     assert.ok((await emptyResults.getByText("Nenhum resultado", { exact: true }).count()) > 0, "Busca global deve ter estado vazio explícito.");
+    const desktopResultsBox = await emptyResults.boundingBox();
+    assert.ok(desktopResultsBox && desktopResultsBox.x >= 0 && desktopResultsBox.x + desktopResultsBox.width <= 1442, `Dropdown desktop fora da janela: ${JSON.stringify(desktopResultsBox)}`);
     await globalSearch.press("Escape");
     assert.equal(await emptyResults.count(), 0, "Escape deve fechar o dropdown global.");
     await uxContext.close();
+
+    for (const viewport of [{ width: 768, height: 1024 }, { width: 390, height: 844 }]) {
+      const responsiveContext = await browser.newContext({ viewport, deviceScaleFactor: 1 });
+      await responsiveContext.addInitScript(() => localStorage.setItem("limpdf-consent-v1", "essential"));
+      const responsivePage = await responsiveContext.newPage();
+      await responsivePage.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded", timeout: 45_000 });
+      const responsiveSearch = responsivePage.locator(".header-search-slot #header-tool-search");
+      await responsiveSearch.waitFor({ state: "visible", timeout: 10_000 });
+      assert.equal(await responsivePage.locator(".sidebar-search #header-tool-search").count(), 1, "A sidebar deve manter um único componente estrutural de busca.");
+      assert.equal(await responsivePage.locator(".sidebar-search").evaluate((element) => getComputedStyle(element).display), "none", `Sidebar deve ficar oculta em ${viewport.width}px.`);
+      await responsiveSearch.fill("diminuir pdf");
+      const responsiveResults = responsivePage.getByRole("listbox");
+      await responsiveResults.waitFor({ state: "visible", timeout: 10_000 });
+      assert.ok((await responsiveResults.getByText(/Compactar PDF/i).count()) > 0, `Busca responsiva deve encontrar Compactar PDF em ${viewport.width}px.`);
+      const responsiveResultsBox = await responsiveResults.boundingBox();
+      assert.ok(responsiveResultsBox && responsiveResultsBox.x >= 0 && responsiveResultsBox.x + responsiveResultsBox.width <= viewport.width + 2, `Dropdown responsivo fora da janela em ${viewport.width}px: ${JSON.stringify(responsiveResultsBox)}`);
+      await responsiveContext.close();
+    }
 
     const reducedContext = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: "reduce" });
     await reducedContext.addInitScript(() => localStorage.setItem("limpdf-consent-v1", "essential"));

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { toolTranslations } from "@/lib/i18n-content";
 import { navigationGroups } from "@/lib/navigation";
 import { tools } from "@/lib/tools";
@@ -277,12 +277,26 @@ function translateTree(language: "pt-BR" | "en" | "es") {
 
 export function NativeTranslator() {
   const language = useLanguage();
+  const translatedLanguage = useRef<"pt-BR" | "en" | "es">("pt-BR");
 
   useEffect(() => {
-    translateTree(language);
-    const observer = new MutationObserver(() => translateTree(language));
-    observer.observe(document.body, { childList: true, subtree: true });
-    return () => observer.disconnect();
+    if (language === "pt-BR" && translatedLanguage.current === "pt-BR") return;
+    let cancelled = false;
+    let observer: MutationObserver | null = null;
+    const timer = window.setTimeout(() => {
+      if (cancelled) return;
+      translateTree(language);
+      translatedLanguage.current = language;
+      observer = new MutationObserver(() => {
+        if (!cancelled) window.requestAnimationFrame(() => { if (!cancelled) translateTree(language); });
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+    }, 50);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+      observer?.disconnect();
+    };
   }, [language]);
 
   return null;

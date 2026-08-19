@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { mkdir, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
-import { chromium, type Download } from "playwright-core";
+import { chromium } from "playwright-core";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 
 const baseUrl = process.env.LIMPDF_BASE_URL || "http://127.0.0.1:3000";
@@ -30,21 +30,23 @@ async function main() {
     await page.locator(".selected-files").waitFor({ state: "visible", timeout: 20_000 });
     await page.locator(".ocr-options select").nth(0).selectOption("eng");
 
-    const downloadPromise = page.waitForEvent("download", { timeout: 75_000 }).then((download) => ({ kind: "download" as const, download }));
+    const outputActions = page.locator(".output-actions");
     const errorPromise = page.locator(".status-message.error").waitFor({ state: "visible", timeout: 75_000 }).then(async () => ({ kind: "error" as const, message: (await page.locator(".status-message.error").textContent()) || "OCR exibiu erro" }));
     await page.locator(".prominent-process").click();
-    let outcome: { kind: "download"; download: Download } | { kind: "error"; message: string };
     try {
-      outcome = await Promise.race([downloadPromise, errorPromise]);
+      const outcome = await Promise.race([outputActions.waitFor({ state: "visible", timeout: 75_000 }).then(() => ({ kind: "output" as const })), errorPromise]);
+      if (outcome.kind === "error") throw new Error(`OCR exibiu erro: ${outcome.message}; pageErrors=${JSON.stringify(pageErrors)} consoleErrors=${JSON.stringify(consoleErrors)} failedRequests=${JSON.stringify(failedRequests)}`);
     } catch (error) {
       const progress = await page.locator(".ocr-progress").textContent().catch(() => "");
       const button = await page.locator(".prominent-process").textContent().catch(() => "");
       throw new Error(`OCR não concluiu no prazo. Botão=${JSON.stringify(button)} progresso=${JSON.stringify(progress)} pageErrors=${JSON.stringify(pageErrors)} consoleErrors=${JSON.stringify(consoleErrors)} failedRequests=${JSON.stringify(failedRequests)}`, { cause: error });
     }
-    if (outcome.kind === "error") throw new Error(`OCR exibiu erro: ${outcome.message}; pageErrors=${JSON.stringify(pageErrors)} consoleErrors=${JSON.stringify(consoleErrors)} failedRequests=${JSON.stringify(failedRequests)}`);
-
-    const path = join(outDir, outcome.download.suggestedFilename());
-    await outcome.download.saveAs(path);
+    const [download] = await Promise.all([
+      page.waitForEvent("download", { timeout: 30_000 }),
+      outputActions.getByRole("button", { name: /Baixar resultado/i }).click(),
+    ]);
+    const path = join(outDir, download.suggestedFilename());
+    await download.saveAs(path);
     assert.deepEqual(pageErrors, []);
     assert.deepEqual(consoleErrors.filter((text) => !/favicon|adsbygoogle|ERR_BLOCKED_BY_CLIENT/i.test(text)), []);
 
@@ -65,15 +67,22 @@ async function main() {
     }
     const normalized = text.replace(/\s+/g, " ").trim();
     assert.ok(normalized.length >= 3, `OCR deveria gerar camada pesquisável; texto extraído: ${JSON.stringify(normalized)}`);
-    const batchDownloadPromise = page.waitForEvent("download", { timeout: 75_000 }).then((download) => ({ kind: "download" as const, download }));
     const batchErrorPromise = page.locator(".status-message.error").waitFor({ state: "visible", timeout: 75_000 }).then(async () => ({ kind: "error" as const, message: (await page.locator(".status-message.error").textContent()) || "OCR em lote exibiu erro" }));
     await page.locator('.ocr-workspace .drop-zone input[type="file"]').setInputFiles([join(fixtureDir, "one-page.pdf"), join(fixtureDir, "one-page.pdf")]);
     await page.locator(".selected-file-row").nth(1).waitFor({ state: "visible", timeout: 20_000 });
     await page.locator(".prominent-process").click();
-    const batchOutcome = await Promise.race([batchDownloadPromise, batchErrorPromise]);
-    if (batchOutcome.kind === "error") throw new Error(`OCR em lote exibiu erro: ${batchOutcome.message}`);
-    const batchPath = join(outDir, batchOutcome.download.suggestedFilename());
-    await batchOutcome.download.saveAs(batchPath);
+    try {
+      const batchOutcome = await Promise.race([outputActions.waitFor({ state: "visible", timeout: 75_000 }).then(() => ({ kind: "output" as const })), batchErrorPromise]);
+      if (batchOutcome.kind === "error") throw new Error(`OCR em lote exibiu erro: ${batchOutcome.message}`);
+    } catch (error) {
+      throw new Error(`OCR em lote não concluiu no prazo; pageErrors=${JSON.stringify(pageErrors)} consoleErrors=${JSON.stringify(consoleErrors)} failedRequests=${JSON.stringify(failedRequests)}`, { cause: error });
+    }
+    const [batchDownload] = await Promise.all([
+      page.waitForEvent("download", { timeout: 30_000 }),
+      outputActions.getByRole("button", { name: /Baixar resultado/i }).click(),
+    ]);
+    const batchPath = join(outDir, batchDownload.suggestedFilename());
+    await batchDownload.saveAs(batchPath);
     const batchBytes = new Uint8Array(await readFile(batchPath));
     assert.equal(batchBytes[0], 0x50, "OCR em lote deveria gerar ZIP");
     assert.equal(batchBytes[1], 0x4b, "OCR em lote deveria gerar ZIP");

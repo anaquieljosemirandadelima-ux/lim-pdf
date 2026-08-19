@@ -82,7 +82,7 @@ async function main() {
     const catalogSummary = uxPage.locator(".catalog-results-summary");
     await catalogSummary.waitFor({ state: "visible", timeout: 10_000 });
     assert.match(await catalogSummary.innerText(), /1 ferramenta.*centro/i, "Busca local deve mostrar contagem e termo pesquisado.");
-    assert.equal(await uxPage.getByRole("link", { name: /Centro de impressão/i }).count(), 1, "Busca local deve encontrar exatamente Centro de impressão.");
+    assert.equal(await uxPage.locator(".reference-catalog").getByRole("link", { name: /Centro de impressão/i }).count(), 1, "Busca local deve encontrar exatamente Centro de impressão no catálogo.");
     await uxPage.getByRole("button", { name: "Limpar filtros" }).click();
     assert.match(await catalogSummary.innerText(), /62 ferramentas.*Todas/i, "Limpar filtros deve restaurar o inventário canónico completo.");
 

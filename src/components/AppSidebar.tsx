@@ -39,7 +39,6 @@ const journeyIcons: Record<NavigationGroup["slug"], typeof Files> = {
 const coreItems: SidebarItem[] = [
   { href: "/", label: "Início", icon: Home, match: (path) => path === "/" },
   { href: "/ferramentas", label: "Todas as ferramentas", icon: Grid2X2, match: (path) => path === "/ferramentas" },
-  { href: "/ferramentas/criar-livreto-pdf", label: "Centro de Impressão", icon: FileOutput, match: (path) => path === "/ferramentas/criar-livreto-pdf" },
 ];
 
 const recommendations = [

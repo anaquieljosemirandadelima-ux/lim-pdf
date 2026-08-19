@@ -2,7 +2,8 @@
 
 import { useRef, useState } from "react";
 import { CheckCircle2, FileText, Layers3, LoaderCircle, Search, ShieldCheck, Trash2, UploadCloud } from "lucide-react";
-import { downloadBlob, downloadBytes, humanSize } from "@/lib/browser-files";
+import { OutputActions } from "@/components/OutputActions";
+import { downloadBytes, humanSize } from "@/lib/browser-files";
 import { createSearchablePdf, createSearchablePdfBatch, OCR_MAX_BATCH_FILES, type OcrPreprocess } from "@/lib/ocr-engine";
 import { formatFileSizeLimit, getFileSizeGuidance, isFileWithinLimit, isPdfFile, MAX_LOCAL_PDF_BYTES } from "@/lib/file-validation";
 
@@ -56,13 +57,13 @@ export function OcrWorkspace() {
         const result = await createSearchablePdf(processingFiles[0], processingLanguages, (message, progress) => setStatus((previous) => ({ type: "processing", message, progress: progress ?? previous.progress })), { preprocess: processingMode });
         downloadBytes(result.bytes, result.filename);
         setReport({ files: 1, pages: result.pages, words: result.recognizedWords, lowConfidenceWords: result.lowConfidenceWords, averageConfidence: result.averageConfidence, pagesWithoutWords: result.pagesWithoutWords });
-        setStatus({ type: "success", message: "OCR concluído. O PDF pesquisável foi baixado.", progress: 100 });
+        setStatus({ type: "success", message: "OCR concluído. O PDF pesquisável está pronto para imprimir ou baixar.", progress: 100 });
       } else {
         const result = await createSearchablePdfBatch(processingFiles, processingLanguages, (message, progress) => setStatus((previous) => ({ type: "processing", message, progress: progress ?? previous.progress })), { preprocess: processingMode });
-        downloadBlob(result.blob, result.filename);
+        downloadBytes(new Uint8Array(await result.blob.arrayBuffer()), result.filename, result.blob.type);
         const summary = result.summaries.reduce((total, current) => ({ pages: total.pages + current.pages, words: total.words + current.recognizedWords, lowConfidenceWords: total.lowConfidenceWords + current.lowConfidenceWords, pagesWithoutWords: total.pagesWithoutWords + current.pagesWithoutWords, confidenceTotal: total.confidenceTotal + current.averageConfidence * current.recognizedWords }), { pages: 0, words: 0, lowConfidenceWords: 0, pagesWithoutWords: 0, confidenceTotal: 0 });
         setReport({ files: result.count, pages: summary.pages, words: summary.words, lowConfidenceWords: summary.lowConfidenceWords, averageConfidence: summary.words ? Math.round(summary.confidenceTotal / summary.words) : 0, pagesWithoutWords: summary.pagesWithoutWords });
-        setStatus({ type: "success", message: `OCR em lote concluído. ${result.count} PDFs foram reunidos em um ZIP.`, progress: 100 });
+        setStatus({ type: "success", message: `OCR em lote concluído. ${result.count} PDFs foram reunidos em um ZIP pronto para baixar.`, progress: 100 });
       }
     } catch (error) { setStatus({ type: "error", message: error instanceof Error ? error.message : "Não foi possível executar o OCR." }); }
   }
@@ -80,5 +81,6 @@ export function OcrWorkspace() {
     {processing && typeof status.progress === "number" ? <div className="ocr-progress" aria-label={`Progresso do OCR: ${Math.round(status.progress)}%`}><i style={{ width: `${Math.max(2, Math.min(100, status.progress))}%` }} /><span>{Math.round(status.progress)}%</span></div> : null}
     {status.type === "success" ? <div className="status-message success"><CheckCircle2 size={18} /><span>{status.message}{report ? ` ${report.files} arquivo(s), ${report.pages} página(s), ${report.words.toLocaleString("pt-BR")} palavra(s), confiança média de ${report.averageConfidence}%.${report.lowConfidenceWords ? ` ${report.lowConfidenceWords.toLocaleString("pt-BR")} palavra(s) abaixo de 60% de confiança.` : ""}${report.pagesWithoutWords ? ` ${report.pagesWithoutWords} página(s) não retornaram palavras reconhecidas.` : ""}` : ""}</span></div> : null}
     {status.type === "error" ? <div className="status-message error"><span>{status.message}</span></div> : null}
+    <OutputActions />
   </section>;
 }

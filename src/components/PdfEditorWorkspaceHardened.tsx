@@ -25,7 +25,8 @@ import {
   UploadCloud,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { downloadBytes } from "@/lib/browser-files";
+import { OutputActions } from "@/components/OutputActions";
+import { prepareOutput } from "@/lib/browser-files";
 import { loadEditorImageAssets, saveEditorImageAssets } from "@/lib/editor-assets";
 import { cleanupExpiredEditorDrafts, EDITOR_DRAFT_PREFIX, EDITOR_RECENTS_KEY } from "@/lib/editor-drafts";
 import { canvasToBlob, loadPdfJsDocument } from "@/lib/pdf-render";
@@ -1080,9 +1081,12 @@ export function PdfEditorWorkspaceHardened() {
         }
       }
 
-      downloadBytes(await output.save({ useObjectStreams: true }), `${file.name.replace(/\.pdf$/i, "")}-editado-lim-pdf.pdf`);
+      const outputBytes = await output.save({ useObjectStreams: true });
+      const outputBuffer = new ArrayBuffer(outputBytes.byteLength);
+      new Uint8Array(outputBuffer).set(outputBytes);
+      prepareOutput(new Blob([outputBuffer], { type: "application/pdf" }), `${file.name.replace(/\.pdf$/i, "")}-editado-lim-pdf.pdf`);
       setStatus("ready");
-      setMessage(needsSanitization ? "PDF exportado. Áreas redigidas ou substituídas foram removidas da base achatada da página." : "PDF editado. O download foi iniciado.");
+      setMessage(needsSanitization ? "PDF exportado. Áreas redigidas ou substituídas foram removidas da base achatada da página. O resultado está pronto para imprimir ou baixar." : "PDF editado. O resultado está pronto para imprimir ou baixar.");
     } catch {
       setStatus("error");
       setMessage("Não foi possível exportar as alterações deste PDF.");
@@ -1207,6 +1211,7 @@ export function PdfEditorWorkspaceHardened() {
           <div className="editor-layers-panel"><div className="layers-panel-heading"><strong>{text.layers}</strong><span>{layers.length}</span></div>{layers.length ? <div className="layers-list">{layers.map((object) => <div className={`layer-item ${selectedIds.includes(object.id) ? "active" : ""} ${object.hidden ? "hidden-layer" : ""}`} key={object.id}><button type="button" className="layer-select-button" onClick={() => setSelectedIds([object.id])}><span>{kindLabel(object)}</span><small>{objectLabel(object)}</small></button><button type="button" aria-label={object.hidden ? `Mostrar ${objectLabel(object)}` : `Ocultar ${objectLabel(object)}`} onClick={() => updateObject(object.id, { hidden: !object.hidden } as Partial<EditorObject>)}><CircleOff size={14} aria-hidden="true" /></button><button type="button" aria-label={object.locked ? `Desbloquear ${objectLabel(object)}` : `Bloquear ${objectLabel(object)}`} onClick={() => updateObject(object.id, { locked: !object.locked } as Partial<EditorObject>)}><LockKeyhole size={14} aria-hidden="true" /></button></div>)}</div> : <p className="layers-empty">{text.noLayers}</p>}</div>
           <div className="editor-signature-panel"><strong>{text.signature}</strong><SignaturePad onChange={setSignatureDataUrl} /><button type="button" className="secondary-button" onClick={addSignature} disabled={!signatureDataUrl}>{text.insertSignature}</button></div>
           <div className="editor-status-card">{status === "exporting" ? <LoaderCircle className="spin" size={18} /> : <CheckCircle2 size={18} />}<span>{message || "Alterações locais e privadas."}</span></div>
+          <OutputActions />
         </aside>
       </div>
       <div className="editor-cache-bar"><ShieldCheck size={16} /><span>{text.cache}</span><Save size={16} /></div>

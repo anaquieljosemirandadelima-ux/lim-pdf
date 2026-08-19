@@ -2,7 +2,8 @@
 
 import { useRef, useState } from "react";
 import { AlertCircle, CheckCircle2, Download, FileText, LoaderCircle, Trash2, UploadCloud } from "lucide-react";
-import { createStoredZipFromBlobs, downloadBlob, downloadBytes, humanSize, outputName, type BlobZipEntry } from "@/lib/browser-files";
+import { OutputActions } from "@/components/OutputActions";
+import { createStoredZipFromBlobs, downloadBytes, humanSize, outputName, prepareOutput, type BlobZipEntry } from "@/lib/browser-files";
 import { canvasToBlob, renderPdfPagesSequentially } from "@/lib/pdf-render";
 import type { ToolDefinition } from "@/lib/tools";
 import { useTemporaryFiles } from "@/lib/use-temporary-files";
@@ -68,7 +69,7 @@ export function MemorySafePdfWorkspace({ tool }: { tool: ToolDefinition }) {
 
     setStatus({ type: "processing", message: "Montando arquivo ZIP sem duplicar as imagens na memória..." });
     const zip = await createStoredZipFromBlobs(entries);
-    downloadBlob(zip, `${file.name.replace(/\.pdf$/i, "")}-${extension}.zip`);
+    prepareOutput(zip, `${file.name.replace(/\.pdf$/i, "")}-${extension}.zip`);
   }
 
   async function processRasterPdf(grayscale: boolean) {
@@ -108,7 +109,7 @@ export function MemorySafePdfWorkspace({ tool }: { tool: ToolDefinition }) {
         type: "success",
         message: tool.slug === "compactar-pdf"
           ? "PDF compactado. Este modo rasteriza as páginas e pode remover texto selecionável, links e formulários."
-          : "Processamento concluído e download iniciado.",
+          : "Processamento concluído. Escolha imprimir no computador ou baixar o resultado.",
       });
     } catch (error) {
       setStatus({ type: "error", message: error instanceof Error ? error.message : "Não foi possível processar o PDF." });
@@ -160,6 +161,7 @@ export function MemorySafePdfWorkspace({ tool }: { tool: ToolDefinition }) {
 
       {status.type !== "idle" ? <div className={`status-message status-${status.type}`} role="status">{status.type === "processing" ? <LoaderCircle className="spin" size={19} /> : null}{status.type === "success" ? <CheckCircle2 size={19} /> : null}{status.type === "error" ? <AlertCircle size={19} /> : null}<span>{status.message}</span></div> : null}
 
+      <OutputActions />
       {file ? <button type="button" className="process-button" onClick={processNow} disabled={status.type === "processing"}>{status.type === "processing" ? <LoaderCircle className="spin" size={20} /> : <Download size={20} />}{status.type === "processing" ? "Processando..." : `${tool.name} agora`}</button> : null}
       <p className="privacy-note">Processamento local no navegador. {cached ? "Cache temporário ativo." : ""}{restored ? " Sessão restaurada." : ""}</p>
     </section>

@@ -172,12 +172,12 @@ export function PremiumToolExperience({ toolName, toolSlug, accent, editor = fal
     const refresh = () => {
       const text = document.body.textContent || "";
       if (editor) {
-        if (/PDF exportado|download foi iniciado|PDF editado/i.test(text)) setPhase(3);
+        if (/PDF exportado|resultado está pronto|escolha imprimir|PDF editado/i.test(text)) setPhase(3);
         else if (document.querySelector(".studio-shell,.pdf-editor-shell")) setPhase(2);
         else setPhase(1);
         return;
       }
-      const success = document.querySelector(".status-message.success,.advanced-status.success,.processing-summary") || /concluído|download iniciado|arquivo gerado/i.test(text);
+      const success = document.querySelector(".status-message.success,.advanced-status.success,.processing-summary") || /concluído|resultado está pronto|escolha imprimir|arquivo gerado/i.test(text);
       const selected = document.querySelector(".selected-files,.advanced-selected-file");
       setPhase(success ? 3 : selected ? 2 : 1);
     };

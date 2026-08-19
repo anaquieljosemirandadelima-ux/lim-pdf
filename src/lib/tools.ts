@@ -269,8 +269,8 @@ export const tools: ToolDefinition[] = [
     faq: [{ question: "O conteúdo fica deformado?", answer: "Somente se você escolher esticar. No modo ajustar, a proporção original é mantida e o conteúdo é centralizado." }, privacyFaq],
   },
   {
-    slug: "criar-livreto-pdf", name: "Centro de impressão", shortDescription: "Prepare livreto, N-up e saída para imprimir.",
-    description: "Prepare um PDF para impressão normal, livreto dobrado ou várias páginas por folha, com preview local e saída pronta para o computador.", category: "Otimizar e proteger", icon: "BookOpen", accent: "orange", accept: "application/pdf", multiple: false,
+    slug: "criar-livreto-pdf", name: "Livreto e páginas por folha", shortDescription: "Prepare livreto, N-up e o PDF final para imprimir.",
+    description: "Prepare um PDF para impressão normal, livreto dobrado ou várias páginas por folha, com preview local e resultado final para imprimir ou baixar.", category: "Otimizar e proteger", icon: "BookOpen", accent: "orange", accept: "application/pdf", multiple: false,
     keywords: ["livreto pdf", "booklet pdf", "imposição pdf", "imprimir livreto", "caderno pdf"],
     intro: "Prepare o arquivo para impressão normal, livreto dobrado ou várias páginas por folha. O preview mostra a ordem de saída e o processamento permanece no navegador.",
     useCases: ["Criar apostila dobrada", "Imprimir várias páginas por folha", "Preparar saída A4, A3 ou Carta", "Revisar a ordem antes da impressão"],

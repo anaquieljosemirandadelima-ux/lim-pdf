@@ -34,7 +34,7 @@ const journeys = [
 ];
 
 const freeRoadmap = [
-  { title: "Centro de Impressão", text: "Unificar livreto, N-up, orientação, margens, escala, preview de folhas, duplex frente e verso e botão para abrir a impressão do computador." },
+  { title: "Saída e impressão contextual", text: "Oferecer, após cada processamento, a escolha de imprimir no computador ou baixar o arquivo final; ferramentas como livreto e N-up continuam disponíveis na jornada de preparação." },
   { title: "Fila local universal", text: "Permitir adicionar várias tarefas, pausar, cancelar, repetir uma etapa e acompanhar memória sem enviar documentos para um servidor." },
   { title: "Revisão e relatórios", text: "Exportar diagnósticos de preflight, OCR, comparação, segurança e impressão em formatos legíveis e reutilizáveis." },
   { title: "Acessibilidade e foco", text: "Consolidar teclado, foco visível, mensagens aria-live, contraste, modo de movimento reduzido e estados vazios orientados." },

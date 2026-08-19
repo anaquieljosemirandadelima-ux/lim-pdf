@@ -133,9 +133,12 @@ async function processEditor(page: Page) {
   assert.equal(await page.evaluate(() => document.activeElement?.id), "header-tool-search", "Ctrl+K deve abrir a busca global, não uma paleta de comandos do editor");
   await page.keyboard.press("Escape");
 
+  await page.getByRole("button", { name: /Baixar PDF/ }).click();
+  const outputActions = page.locator(".output-actions");
+  await outputActions.waitFor({ state: "visible", timeout: 60_000 });
   const [download] = await Promise.all([
     page.waitForEvent("download", { timeout: 60_000 }),
-    page.getByRole("button", { name: /Baixar PDF/ }).click(),
+    outputActions.getByRole("button", { name: /Baixar resultado/i }).click(),
   ]);
   const target = join(downloadDir, `editar-pdf-${download.suggestedFilename()}`);
   await download.saveAs(target);
@@ -144,16 +147,18 @@ async function processEditor(page: Page) {
 
 async function processPrintCenter(page: Page) {
   await navigate(page, "/ferramentas/criar-livreto-pdf");
-  assert.match(await page.title(), /Centro de impressão/i);
+  assert.match(await page.title(), /Livreto e páginas por folha/i);
   await page.waitForTimeout(1_000);
   await page.locator(".print-center-workspace input[type=file]").setInputFiles(fixture("basic.pdf"));
   await page.locator(".print-center-options").waitFor({ state: "visible", timeout: 60_000 });
   await page.locator(".print-center-options select").first().selectOption("booklet");
-  await page.getByRole("button", { name: /Gerar PDF para impressão/i }).click();
-  await page.locator(".print-output-actions").waitFor({ state: "visible", timeout: 90_000 });
+  await page.getByRole("button", { name: /Gerar saída/i }).click();
+  const printOutputActions = page.locator(".output-actions");
+  await printOutputActions.waitFor({ state: "visible", timeout: 90_000 });
+  assert.equal(await printOutputActions.getByRole("button", { name: /Imprimir no computador/i }).count(), 1, "Livreto deve oferecer impressão contextual");
   const [download] = await Promise.all([
     page.waitForEvent("download", { timeout: 60_000 }),
-    page.getByRole("link", { name: /Baixar PDF/i }).click(),
+    printOutputActions.getByRole("button", { name: /Baixar resultado/i }).click(),
   ]);
   const target = join(downloadDir, `criar-livreto-pdf-${download.suggestedFilename()}`);
   await download.saveAs(target);
@@ -183,9 +188,12 @@ async function processTool(page: Page, slug: AllToolSlug) {
 
   const processButton = page.locator("button.process-button");
   await processButton.waitFor({ state: "visible" });
+  await processButton.click();
+  const outputActions = page.locator(".output-actions");
+  await outputActions.waitFor({ state: "visible", timeout: 75_000 });
   const [download] = await Promise.all([
     page.waitForEvent("download", { timeout: 75_000 }),
-    processButton.click(),
+    outputActions.getByRole("button", { name: /Baixar resultado/i }).click(),
   ]);
   const target = join(downloadDir, `${slug}-${download.suggestedFilename()}`);
   await download.saveAs(target);

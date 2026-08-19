@@ -36,7 +36,7 @@ for (const route of routes) {
   if (route === "/ferramentas/converter-pdf" && (!text.includes("Converter para") || !text.includes("Word") || !text.includes("Excel"))) throw new Error("unified converter missing format controls");
   if (route === "/ferramentas/ocr-pdf" && (!text.includes("OCR PDF") || !text.includes("Idiomas do reconhecimento"))) throw new Error("OCR route missing workspace markers");
   if (route === "/ferramentas/preflight-pdf" && (!text.includes("Preflight PDF") || !text.includes("Executar preflight"))) throw new Error("preflight route missing diagnosis UI");
-  if (route === "/ferramentas/criar-livreto-pdf" && (!text.includes("Centro de impressão") || !text.includes("Prepare um PDF"))) throw new Error("print center route missing local print UI");
+  if (route === "/ferramentas/criar-livreto-pdf" && (!text.includes("Prepare páginas para impressão") || !text.includes("Processamento local") || text.includes("Centro de impressão"))) throw new Error("page preparation route missing contextual print UI");
   if (professionalRoutes.includes(route) && !text.includes("pro-pdf-workspace")) throw new Error(`${route} missing professional workspace`);
   if (route === "/sitemap.xml") {
     for (const marker of ["/ferramentas/converter-pdf", "/ferramentas/ocr-pdf", "/ferramentas/dimensionar-pdf", "/ferramentas/preflight-pdf", "/ferramentas/assinatura-digital-pdf", "/ferramentas/links-pdf", "/ferramentas/comparar-pdfs"]) if (!text.includes(marker)) throw new Error(`sitemap missing ${marker}`);

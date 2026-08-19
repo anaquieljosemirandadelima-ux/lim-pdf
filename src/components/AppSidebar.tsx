@@ -2,8 +2,6 @@
 
 import Link from "next/link";
 import {
-  ArrowRight,
-  FileOutput,
   Files,
   Grid2X2,
   Home,
@@ -14,7 +12,6 @@ import {
   Sparkles,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
 import { HeaderToolSearch } from "@/components/HeaderToolSearch";
 import { Logo } from "@/components/Logo";
 import { navigationGroups, type NavigationGroup } from "@/lib/navigation";
@@ -41,13 +38,6 @@ const coreItems: SidebarItem[] = [
   { href: "/ferramentas", label: "Todas as ferramentas", icon: Grid2X2, match: (path) => path === "/ferramentas" },
 ];
 
-const recommendations = [
-  { title: "Converter PDF em Word", description: "Transforme seu arquivo em documento editável", href: "/ferramentas/pdf-para-word", icon: FileOutput },
-  { title: "Assinar PDF", description: "Adicione sua assinatura rapidamente", href: "/ferramentas/assinar-pdf", icon: ShieldCheck },
-  { title: "Organizar páginas", description: "Reordene, duplique ou remova páginas", href: "/ferramentas/organizar-paginas", icon: Grid2X2 },
-  { title: "Comprimir PDF", description: "Reduza o tamanho sem perder praticidade", href: "/ferramentas/compactar-pdf", icon: Sparkles },
-] as const;
-
 function SidebarLink({ item, pathname }: { item: SidebarItem; pathname: string }) {
   const Icon = item.icon;
   const active = item.match(pathname);
@@ -63,16 +53,6 @@ function SidebarLink({ item, pathname }: { item: SidebarItem; pathname: string }
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const [recommendationIndex, setRecommendationIndex] = useState(0);
-  const recommendation = useMemo(() => recommendations[recommendationIndex % recommendations.length], [recommendationIndex]);
-  const RecommendationIcon = recommendation.icon;
-
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      setRecommendationIndex((index) => (index + 1) % recommendations.length);
-    }, 5200);
-    return () => window.clearInterval(timer);
-  }, []);
 
   return (
     <aside className="reference-sidebar" aria-label="Navegação principal">
@@ -97,26 +77,7 @@ export function AppSidebar() {
             return <SidebarLink item={item} pathname={pathname} key={group.slug} />;
           })}
         </div>
-
       </nav>
-
-      <section className="sidebar-recommendation" aria-label="Sugestão de ferramenta">
-        <div className="sidebar-development-note" role="note" aria-label="LIM PDF gratuito">
-          <span className="sidebar-development-orb" aria-hidden="true" />
-          <span className="sidebar-development-copy">
-            <strong>Tudo gratuito no LIM PDF</strong>
-            <span className="sidebar-development-text">Processamento local, sem assinatura obrigatória e sem bloquear downloads.</span>
-            <span className="sidebar-development-chip">100% gratuito</span>
-          </span>
-        </div>
-
-        <div className="sidebar-recommendation-card" key={recommendation.title}>
-          <span className="sidebar-recommendation-icon"><RecommendationIcon size={24} aria-hidden="true" /></span>
-          <strong>{recommendation.title}</strong>
-          <p>{recommendation.description}</p>
-          <Link href={recommendation.href}>Usar agora <ArrowRight size={14} aria-hidden="true" /></Link>
-        </div>
-      </section>
     </aside>
   );
 }

@@ -516,8 +516,7 @@
     max-width: 52px !important;
   }
 
-  .sidebar-nav-heading,
-  .sidebar-recommendation {
+  .sidebar-nav-heading {
     display: none !important;
   }
 

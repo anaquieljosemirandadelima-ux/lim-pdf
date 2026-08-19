@@ -66,7 +66,7 @@ async function main() {
   assert.ok(ocr.includes("Tesseract") && ocr.includes("parseTsvWords") && ocr.includes("drawText") && ocr.includes("MAX_RASTER_PIXELS"), "OCR deve criar camada pesquisável com limite de memória.");
 
   for (const marker of ["Organizar", "Editar", "Converter", "Formulários", "Segurança", "Otimizar", "Automação"]) assert.ok(navigation.includes(`: "${marker}"`) && sidebar.includes("navigationGroups.map"), `Sidebar sem jornada canónica ${marker}`);
-  assert.ok(sidebar.includes("Tudo gratuito no LIM PDF") && sidebar.includes("100% gratuito"), "Sidebar deve comunicar o produto gratuito.");
+  assert.ok(!sidebar.includes("Tudo gratuito no LIM PDF") && !sidebar.includes("sidebar-recommendation"), "Sidebar não deve renderizar o cartão promocional removido.");
   assert.ok(search.includes("searchScore") && search.includes("aliases") && search.includes("Ctrl K") && search.includes("navigationGroups") && search.includes("catalogToolBySlug"), "Busca global deve cobrir intenção, categorias e catálogo unificado.");
   assert.ok(consent.includes("Cookies no LIM PDF") && consent.includes("Só essenciais") && consent.includes("Opções"), "Consentimento deve permanecer compacto e configurável.");
   assert.ok(footer.includes("LIM PDF pertence ao LIM Group") && footer.includes("/guias") && footer.includes("/premium") && footer.includes("/sobre") && footer.includes("/contato"), "Rodapé deve identificar o LIM Group e expor a navegação editorial e institucional.");

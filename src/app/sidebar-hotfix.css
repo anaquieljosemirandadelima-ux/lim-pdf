@@ -116,58 +116,6 @@
   color:#f0181f!important;
 }
 
-.sidebar-recommendation{
-  width:100%!important;
-  flex:0 0 auto!important;
-  margin-top:auto!important;
-  padding-top:12px!important;
-}
-.sidebar-recommendation-heading,
-.sidebar-recommendation-dots{
-  display:none!important;
-}
-.sidebar-recommendation-card{
-  width:100%!important;
-  min-height:136px!important;
-  padding:11px 12px!important;
-  box-sizing:border-box!important;
-  border-radius:14px!important;
-  overflow:hidden!important;
-}
-.sidebar-recommendation-icon{
-  width:34px!important;
-  height:34px!important;
-  margin-bottom:7px!important;
-  border-radius:10px!important;
-}
-.sidebar-recommendation-icon svg{
-  width:19px!important;
-  height:19px!important;
-}
-.sidebar-recommendation-card>strong{
-  display:block!important;
-  width:100%!important;
-  margin:0!important;
-  text-align:left!important;
-  font-size:11.5px!important;
-  line-height:1.2!important;
-}
-.sidebar-recommendation-card>p{
-  width:100%!important;
-  min-height:0!important;
-  margin:4px 0 8px!important;
-  text-align:left!important;
-  font-size:9.8px!important;
-  line-height:1.35!important;
-}
-.sidebar-recommendation-card>a{
-  width:100%!important;
-  min-height:31px!important;
-  padding:0 10px!important;
-  font-size:10px!important;
-  border-radius:9px!important;
-}
-
 @media (max-height:850px) and (min-width:761px){
   .reference-sidebar{
     padding-top:12px!important;
@@ -193,16 +141,6 @@
     top:10px!important;
     transform:none!important;
   }
-  .sidebar-recommendation{
-    padding-top:8px!important;
-  }
-  .sidebar-recommendation-card{
-    min-height:112px!important;
-    padding:10px 11px!important;
-  }
-  .sidebar-recommendation-icon{
-    display:none!important;
-  }
 }
 
 @media (max-height:720px) and (min-width:761px){
@@ -214,8 +152,5 @@
     font-size:12.5px!important;
     top:10px!important;
     transform:none!important;
-  }
-  .sidebar-recommendation{
-    display:none!important;
   }
 }

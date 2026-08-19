@@ -8,6 +8,7 @@ import { canvasToBlob, renderPdfPagesSequentially } from "@/lib/pdf-render";
 import type { ToolDefinition } from "@/lib/tools";
 import { useTemporaryFiles } from "@/lib/use-temporary-files";
 import { formatFileSizeLimit, getFileSizeGuidance, isFileWithinLimit, isPdfFile, MAX_LOCAL_PDF_BYTES } from "@/lib/file-validation";
+import { chooseSmallestPdf, compressionReduction, getPdfCompressionPreset, PDF_COMPRESSION_PRESETS, type PdfCompressionPreset, type PdfCompressionStrategy } from "@/lib/pdf-compression";
 
 type SupportedSlug = "pdf-para-jpg" | "pdf-para-png" | "compactar-pdf" | "pdf-em-escala-de-cinza";
 type Status =
@@ -27,7 +28,7 @@ export function MemorySafePdfWorkspace({ tool }: { tool: ToolDefinition }) {
   const [status, setStatus] = useState<Status>({ type: "idle" });
   const [dragActive, setDragActive] = useState(false);
   const [renderResolution, setRenderResolution] = useState("1.5");
-  const [compression, setCompression] = useState("equilibrada");
+  const [compression, setCompression] = useState<PdfCompressionPreset>("recomendada");
   const { restored, cached, clearCache } = useTemporaryFiles(`tool:${tool.slug}`, files, setFiles);
   const file = files[0];
   const fileGuidance = file ? getFileSizeGuidance(file) : null;
@@ -73,29 +74,54 @@ export function MemorySafePdfWorkspace({ tool }: { tool: ToolDefinition }) {
   }
 
   async function processRasterPdf(grayscale: boolean) {
-    if (!file) return;
+    if (!file) throw new Error("Selecione um PDF antes de processar.");
     const pdfLib = await import("pdf-lib");
-    const presets = {
-      leve: { scale: 1.65, quality: 0.84 },
-      equilibrada: { scale: 1.35, quality: 0.7 },
-      forte: { scale: 1.05, quality: 0.5 },
-    } as const;
-    const preset = presets[compression as keyof typeof presets] || presets.equilibrada;
-    const output = await pdfLib.PDFDocument.create();
     const sourceBytes = await file.arrayBuffer();
+    const input = new Uint8Array(sourceBytes.slice(0));
+    const presetName = getPdfCompressionPreset(compression);
+    const preset = PDF_COMPRESSION_PRESETS[presetName];
 
+    if (grayscale) {
+      const output = await pdfLib.PDFDocument.create();
+      await renderPdfPagesSequentially(sourceBytes, preset.scale, async (rendered, progress) => {
+        setStatus({ type: "processing", message: `Convertendo página ${progress.pageNumber} de ${progress.totalPages}...` });
+        const blob = await canvasToBlob(rendered.canvas, "image/jpeg", 0.82);
+        const image = await output.embedJpg(await blob.arrayBuffer());
+        const width = rendered.width / rendered.scale;
+        const height = rendered.height / rendered.scale;
+        const page = output.addPage([width, height]);
+        page.drawImage(image, { x: 0, y: 0, width, height });
+      }, true);
+      const bytes = await output.save({ useObjectStreams: true, objectsPerTick: 45 });
+      downloadBytes(bytes, outputName(file, "escala-de-cinza"));
+      return { strategy: "visual" as const, bytes, reduction: compressionReduction(input.length, bytes.length), inputSize: input.length, outputSize: bytes.length, preset: presetName };
+    }
+
+    const candidates: Array<{ strategy: PdfCompressionStrategy; bytes: Uint8Array }> = [];
+    try {
+      setStatus({ type: "processing", message: "Otimizando a estrutura sem rasterizar o documento..." });
+      const structural = await pdfLib.PDFDocument.load(input, { ignoreEncryption: true, updateMetadata: false });
+      const structuralBytes = await structural.save({ useObjectStreams: true, objectsPerTick: 45 });
+      candidates.push({ strategy: "estrutural", bytes: structuralBytes });
+    } catch {
+      // PDFs protegidos ou com estrutura incomum continuam pelo caminho visual.
+    }
+
+    const visual = await pdfLib.PDFDocument.create();
     await renderPdfPagesSequentially(sourceBytes, preset.scale, async (rendered, progress) => {
-      setStatus({ type: "processing", message: `${grayscale ? "Convertendo" : "Compactando"} página ${progress.pageNumber} de ${progress.totalPages}...` });
-      const blob = await canvasToBlob(rendered.canvas, "image/jpeg", grayscale ? 0.82 : preset.quality);
-      const image = await output.embedJpg(await blob.arrayBuffer());
+      setStatus({ type: "processing", message: `Testando redução visual: página ${progress.pageNumber} de ${progress.totalPages}...` });
+      const blob = await canvasToBlob(rendered.canvas, "image/jpeg", preset.quality);
+      const image = await visual.embedJpg(await blob.arrayBuffer());
       const width = rendered.width / rendered.scale;
       const height = rendered.height / rendered.scale;
-      const page = output.addPage([width, height]);
+      const page = visual.addPage([width, height]);
       page.drawImage(image, { x: 0, y: 0, width, height });
-    }, grayscale);
+    });
+    candidates.push({ strategy: "visual", bytes: await visual.save({ useObjectStreams: true, objectsPerTick: 45 }) });
 
-    const bytes = await output.save({ useObjectStreams: true });
-    downloadBytes(bytes, outputName(file, grayscale ? "escala-de-cinza" : "compactado"));
+    const selected = chooseSmallestPdf(input, candidates);
+    downloadBytes(selected.bytes, outputName(file, "compactado"));
+    return { ...selected, inputSize: input.length, outputSize: selected.bytes.length, preset: presetName };
   }
 
   async function processNow() {
@@ -104,13 +130,19 @@ export function MemorySafePdfWorkspace({ tool }: { tool: ToolDefinition }) {
     try {
       if (tool.slug === "pdf-para-jpg") await processImages("image/jpeg");
       else if (tool.slug === "pdf-para-png") await processImages("image/png");
-      else await processRasterPdf(tool.slug === "pdf-em-escala-de-cinza");
-      setStatus({
-        type: "success",
-        message: tool.slug === "compactar-pdf"
-          ? "PDF compactado. Este modo rasteriza as páginas e pode remover texto selecionável, links e formulários."
-          : "Processamento concluído. Escolha imprimir no computador ou baixar o resultado.",
-      });
+      else {
+        const result = await processRasterPdf(tool.slug === "pdf-em-escala-de-cinza");
+        const reduction = compressionReduction(result.inputSize, result.outputSize);
+        const strategyLabel = result.strategy === "estrutural" ? "estrutura preservada" : result.strategy === "visual" ? "redução visual" : "arquivo original preservado";
+        setStatus({
+          type: "success",
+          message: tool.slug === "compactar-pdf"
+            ? reduction > 0
+              ? `PDF compactado: ${humanSize(result.inputSize)} → ${humanSize(result.outputSize)} (${reduction}% menor; ${strategyLabel}). ${result.strategy === "estrutural" ? "Texto, links e formulários foram mantidos." : "Nesta saída visual, elementos da página podem virar imagem e perder seleção."}`
+              : "O PDF já estava otimizado; o arquivo original foi preservado para não aumentar o tamanho."
+            : "Processamento concluído. Escolha imprimir no computador ou baixar o resultado.",
+        });
+      }
     } catch (error) {
       setStatus({ type: "error", message: error instanceof Error ? error.message : "Não foi possível processar o PDF." });
     }
@@ -153,9 +185,9 @@ export function MemorySafePdfWorkspace({ tool }: { tool: ToolDefinition }) {
           {(tool.slug === "pdf-para-jpg" || tool.slug === "pdf-para-png") ? (
             <label><span>Resolução</span><select value={renderResolution} onChange={(event) => setRenderResolution(event.target.value)}><option value="1">Normal</option><option value="1.5">Alta</option><option value="2">Muito alta</option></select><small>A resolução é reduzida automaticamente apenas quando uma página ultrapassaria o limite seguro de memória.</small></label>
           ) : (
-            <label><span>{tool.slug === "compactar-pdf" ? "Nível de compactação" : "Qualidade de saída"}</span><select value={compression} onChange={(event) => setCompression(event.target.value)}><option value="leve">Alta qualidade</option><option value="equilibrada">Equilibrada</option><option value="forte">Arquivo menor</option></select></label>
+            <label><span>{tool.slug === "compactar-pdf" ? "Nível de compactação" : "Qualidade de saída"}</span><select value={compression} onChange={(event) => setCompression(getPdfCompressionPreset(event.target.value))}><option value="alta">Alta qualidade</option><option value="recomendada">Recomendada</option><option value="maxima">Máxima redução</option></select><small>{PDF_COMPRESSION_PRESETS[compression].description}</small></label>
           )}
-          {tool.slug === "compactar-pdf" ? <div className="option-full extraction-note"><strong>Compactação rasterizada</strong><span>Indicada para digitalizações. O resultado pode perder texto selecionável, links, camadas e campos de formulário.</span></div> : null}
+          {tool.slug === "compactar-pdf" ? <div className="option-full extraction-note"><strong>Compressão inteligente</strong><span>O LIM PDF compara uma otimização estrutural com uma versão visual e baixa a menor saída. Texto, links e formulários são mantidos quando isso gera o melhor resultado.</span></div> : null}
         </div>
       ) : null}
 

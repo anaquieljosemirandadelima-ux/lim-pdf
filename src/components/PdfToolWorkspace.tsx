@@ -26,6 +26,7 @@ import {
 import { toolText, uiText, type UiTextBundle } from "@/lib/i18n-content";
 import { parsePageOrder, parsePages } from "@/lib/page-selection";
 import { canvasToBlob, extractTextByPage, renderPdfPages } from "@/lib/pdf-render";
+import { chooseSmallestPdf, getPdfCompressionPreset, PDF_COMPRESSION_PRESETS, type PdfCompressionPreset, type PdfCompressionStrategy } from "@/lib/pdf-compression";
 import { formatFileSizeLimit, getDeviceMemoryGuidance, getFileSizeGuidance, isFileWithinLimit, isPdfFile, MAX_LOCAL_PDF_BYTES } from "@/lib/file-validation";
 import type { ToolDefinition, ToolSlug } from "@/lib/tools";
 import { useTemporaryFiles } from "@/lib/use-temporary-files";
@@ -250,7 +251,7 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
   const [imageScale, setImageScale] = useState("25");
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
   const [renderResolution, setRenderResolution] = useState("1.5");
-  const [compression, setCompression] = useState("equilibrada");
+  const [compression, setCompression] = useState<PdfCompressionPreset>("recomendada");
   const [headerText, setHeaderText] = useState("");
   const [footerText, setFooterText] = useState("LIM PDF");
   const [alignment, setAlignment] = useState<"left" | "center" | "right">("center");
@@ -740,23 +741,49 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
     const file = files[0];
     if (!file) throw new Error("Selecione um PDF.");
     const pdfLib = await getPdfLib();
-    const presets = {
-      leve: { scale: 1.65, quality: 0.84 },
-      equilibrada: { scale: 1.35, quality: 0.7 },
-      forte: { scale: 1.05, quality: 0.5 },
-    } as const;
-    const preset = presets[compression as keyof typeof presets] || presets.equilibrada;
-    const pages = await renderPdfPages(await file.arrayBuffer(), preset.scale, grayscale);
+    const sourceBuffer = await file.arrayBuffer();
+    const sourceBytes = new Uint8Array(sourceBuffer.slice(0));
+    const presetName = getPdfCompressionPreset(compression);
+    const preset = PDF_COMPRESSION_PRESETS[presetName];
+
+    if (grayscale) {
+      const pages = await renderPdfPages(sourceBuffer, preset.scale, true);
+      const output = await pdfLib.PDFDocument.create();
+      for (const rendered of pages) {
+        const blob = await canvasToBlob(rendered.canvas, "image/jpeg", 0.82);
+        const image = await output.embedJpg(await blob.arrayBuffer());
+        const width = rendered.width / rendered.scale;
+        const height = rendered.height / rendered.scale;
+        const page = output.addPage([width, height]);
+        page.drawImage(image, { x: 0, y: 0, width, height });
+      }
+      const bytes = await output.save({ useObjectStreams: true, objectsPerTick: 45 });
+      downloadBytes(bytes, outputName(file, "escala-de-cinza"));
+      return { strategy: "visual" as const, bytes, inputSize: sourceBytes.length, outputSize: bytes.length };
+    }
+
+    const candidates: Array<{ strategy: PdfCompressionStrategy; bytes: Uint8Array }> = [];
+    try {
+      const structural = await pdfLib.PDFDocument.load(sourceBytes, { ignoreEncryption: true, updateMetadata: false });
+      candidates.push({ strategy: "estrutural", bytes: await structural.save({ useObjectStreams: true, objectsPerTick: 45 }) });
+    } catch {
+      // PDFs protegidos ou com estrutura incomum continuam pelo caminho visual.
+    }
+
+    const pages = await renderPdfPages(sourceBuffer, preset.scale, false);
     const output = await pdfLib.PDFDocument.create();
     for (const rendered of pages) {
-      const blob = await canvasToBlob(rendered.canvas, "image/jpeg", grayscale ? 0.82 : preset.quality);
+      const blob = await canvasToBlob(rendered.canvas, "image/jpeg", preset.quality);
       const image = await output.embedJpg(await blob.arrayBuffer());
-      const width = rendered.width / preset.scale;
-      const height = rendered.height / preset.scale;
+      const width = rendered.width / rendered.scale;
+      const height = rendered.height / rendered.scale;
       const page = output.addPage([width, height]);
       page.drawImage(image, { x: 0, y: 0, width, height });
     }
-    downloadBytes(await output.save({ useObjectStreams: true }), outputName(file, grayscale ? "escala-de-cinza" : "compactado"));
+    candidates.push({ strategy: "visual", bytes: await output.save({ useObjectStreams: true, objectsPerTick: 45 }) });
+    const selected = chooseSmallestPdf(sourceBytes, candidates);
+    downloadBytes(selected.bytes, outputName(file, "compactado"));
+    return { ...selected, inputSize: sourceBytes.length, outputSize: selected.bytes.length };
   }
 
   async function processExtractText() {
@@ -907,8 +934,8 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
         "imagens-para-pdf": processImages,
         "pdf-para-jpg": () => processPdfToImage("image/jpeg"),
         "pdf-para-png": () => processPdfToImage("image/png"),
-        "compactar-pdf": () => processRasterPdf(false),
-        "pdf-em-escala-de-cinza": () => processRasterPdf(true),
+        "compactar-pdf": async () => { await processRasterPdf(false); },
+        "pdf-em-escala-de-cinza": async () => { await processRasterPdf(true); },
         "extrair-texto-pdf": processExtractText,
         "preencher-formulario-pdf": processFillForm,
         "achatar-formulario-pdf": processFlattenForm,
@@ -1005,7 +1032,7 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
           {tool.slug === "criar-livreto-pdf" && <BookletOptions format={bookletSheetFormat} onFormatChange={setBookletSheetFormat} binding={bookletBinding} onBindingChange={setBookletBinding} flip={bookletFlip} onFlipChange={setBookletFlip} margin={bookletMargin} onMarginChange={setBookletMargin} />}
           {tool.slug === "paginas-por-folha" && <label><span>Páginas em cada folha A4</span><select value={pagesPerSheet} onChange={(event) => setPagesPerSheet(event.target.value)}><option value="2">2 páginas</option><option value="4">4 páginas</option></select></label>}
           {(tool.slug === "pdf-para-jpg" || tool.slug === "pdf-para-png") && <label><span>Resolução</span><select value={renderResolution} onChange={(event) => setRenderResolution(event.target.value)}><option value="1">Normal</option><option value="1.5">Alta</option><option value="2">Muito alta</option></select><small>Resoluções maiores usam mais memória.</small></label>}
-          {(tool.slug === "compactar-pdf" || tool.slug === "pdf-em-escala-de-cinza") && <label><span>{tool.slug === "compactar-pdf" ? "Nível de compactação" : "Qualidade de saída"}</span><select value={compression} onChange={(event) => setCompression(event.target.value)}><option value="leve">Alta qualidade</option><option value="equilibrada">Equilibrada</option><option value="forte">Arquivo menor</option></select></label>}
+          {(tool.slug === "compactar-pdf" || tool.slug === "pdf-em-escala-de-cinza") && <label><span>{tool.slug === "compactar-pdf" ? "Nível de compactação" : "Qualidade de saída"}</span><select value={compression} onChange={(event) => setCompression(getPdfCompressionPreset(event.target.value))}><option value="alta">Alta qualidade</option><option value="recomendada">Recomendada</option><option value="maxima">Máxima redução</option></select><small>{PDF_COMPRESSION_PRESETS[compression].description}</small></label>}
           {tool.slug === "preencher-formulario-pdf" && <FormFieldsEditor loading={loadingFields} fields={formFields} onChange={setFormFields} />}
           {tool.slug === "cabecalho-rodape-pdf" && <><label className="option-full"><span>Cabeçalho</span><input maxLength={100} value={headerText} onChange={(event) => setHeaderText(event.target.value)} placeholder="Ex.: Nome da empresa" /></label><label className="option-full"><span>Rodapé</span><input maxLength={100} value={footerText} onChange={(event) => setFooterText(event.target.value)} placeholder="Ex.: Documento confidencial" /></label><label><span>Alinhamento</span><select value={alignment} onChange={(event) => setAlignment(event.target.value as typeof alignment)}><option value="left">Esquerda</option><option value="center">Centro</option><option value="right">Direita</option></select></label><FontSize value={fontSize} onChange={setFontSize} /></>}
           {tool.slug === "espelhar-pdf" && <label><span>Direção</span><select value={mirrorDirection} onChange={(event) => setMirrorDirection(event.target.value as typeof mirrorDirection)}><option value="horizontal">Horizontal</option><option value="vertical">Vertical</option></select></label>}

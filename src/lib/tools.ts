@@ -314,13 +314,13 @@ export const tools: ToolDefinition[] = [
     faq: [{ question: "Quando escolher PNG em vez de JPG?", answer: "Use PNG quando priorizar nitidez de texto e gráficos; JPG é menor para fotografias." }, privacyFaq],
   },
   {
-    slug: "compactar-pdf", name: "Compactar PDF", shortDescription: "Reduza o tamanho rasterizando as páginas.",
-    description: "Gere uma cópia menor escolhendo o equilíbrio entre qualidade visual e tamanho do arquivo.", category: "Otimizar e proteger", icon: "Minimize2", accent: "blue", accept: "application/pdf", multiple: false,
+    slug: "compactar-pdf", name: "Compactar PDF", shortDescription: "Reduza o tamanho preservando a melhor qualidade possível.",
+    description: "Gere uma cópia menor escolhendo entre alta qualidade, compressão recomendada e máxima redução.", category: "Otimizar e proteger", icon: "Minimize2", accent: "blue", accept: "application/pdf", multiple: false,
     keywords: ["comprimir pdf", "reduzir pdf", "diminuir tamanho pdf", "pdf leve"],
     intro: "Reduza documentos escaneados e PDFs visuais para facilitar envio por e-mail, WhatsApp ou formulários com limite de tamanho.",
     useCases: ["Enviar arquivo por e-mail", "Adequar PDF a um portal", "Reduzir digitalizações pesadas", "Economizar espaço no celular"],
-    limitations: ["A compactação rasteriza as páginas", "Texto selecionável, links e formulários podem deixar de funcionar"],
-    faq: [{ question: "A qualidade pode diminuir?", answer: "Sim. Você escolhe a intensidade. Compressão maior gera arquivos menores e imagens menos nítidas." }, privacyFaq],
+    limitations: ["A máxima redução pode converter páginas visuais em imagens", "Arquivos já otimizados podem não diminuir"],
+    faq: [{ question: "A qualidade pode diminuir?", answer: "A opção recomendada equilibra tamanho e legibilidade. A máxima redução pode diminuir detalhes de imagens; o LIM PDF preserva o original quando uma saída candidata fica maior." }, privacyFaq],
   },
   {
     slug: "pdf-em-escala-de-cinza", name: "PDF em escala de cinza", shortDescription: "Converta páginas coloridas para tons de cinza.",

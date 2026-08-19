@@ -175,7 +175,17 @@ export function PrintCenterWorkspace() {
 
   return <section className="workspace print-center-workspace" aria-labelledby="print-center-title" aria-busy={status === "loading" || Boolean(activeJob)}>
     <div className="workspace-heading"><div><span className="page-kicker">Centro de saída local</span><h2 id="print-center-title">Prepare, revise e imprima seu PDF</h2><p>O arquivo permanece no navegador. Configure a folha, veja a ordem e abra o resultado na impressão do computador.</p></div><FileOutput size={31} aria-hidden="true" /></div>
-    {!file ? <div className="drop-zone" onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); selectFile(event.dataTransfer.files[0] || null); }}><span className="drop-icon"><UploadCloud size={31} /></span><strong>Arraste um PDF ou escolha no dispositivo</strong><span>Até {formatFileSizeLimit()} · processamento local</span><button className="primary-button" type="button" onClick={() => { inputRef.current?.click(); }}><FileText size={18} /> Escolher PDF</button><input ref={inputRef} type="file" accept="application/pdf,.pdf" hidden onChange={(event) => selectFile(event.target.files?.[0] || null)} /></div> : <div className="selected-files"><div className="selected-file-row"><FileText size={17} /><span><strong>{file.name}</strong><small>{humanSize(file.size)} · {pageCount} página(s)</small></span><button type="button" aria-label="Remover arquivo" onClick={clearFile}><Trash2 size={15} /></button></div></div>}
+    {!file ? <>
+      <div className="print-flow-guide" aria-label="Como preparar e imprimir">
+        <div className="print-flow-guide-heading"><strong>Como funciona</strong><span>Processamento local, sem enviar o PDF</span></div>
+        <ol>
+          <li><b>1</b><span><strong>Escolha o PDF</strong><small>Até {formatFileSizeLimit()} no seu dispositivo.</small></span></li>
+          <li><b>2</b><span><strong>Configure a saída</strong><small>Escolha livreto, N-up, papel e margem.</small></span></li>
+          <li><b>3</b><span><strong>Imprima no computador</strong><small>Abra o resultado pronto ou baixe o arquivo.</small></span></li>
+        </ol>
+      </div>
+      <div className="drop-zone" onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); selectFile(event.dataTransfer.files[0] || null); }}><span className="drop-icon"><UploadCloud size={31} /></span><strong>Arraste um PDF ou escolha no dispositivo</strong><span>Até {formatFileSizeLimit()} · processamento local</span><button className="primary-button" type="button" onClick={() => { inputRef.current?.click(); }}><FileText size={18} /> Escolher PDF</button><input ref={inputRef} type="file" accept="application/pdf,.pdf" hidden onChange={(event) => selectFile(event.target.files?.[0] || null)} /></div>
+      </> : <div className="selected-files"><div className="selected-file-row"><FileText size={17} /><span><strong>{file.name}</strong><small>{humanSize(file.size)} · {pageCount} página(s)</small></span><button type="button" aria-label="Remover arquivo" onClick={clearFile}><Trash2 size={15} /></button></div></div>}
     {guidance && guidance.tier !== "standard" ? <div className="large-file-notice" role="status"><FileText size={16} /><span><strong>Arquivo grande</strong><small>{guidance.message} A geração é feita sem enviar o documento.</small></span></div> : null}
     {status === "loading" ? <div className="status-message processing" role="status"><LoaderCircle className="spin" size={18} /> <span>{message}</span></div> : null}
     {file && pageCount ? <>

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { CheckCircle2, ExternalLink, FileText, Layers3, LoaderCircle, Repeat2, Trash2, UploadCloud } from "lucide-react";
+import { OutputActions } from "@/components/OutputActions";
 import { downloadBytes, humanSize } from "@/lib/browser-files";
 import { formatFileSizeLimit, getFileSizeGuidance, isFileWithinLimit, isPdfFile, MAX_LOCAL_PDF_BYTES } from "@/lib/file-validation";
 import { addHyperlink, addInternalPageLink, editHyperlink, readHyperlinks, removeAllHyperlinks, removeHyperlink, type PdfHyperlinkInfo } from "@/lib/pro-pdf-engines";
@@ -58,7 +59,7 @@ export function ProLinksWorkspace() {
         result = mode === "edit" ? await editHyperlink(file, item.page, item.index, url) : await removeHyperlink(file, item.page, item.index);
       }
       downloadBytes(result.bytes, result.filename);
-      setState({ type: "success", message: "Hyperlinks atualizados. O download foi iniciado." });
+      setState({ type: "success", message: "Hyperlinks atualizados. O resultado está pronto para imprimir ou baixar." });
     } catch (error) {
       setState({ type: "error", message: error instanceof Error ? error.message : "Não foi possível alterar os hyperlinks." });
     }
@@ -91,5 +92,6 @@ export function ProLinksWorkspace() {
     <button className="process-button" type="button" disabled={!file || state.type === "processing" || (needsExisting && !current)} onClick={() => void process()}>{state.type === "processing" ? <><LoaderCircle className="spin" size={18} /> {state.message}</> : <><Repeat2 size={18} /> Aplicar alteração</>}</button>
     {state.type === "success" ? <div className="status-message success"><CheckCircle2 size={18} /><span>{state.message}</span></div> : null}
     {state.type === "error" ? <div className="status-message error"><span>{state.message}</span></div> : null}
+    <OutputActions />
   </section>;
 }

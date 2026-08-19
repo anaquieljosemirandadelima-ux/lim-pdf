@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { CheckCircle2, Download, FileOutput, FileText, LoaderCircle, RotateCw, Trash2, UploadCloud, X } from "lucide-react";
+import { useRef, useState } from "react";
+import { CheckCircle2, FileOutput, FileText, LoaderCircle, RotateCw, Trash2, UploadCloud, X } from "lucide-react";
 import { PDFDocument } from "pdf-lib";
-import { humanSize, outputName as buildOutputName } from "@/lib/browser-files";
+import { OutputActions } from "@/components/OutputActions";
+import { clearPreparedOutput, humanSize, outputName as buildOutputName, prepareOutput } from "@/lib/browser-files";
 import { formatFileSizeLimit, getFileSizeGuidance, isFileWithinLimit, isPdfFile, MAX_LOCAL_PDF_BYTES } from "@/lib/file-validation";
 import { loadPdfJsDocument, renderPdfPagesSequentially } from "@/lib/pdf-render";
 import { buildPrintPlan, nUpGrid, PRINT_PAPERS, pageLabel, bookletSheets, type DuplexEdge, type PrintMode, type PrintPaper } from "@/lib/pdf-print";
@@ -33,11 +34,8 @@ export function PrintCenterWorkspace() {
   const [margin, setMargin] = useState("6");
   const [status, setStatus] = useState<PrintStatus>("idle");
   const [message, setMessage] = useState("");
-  const [outputUrl, setOutputUrl] = useState<string | null>(null);
-  const [outputName, setOutputName] = useState("");
+  const [outputReady, setOutputReady] = useState(false);
   const { jobs, activeJob, enqueue, cancel, retry, clearFinished } = useLocalJobQueue();
-
-  useEffect(() => () => { if (outputUrl) URL.revokeObjectURL(outputUrl); }, [outputUrl]);
 
   async function inspect(selected: File) {
     setStatus("loading");
@@ -67,14 +65,16 @@ export function PrintCenterWorkspace() {
     if (!isFileWithinLimit(selected, MAX_LOCAL_PDF_BYTES)) { setStatus("error"); setMessage(`O PDF ultrapassa ${formatFileSizeLimit()}.`); return; }
     setFile(selected);
     outputReadyRef.current = false;
-    setOutputUrl(null);
-    setOutputName("");
+    setOutputReady(false);
+    clearPreparedOutput();
     void inspect(selected);
   }
 
   function clearFile() {
     outputReadyRef.current = false;
-    setFile(null); setPageCount(0); setThumbnails([]); setOutputUrl(null); setOutputName(""); setStatus("idle"); setMessage("");
+    setOutputReady(false);
+    clearPreparedOutput();
+    setFile(null); setPageCount(0); setThumbnails([]); setStatus("idle"); setMessage("");
     if (inputRef.current) inputRef.current.value = "";
   }
 
@@ -152,12 +152,12 @@ export function PrintCenterWorkspace() {
     setMessage("A preparação está na fila local.");
     try {
       const result = await job.promise;
-      const blob = new Blob([result.bytes.buffer as ArrayBuffer], { type: "application/pdf" });
-      if (outputUrl) URL.revokeObjectURL(outputUrl);
+      const outputBuffer = new ArrayBuffer(result.bytes.byteLength);
+      new Uint8Array(outputBuffer).set(result.bytes);
       outputReadyRef.current = true;
-      setOutputUrl(URL.createObjectURL(blob));
-      setOutputName(result.name);
-      setMessage("PDF pronto. Revise o plano e abra a saída para imprimir no computador.");
+      setOutputReady(true);
+      prepareOutput(new Blob([outputBuffer], { type: "application/pdf" }), result.name);
+      setMessage("PDF pronto. Escolha imprimir no computador ou baixar o arquivo.");
     } catch (error) {
       if (!(error instanceof DOMException && error.name === "AbortError")) setMessage(error instanceof Error ? error.message : "Não foi possível preparar a impressão.");
     } finally {
@@ -165,18 +165,13 @@ export function PrintCenterWorkspace() {
     }
   }
 
-  function openPrintPdf() {
-    if (!outputUrl) return;
-    window.open(outputUrl, "_blank", "noopener,noreferrer");
-  }
-
   const plan = pageCount ? buildPrintPlan(pageCount, mode, pagesPerSheet) : [];
   const guidance = file ? getFileSizeGuidance(file) : null;
 
-  return <section className="workspace print-center-workspace" aria-labelledby="print-center-title" aria-busy={status === "loading" || Boolean(activeJob)}>
-    <div className="workspace-heading"><div><span className="page-kicker">Centro de saída local</span><h2 id="print-center-title">Prepare, revise e imprima seu PDF</h2><p>O arquivo permanece no navegador. Configure a folha, veja a ordem e abra o resultado na impressão do computador.</p></div><FileOutput size={31} aria-hidden="true" /></div>
+  return <section className="workspace print-center-workspace" aria-labelledby="booklet-tool-title" aria-busy={status === "loading" || Boolean(activeJob)}>
+    <div className="workspace-heading"><div><span className="page-kicker">Preparação de páginas</span><h2 id="booklet-tool-title">Prepare páginas para impressão</h2><p>O arquivo permanece no navegador. Configure livreto, páginas por folha, papel e margem; depois escolha imprimir ou baixar o PDF final.</p></div><FileOutput size={31} aria-hidden="true" /></div>
     {!file ? <>
-      <div className="print-flow-guide" aria-label="Como preparar e imprimir">
+      <div className="print-flow-guide" aria-label="Como preparar a saída">
         <div className="print-flow-guide-heading"><strong>Como funciona</strong><span>Processamento local, sem enviar o PDF</span></div>
         <ol>
           <li><b>1</b><span><strong>Escolha o PDF</strong><small>Até {formatFileSizeLimit()} no seu dispositivo.</small></span></li>
@@ -202,10 +197,10 @@ export function PrintCenterWorkspace() {
         <img src={thumbnail.dataUrl} alt={`Miniatura da página ${thumbnail.page}`} />
         <figcaption>Página {thumbnail.page}</figcaption>
       </figure>)}</div></div> : null}
-      <button className="process-button" type="button" disabled={Boolean(activeJob)} onClick={() => void process()}>{activeJob ? <><LoaderCircle className="spin" size={19} /> {activeJob.message}</> : <><FileOutput size={19} /> Gerar PDF para impressão</>}</button>
+      <button className="process-button" type="button" disabled={Boolean(activeJob)} onClick={() => void process()}>{activeJob ? <><LoaderCircle className="spin" size={19} /> {activeJob.message}</> : <><FileOutput size={19} /> Gerar saída</>}</button>
     </> : null}
-    {message && status !== "loading" ? <div className={`status-message ${outputUrl ? "success" : "processing"}`} role="status" aria-live="polite">{outputUrl ? <CheckCircle2 size={18} /> : null}<span>{message}</span></div> : null}
-    {outputUrl ? <div className="print-output-actions"><button className="primary-button" type="button" onClick={openPrintPdf}><FileOutput size={17} /> Abrir para imprimir</button><a className="secondary-button" href={outputUrl} download={outputName}><Download size={17} /> Baixar PDF</a></div> : null}
+    {message && status !== "loading" ? <div className={`status-message ${outputReady ? "success" : "processing"}`} role="status" aria-live="polite">{outputReady ? <CheckCircle2 size={18} /> : null}<span>{message}</span></div> : null}
+    <OutputActions />
     {jobs.length ? <div className="local-job-queue" aria-label="Fila local"><div><strong>Fila local</strong><button className="text-button" type="button" onClick={clearFinished}>Limpar concluídos</button></div>{jobs.map((job) => <div className="local-job-row" key={job.id}><span><strong>{job.label}</strong><small>{job.message}</small></span><span>{job.status === "running" || job.status === "queued" ? `${job.progress}%` : job.status === "success" ? "Concluído" : job.status === "error" ? <button className="text-button" type="button" onClick={() => void retry(job.id)}><RotateCw size={14} /> Tentar novamente</button> : "Cancelado"}</span>{job.status === "running" || job.status === "queued" ? <button type="button" className="icon-button" aria-label="Cancelar operação" onClick={() => cancel(job.id)}><X size={15} /></button> : null}</div>)}</div> : null}
   </section>;
 }

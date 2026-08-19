@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { CheckCircle2, FilePlus2, FileText, ListOrdered, LoaderCircle, Trash2, UploadCloud } from "lucide-react";
+import { OutputActions } from "@/components/OutputActions";
 import { downloadBytes, humanSize } from "@/lib/browser-files";
 import { formatFileSizeLimit, getFileSizeGuidance, isFileWithinLimit, isPdfFile, MAX_LOCAL_PDF_BYTES } from "@/lib/file-validation";
 import { addBookmarks, type BookmarkDraft } from "@/lib/pro-pdf-engines";
@@ -42,7 +43,7 @@ export function ProNavigationWorkspace({ tool }: { tool: ProToolDefinition }) {
     try {
       const result = await addBookmarks(file, bookmarks);
       downloadBytes(result.bytes, result.filename);
-      setState({ type: "success", message: "Marcadores adicionados. O download foi iniciado." });
+      setState({ type: "success", message: "Marcadores adicionados. O resultado está pronto para imprimir ou baixar." });
     } catch (error) {
       setState({ type: "error", message: error instanceof Error ? error.message : "Não foi possível criar os marcadores." });
     }
@@ -69,5 +70,6 @@ export function ProNavigationWorkspace({ tool }: { tool: ProToolDefinition }) {
     <button className="process-button" type="button" disabled={!file || !bookmarks.length || state.type === "processing"} onClick={() => void process()}>{state.type === "processing" ? <><LoaderCircle className="spin" size={18} /> {state.message}</> : <>Criar marcadores</>}</button>
     {state.type === "success" ? <div className="status-message success"><CheckCircle2 size={18} /><span>{state.message}</span></div> : null}
     {state.type === "error" ? <div className="status-message error"><span>{state.message}</span></div> : null}
+    <OutputActions />
   </section>;
 }

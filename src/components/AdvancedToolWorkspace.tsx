@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, FileText, LoaderCircle, ShieldCheck, UploadCloud } from "lucide-react";
-import { createStoredZip, downloadBlob, downloadBytes, humanSize } from "@/lib/browser-files";
+import { OutputActions } from "@/components/OutputActions";
+import { createStoredZip, downloadBytes, prepareOutput, humanSize } from "@/lib/browser-files";
 import { loadPdfJsDocument } from "@/lib/pdf-render";
 import { formatFileSizeLimit, getDeviceMemoryGuidance, getFileSizeGuidance, isFileWithinLimit, MAX_LOCAL_PDF_BYTES } from "@/lib/file-validation";
 import type { AdvancedToolSlug, AnyToolDefinition } from "@/lib/all-tools";
@@ -497,16 +498,16 @@ export function AdvancedToolWorkspace({ tool }: { tool: AnyToolDefinition }) {
         const pages = await pdfTextRows(file);
         if (!pages.some((rows) => rows.length)) throw new Error("Nenhum texto foi detectado. Este PDF pode ser apenas imagem e precisar de OCR.");
         const zip = docxBlob(pages);
-        downloadBlob(new Blob([await zip.arrayBuffer()], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" }), `${baseName(file)}.docx`);
+        prepareOutput(new Blob([await zip.arrayBuffer()], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" }), `${baseName(file)}.docx`);
       } else if (slug === "pdf-para-excel") {
         const pages = await pdfTextRows(file);
         if (!pages.some((rows) => rows.length)) throw new Error("Nenhum texto ou tabela foi detectado. Este PDF pode precisar de OCR.");
         const zip = xlsxBlob(pages);
-        downloadBlob(new Blob([await zip.arrayBuffer()], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), `${baseName(file)}.xlsx`);
+        prepareOutput(new Blob([await zip.arrayBuffer()], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), `${baseName(file)}.xlsx`);
       } else if (slug === "pdf-para-markdown") {
         const pages = await pdfTextRows(file);
         if (!pages.some((rows) => rows.length)) throw new Error("Nenhum texto foi detectado. Este PDF pode ser apenas imagem e precisar de OCR.");
-        downloadBlob(markdownBlob(pages), `${baseName(file)}.md`);
+        prepareOutput(markdownBlob(pages), `${baseName(file)}.md`);
       } else if (slug === "word-para-pdf") {
         downloadBytes(await docxToPdf(file), `${baseName(file)}.pdf`);
       } else if (slug === "excel-para-pdf") {
@@ -514,7 +515,7 @@ export function AdvancedToolWorkspace({ tool }: { tool: AnyToolDefinition }) {
       } else if (slug === "destacar-texto") {
         const result = await highlightPdf(file, highlightQuery);
         downloadBytes(result.bytes, `${baseName(file)}-destacado.pdf`);
-        setStatus({ type: "success", message: `${result.matches} ocorrência(s) destacada(s). O download foi iniciado.` });
+        setStatus({ type: "success", message: `${result.matches} ocorrência(s) destacada(s). O resultado está pronto: escolha imprimir no computador ou baixar.` });
         return;
       } else if (slug === "marcar-confidencial") {
         downloadBytes(await confidentialPdf(file), `${baseName(file)}-confidencial.pdf`);
@@ -545,7 +546,7 @@ export function AdvancedToolWorkspace({ tool }: { tool: AnyToolDefinition }) {
         });
         downloadBytes(encrypted, `${baseName(file)}-permissoes.pdf`);
       }
-      setStatus({ type: "success", message: "Processamento concluído. O download foi iniciado." });
+      setStatus({ type: "success", message: "Processamento concluído. Escolha imprimir no computador ou baixar o resultado." });
     } catch (error) {
       setStatus({ type: "error", message: error instanceof Error ? error.message : "Não foi possível processar o arquivo." });
     }
@@ -612,6 +613,7 @@ export function AdvancedToolWorkspace({ tool }: { tool: AnyToolDefinition }) {
         <span>{status.message}</span>
       </div> : null}
 
+      <OutputActions />
       <button type="button" className="process-button" disabled={!file || status.type === "processing"} onClick={() => void processFile()}>
         {status.type === "processing" ? <><LoaderCircle className="spin" size={19} /> Processando…</> : <>Processar agora</>}
       </button>

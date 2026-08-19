@@ -81,8 +81,11 @@ async function main() {
     await catalogSearch.fill("centro");
     const catalogSummary = uxPage.locator(".catalog-results-summary");
     await catalogSummary.waitFor({ state: "visible", timeout: 10_000 });
-    assert.match(await catalogSummary.innerText(), /1 ferramenta.*centro/i, "Busca local deve mostrar contagem e termo pesquisado.");
-    assert.equal(await uxPage.locator(".reference-catalog").getByRole("link", { name: /Centro de impressão/i }).count(), 1, "Busca local deve encontrar exatamente Centro de impressão no catálogo.");
+    assert.match(await catalogSummary.innerText(), /0 ferramentas.*centro/i, "O catálogo não deve promover um Centro de Impressão separado.");
+    assert.equal(await uxPage.locator(".reference-catalog").getByRole("link", { name: /Centro de impressão/i }).count(), 0, "O catálogo não deve conter um atalho separado ao Centro de Impressão.");
+    await catalogSearch.fill("livreto");
+    assert.match(await catalogSummary.innerText(), /[1-9]\d* ferramentas?.*livreto/i, "A ferramenta de livreto deve continuar descobrível no catálogo.");
+    assert.equal(await uxPage.locator(".reference-catalog").getByRole("link", { name: /Livreto e páginas por folha/i }).count(), 1, "A ferramenta de livreto deve aparecer como opção normal do catálogo.");
     await uxPage.getByRole("button", { name: "Limpar filtros" }).click();
     assert.match(await catalogSummary.innerText(), /62 ferramentas.*Todas/i, "Limpar filtros deve restaurar o inventário canónico completo.");
 

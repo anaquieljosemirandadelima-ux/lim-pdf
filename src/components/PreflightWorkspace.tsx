@@ -3,7 +3,8 @@
 import { useRef, useState } from "react";
 import { CheckCircle2, CircleOff, Download, FileText, ListChecks, LoaderCircle, ShieldCheck, Trash2, UploadCloud } from "lucide-react";
 import { PDFDocument } from "pdf-lib";
-import { downloadBlob, downloadBytes, humanSize } from "@/lib/browser-files";
+import { OutputActions } from "@/components/OutputActions";
+import { downloadBytes, humanSize, prepareOutput } from "@/lib/browser-files";
 import { useLocalJobQueue } from "@/lib/use-local-job-queue";
 import { formatFileSizeLimit, getFileSizeGuidance, isFileWithinLimit, isPdfFile, MAX_LOCAL_PDF_BYTES } from "@/lib/file-validation";
 import { loadPdfJsDocument } from "@/lib/pdf-render";
@@ -38,7 +39,7 @@ export function PreflightWorkspace() {
     if (!file || !findings.length) return;
     const lines = ["LIM PDF — relatório de preflight", `Arquivo: ${file.name}`, `Tamanho: ${humanSize(file.size)}`, `Gerado em: ${new Date().toLocaleString("pt-BR")}`, "", ...findings.map((finding) => `[${finding.severity.toUpperCase()}] ${finding.title}\n${finding.detail}`)];
     const filename = `${file.name.replace(/\.pdf$/i, "") || "documento"}-preflight.txt`;
-    downloadBlob(new Blob([lines.join("\n\n")], { type: "text/plain;charset=utf-8" }), filename);
+    prepareOutput(new Blob([lines.join("\n\n")], { type: "text/plain;charset=utf-8" }), filename);
   }
 
   async function downloadSanitized() {
@@ -133,7 +134,8 @@ export function PreflightWorkspace() {
     {status.type === "processing" ? <div className="status-message status-processing"><LoaderCircle className="spin" size={18} /><span>{status.message}</span></div> : null}
     {status.type === "success" ? <div className="status-message status-success"><CheckCircle2 size={18} /><span>{status.message}</span></div> : null}
     {status.type === "error" ? <div className="status-message status-error"><span>{status.message}</span></div> : null}
-    {findings.length ? <><div className="preflight-report-actions"><button className="secondary-button" type="button" onClick={downloadReport}><Download size={16} /> Baixar relatório</button><button className="secondary-button" type="button" onClick={() => void downloadSanitized()}><ShieldCheck size={16} /> Criar cópia sanitizada</button></div><div className="preflight-results">{findings.map((finding) => <article className={`preflight-${finding.severity}`} key={finding.title}>{finding.severity === "ok" ? <CheckCircle2 size={19} /> : finding.severity === "warn" ? <CircleOff size={19} /> : <ShieldCheck size={19} />}<div><strong>{finding.title}</strong><p>{finding.detail}</p></div></article>)}</div></> : null}
+        {findings.length ? <><OutputActions /><div className="preflight-report-actions"><button className="secondary-button" type="button" onClick={downloadReport}><Download size={16} /> Preparar relatório</button><button className="secondary-button" type="button" onClick={() => void downloadSanitized()}><ShieldCheck size={16} /> Criar cópia sanitizada</button></div><div className="preflight-results">
+{findings.map((finding) => <article className={`preflight-${finding.severity}`} key={finding.title}>{finding.severity === "ok" ? <CheckCircle2 size={19} /> : finding.severity === "warn" ? <CircleOff size={19} /> : <ShieldCheck size={19} />}<div><strong>{finding.title}</strong><p>{finding.detail}</p></div></article>)}</div></> : null}
     {jobs.length ? <div className="local-job-queue" aria-label="Fila local do preflight"><div><strong>Fila local</strong><button className="text-button" type="button" onClick={clearFinished}>Limpar concluídos</button></div>{jobs.map((job) => <div className="local-job-row" key={job.id}><span><strong>{job.label}</strong><small>{job.message}</small></span><span>{job.status === "running" || job.status === "queued" ? `${job.progress}%` : job.status === "success" ? "Concluído" : job.status === "error" ? "Falhou" : "Cancelado"}</span>{job.status === "running" || job.status === "queued" ? <button className="icon-button" type="button" aria-label="Cancelar análise" onClick={() => cancel(job.id)}><span aria-hidden="true">×</span></button> : job.status === "error" ? <button className="text-button" type="button" onClick={() => void retry(job.id)}>Tentar novamente</button> : null}</div>)}</div> : null}
   </section>;
 }

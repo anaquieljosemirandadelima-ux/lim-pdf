@@ -9,6 +9,24 @@ function announceDownload(blob: Blob, filename: string) {
   window.dispatchEvent(new CustomEvent("limpdf:download", { detail: { bytes: blob.size, extension } }));
 }
 
+export type OutputArtifact = { blob: Blob; filename: string };
+
+let preparedOutput: OutputArtifact | null = null;
+
+export function getPreparedOutput() {
+  return preparedOutput;
+}
+
+export function clearPreparedOutput() {
+  preparedOutput = null;
+  if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("limpdf:output-clear"));
+}
+
+export function prepareOutput(blob: Blob, filename: string) {
+  preparedOutput = { blob, filename };
+  if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent<OutputArtifact>("limpdf:output-ready", { detail: preparedOutput }));
+}
+
 export function downloadBlob(blob: Blob, filename: string) {
   announceDownload(blob, filename);
   const url = URL.createObjectURL(blob);
@@ -23,7 +41,7 @@ export function downloadBlob(blob: Blob, filename: string) {
 
 export function downloadBytes(bytes: Uint8Array, filename: string, type = "application/pdf") {
   const safeBytes = Uint8Array.from(bytes);
-  downloadBlob(new Blob([safeBytes.buffer], { type }), filename);
+  prepareOutput(new Blob([safeBytes.buffer], { type }), filename);
 }
 
 export function outputName(file: File | undefined, suffix: string) {

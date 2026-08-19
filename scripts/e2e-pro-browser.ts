@@ -21,10 +21,16 @@ async function validatePdf(path: string) {
 }
 
 async function outputFor(page: Page, slug: ProToolSlug, timeout = 100_000) {
-  const [download] = await Promise.all([page.waitForEvent("download", { timeout }), page.locator("button.process-button").click()]);
+  await page.locator("button.process-button").click();
+  const outputActions = page.locator(".output-actions");
+  await outputActions.waitFor({ state: "visible", timeout });
+  assert.equal(await page.locator(".status-message.error").count(), 0, `${slug}: terminou com erro visível`);
+  const [download] = await Promise.all([
+    page.waitForEvent("download", { timeout }),
+    outputActions.getByRole("button", { name: /Baixar resultado/i }).click(),
+  ]);
   const target = join(downloadDir, `${slug}-${download.suggestedFilename()}`);
   await download.saveAs(target);
-  assert.equal(await page.locator(".status-message.error").count(), 0, `${slug}: terminou com erro visível`);
   return target;
 }
 

@@ -2,7 +2,8 @@
 
 import { useRef, useState } from "react";
 import { ArrowDown, ArrowUp, CheckCircle2, FilePlus2, FileText, LoaderCircle, ShieldCheck, Trash2, UploadCloud } from "lucide-react";
-import { downloadBlob, downloadBytes, humanSize } from "@/lib/browser-files";
+import { OutputActions } from "@/components/OutputActions";
+import { downloadBytes, humanSize, prepareOutput } from "@/lib/browser-files";
 import { formatFileSizeLimit, getFileSizeGuidance, isFileWithinLimit, MAX_LOCAL_PDF_BYTES } from "@/lib/file-validation";
 import type { ProToolDefinition } from "@/lib/pro-tools";
 import {
@@ -134,7 +135,7 @@ export function ProPdfWorkspace({ tool }: { tool: ProToolDefinition }) {
       } else if (tool.slug === "reparar-pdf") {
         const result = await repairPdf(file, progress); downloadBytes(result.bytes, result.filename); setReport([`Estratégia aplicada: ${result.mode === "estrutura" ? "normalização estrutural" : "reconstrução visual"}.`]);
       } else if (tool.slug === "extrair-imagens-pdf") {
-        const result = await extractEmbeddedImages(file, progress); downloadBlob(result.blob, result.filename); setReport([`${result.count} imagem(ns) raster extraída(s).`]);
+        const result = await extractEmbeddedImages(file, progress); prepareOutput(result.blob, result.filename); setReport([`${result.count} imagem(ns) raster extraída(s).`]);
       } else if (tool.slug === "limpar-documento-digitalizado") {
         const result = await cleanScannedPdf(file, { deskew: cleanDeskew, removeBlank: cleanBlank, strength: cleanStrength, rotate: cleanRotate }, progress); downloadBytes(result.bytes, result.filename); setReport([`${result.removed} página(s) em branco removida(s).`]);
       } else if (tool.slug === "otimizar-pdf-avancado") {
@@ -150,11 +151,11 @@ export function ProPdfWorkspace({ tool }: { tool: ProToolDefinition }) {
       } else if (tool.slug === "pdf-a") {
         const result = await preparePdfA(file); downloadBytes(result.bytes, result.filename); setReport(result.report);
       } else if (tool.slug === "pdf-para-powerpoint") {
-        const result = await pdfToPptx(file, progress); downloadBlob(result.blob, result.filename);
+        const result = await pdfToPptx(file, progress); prepareOutput(result.blob, result.filename);
       } else if (tool.slug === "powerpoint-para-pdf") {
         const result = await pptxToPdf(file, progress); downloadBytes(result.bytes, result.filename);
       } else if (tool.slug === "processamento-lote-pdf") {
-        const result = await processBatch(files, batchOperation, progress); downloadBlob(result.blob, result.filename); setReport([`${result.count} arquivo(s) processado(s) e reunido(s) em ZIP.`]);
+        const result = await processBatch(files, batchOperation, progress); prepareOutput(result.blob, result.filename); setReport([`${result.count} arquivo(s) processado(s) e reunido(s) em ZIP.`]);
       } else if (tool.slug === "assinatura-digital-pdf") {
         if (!certificatePem || !privateKeyPem) throw new Error("Selecione o certificado X.509 PEM e a chave privada RSA PKCS#8 PEM.");
         const result = await signPdfPades(file, certificatePem, privateKeyPem, { name: signerName, reason: signReason, visible: signVisible });
@@ -162,7 +163,7 @@ export function ProPdfWorkspace({ tool }: { tool: ProToolDefinition }) {
       } else {
         throw new Error("Esta ferramenta usa um workspace especializado.");
       }
-      setStatus({ type: "success", message: "Processamento concluído. O download foi iniciado.", progress: 100 });
+      setStatus({ type: "success", message: "Processamento concluído. O resultado está pronto para imprimir ou baixar.", progress: 100 });
     } catch (error) {
       setStatus({ type: "error", message: error instanceof Error ? error.message : "Não foi possível concluir o processamento." });
     }
@@ -220,6 +221,7 @@ export function ProPdfWorkspace({ tool }: { tool: ProToolDefinition }) {
     {processing && typeof status.progress === "number" ? <div className="pro-progress"><i style={{ width: `${Math.max(2, Math.min(100, status.progress))}%` }} /><span>{Math.round(status.progress)}%</span></div> : null}
     {status.type === "success" ? <div className="status-message success" role="status" aria-live="polite"><CheckCircle2 size={18} /><span>{status.message}</span></div> : null}
     {status.type === "error" ? <div className="status-message error" role="alert" aria-live="assertive"><span>{status.message}</span></div> : null}
+    <OutputActions />
     {report.length ? <div className="pro-report"><strong>Relatório</strong>{report.map((item) => <span key={item}>{item}</span>)}</div> : null}
   </section>;
 }

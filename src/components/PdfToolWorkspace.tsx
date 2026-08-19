@@ -14,11 +14,12 @@ import {
   UploadCloud,
   ShieldCheck,
 } from "lucide-react";
+import { OutputActions } from "@/components/OutputActions";
 import { SignaturePad } from "@/components/SignaturePad";
 import {
   createStoredZip,
-  downloadBlob,
   downloadBytes,
+  prepareOutput,
   humanSize,
   outputName,
 } from "@/lib/browser-files";
@@ -416,7 +417,7 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
       output.addPage(page);
       entries.push({ name: `${file.name.replace(/\.pdf$/i, "")}-pagina-${index + 1}.pdf`, data: await output.save({ useObjectStreams: true }) });
     }
-    downloadBlob(createStoredZip(entries), `${file.name.replace(/\.pdf$/i, "")}-paginas.zip`);
+    prepareOutput(createStoredZip(entries), `${file.name.replace(/\.pdf$/i, "")}-paginas.zip`);
   }
 
   async function processExtract(removeSelected: boolean) {
@@ -732,7 +733,7 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
       const blob = await canvasToBlob(page.canvas, type, 0.9);
       entries.push({ name: `${file.name.replace(/\.pdf$/i, "")}-pagina-${page.pageNumber}.${extension}`, data: new Uint8Array(await blob.arrayBuffer()) });
     }
-    downloadBlob(createStoredZip(entries), `${file.name.replace(/\.pdf$/i, "")}-${extension}.zip`);
+    prepareOutput(createStoredZip(entries), `${file.name.replace(/\.pdf$/i, "")}-${extension}.zip`);
   }
 
   async function processRasterPdf(grayscale: boolean) {
@@ -776,7 +777,7 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
       })),
       note: "Esta extração usa a camada de texto já presente no PDF. Páginas escaneadas sem OCR retornam sem texto.",
     };
-    downloadBlob(createStoredZip([
+    prepareOutput(createStoredZip([
       { name: `${file.name.replace(/\.pdf$/i, "")}-texto.txt`, data: new TextEncoder().encode(text) },
       { name: `${file.name.replace(/\.pdf$/i, "")}-texto.md`, data: new TextEncoder().encode(markdown) },
       { name: `${file.name.replace(/\.pdf$/i, "")}-relatorio.json`, data: new TextEncoder().encode(JSON.stringify(report, null, 2)) },
@@ -1024,6 +1025,7 @@ export function PdfToolWorkspace({ tool }: PdfToolWorkspaceProps) {
         </div>
       ) : null}
 
+      <OutputActions />
       {files.length ? <button type="button" className="process-button" onClick={processFiles} disabled={!canProcess}>{status.type === "processing" ? <LoaderCircle className="spin" size={20} /> : <Download size={20} />}{status.type === "processing" ? text.processing : `${localizedTool.name} ${text.processNow}`}</button> : null}
 
       <p className="privacy-note">{text.localFiles} {cached ? text.cacheActive : ""}{restored ? ` ${text.sessionRestored}` : ""}</p>

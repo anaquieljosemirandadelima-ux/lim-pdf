@@ -50,7 +50,7 @@
 .global-tool-search:focus-within > label {
   background: #fff !important;
   border-color: #d9dce2 !important;
-  box-shadow: 0 0 0 4px rgba(239, 21, 28, .055) !important;
+  box-shadow: 0 0 0 3px rgba(71, 85, 105, .14) !important;
 }
 
 .global-tool-search input {
@@ -200,7 +200,7 @@
 }
 
 .global-search-results > button:not(.search-view-all):focus-visible {
-  outline: 2px solid rgba(240, 24, 31, .28) !important;
+  outline: 2px solid rgba(71, 85, 105, .22) !important;
   outline-offset: -2px !important;
 }
 
@@ -432,8 +432,8 @@
 }
 
 .reference-catalog-head .reference-search:focus-within {
-  border-color: #e38f93;
-  box-shadow: 0 0 0 4px rgba(240, 24, 31, 0.08);
+  border-color: #c8d0dc;
+  box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.14), 0 8px 22px rgba(35, 44, 66, 0.055);
 }
 
 .reference-catalog-tabs {
@@ -585,6 +585,30 @@
 
 .catalog-filter .reference-search {
   position: relative;
+}
+
+.global-tool-search input:focus,
+.reference-catalog-head .reference-search input:focus {
+  outline: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.global-tool-search > label,
+.reference-catalog-head .reference-search {
+  overflow: hidden !important;
+}
+
+.search-submit {
+  align-self: stretch !important;
+  height: 42px !important;
+}
+
+.search-submit:focus-visible,
+.search-clear:focus-visible,
+.catalog-filter-clear:focus-visible {
+  outline: 2px solid rgba(71, 85, 105, .34) !important;
+  outline-offset: 2px !important;
 }
 
 .catalog-filter-clear {

@@ -930,8 +930,8 @@ body.modal-open{overflow:hidden}
 .mega-menu{position:fixed;top:86px;left:50%;width:min(1440px,calc(100vw - 64px));max-width:calc(100vw - 64px);border-color:#eef0f4;border-radius:18px}
 .header-actions{flex:0 0 auto;min-width:0;justify-content:flex-end;gap:14px;margin-left:auto}
 .header-search{position:relative;display:flex;align-items:center;width:clamp(320px,22vw,430px);flex:0 1 430px;min-width:300px;height:56px}
-.header-search>label{width:100%;height:56px;border:1.5px solid #ef151c;border-radius:13px;display:flex;align-items:center;gap:12px;padding:0 52px 0 18px;background:#fff;color:#344054;box-shadow:0 10px 26px rgba(207,0,13,.04)}
-.header-search:focus-within>label{border-color:#ff3440;box-shadow:0 0 0 4px rgba(239,21,28,.08),0 14px 30px rgba(207,0,13,.08)}
+.header-search>label{width:100%;height:56px;border:1px solid #dfe4eb;border-radius:13px;display:flex;align-items:center;gap:12px;padding:0 52px 0 18px;background:#fff;color:#344054;box-shadow:0 8px 22px rgba(35,44,66,.055)}
+.header-search:focus-within>label{border-color:#c8d0dc;box-shadow:0 0 0 3px rgba(71,85,105,.14),0 12px 26px rgba(35,44,66,.08)}
 .header-search input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#172033;font-size:14px}
 .header-search button{position:absolute;right:9px;width:38px;height:38px;border:0;border-radius:10px;display:grid;place-items:center;background:#ef151c;color:#fff;padding:0}
 .search-trigger,.search-modal-backdrop,.search-command,.header-cta,.mobile-upload-button{display:none!important}

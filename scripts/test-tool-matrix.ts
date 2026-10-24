@@ -17,7 +17,7 @@ async function main() {
   assert.equal(allTools.length + proTools.length + STANDALONE_FLOWS, 62, "A navegação pública deve fechar 62 fluxos úteis.");
 
   const navigation = await source("src/lib/navigation.ts");
-  const [route, generic, sequential, advanced, editorSwitcher, editor, sitemap, telemetryBridge, telemetryLib, telemetryApi, converter, ocr, sidebar, search, consent, footer, adRoute, proRegistry, proEngines, proWorkspace, linksWorkspace, navigationWorkspace, preflight] = await Promise.all([
+  const [route, generic, sequential, advanced, editorSwitcher, editor, sitemap, telemetryBridge, telemetryLib, telemetryApi, converter, ocr, sidebar, search, consent, footer, adRoute, proRegistry, proEngines, proWorkspace, linksWorkspace, navigationWorkspace, preflight, contact, catalog, catalogStyles, converterStyles, workflowCopy] = await Promise.all([
     source("src/app/ferramentas/[slug]/page.tsx"),
     source("src/components/PdfToolWorkspace.tsx"),
     source("src/components/MemorySafePdfWorkspace.tsx"),
@@ -41,6 +41,11 @@ async function main() {
     source("src/components/ProLinksWorkspace.tsx"),
     source("src/components/ProNavigationWorkspace.tsx"),
     source("src/components/PreflightWorkspace.tsx"),
+    source("src/app/contato/page.tsx"),
+    source("src/components/ToolCatalog.tsx"),
+    source("src/app/catalog-discovery-2026.css"),
+    source("src/app/release-clean.css"),
+    source("src/lib/workflows.ts"),
   ]);
 
   assert.match(route, /\.\.\.allTools, \.\.\.proTools/, "A rota dinâmica deve gerar parâmetros core e profissionais.");
@@ -63,6 +68,13 @@ async function main() {
   assert.ok(!route.includes("editor /><div className=\"reference-editor-wrap\""), "Editar PDF não deve renderizar a camada antiga de Foco/Tela cheia/Comandos.");
 
   assert.ok(converter.includes("DataTransfer") && converter.includes("Converter para") && converter.includes("pdf-para-markdown"), "Conversor deve preservar o arquivo e oferecer Markdown ao trocar a saída.");
+  assert.ok(converter.includes("status-message.status-success") && converter.includes("status-message.status-error"), "Conversor deve liberar o estado ocupado para os workspaces que prefixam status de sucesso e erro.");
+  assert.ok(sequential.includes("Conversão concluída. O ZIP com as imagens está pronto para baixar."), "Conversão JPG/PNG deve publicar um estado de sucesso terminal.");
+  assert.ok(converter.includes("aria-busy={processingLocked}"), "Workspace do conversor deve expor o estado ocupado à tecnologia assistiva.");
+  assert.ok(catalog.includes("hasFewResults") && catalogStyles.includes(".reference-catalog.has-few-results"), "Busca com poucos resultados deve expandir os cards do catálogo.");
+  assert.ok(converterStyles.includes(".unified-converter-host .selected-files") && converterStyles.includes(".unified-converter-host .workspace-heading"), "Conversor unificado não deve duplicar arquivo e cabeçalho do workspace filho.");
+  assert.ok(contact.includes("Contato e suporte") && !contact.includes("Este endereço pode ser configurado") && !contact.includes("atualize a configuração antes de divulgar"), "Página de contato não deve expor notas internas de configuração.");
+  assert.ok(workflowCopy.includes("Preparar para impressão") && workflowCopy.includes("a orientação"), "Textos visíveis dos fluxos devem manter acentuação em pt-BR.");
   assert.ok(ocr.includes("Tesseract") && ocr.includes("parseTsvWords") && ocr.includes("drawText") && ocr.includes("MAX_RASTER_PIXELS"), "OCR deve criar camada pesquisável com limite de memória.");
 
   for (const marker of ["Organizar", "Editar", "Converter", "Formulários", "Segurança", "Otimizar", "Automação"]) assert.ok(navigation.includes(`: "${marker}"`) && sidebar.includes("navigationGroups.map"), `Sidebar sem jornada canónica ${marker}`);

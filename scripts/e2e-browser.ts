@@ -200,6 +200,17 @@ async function processTool(page: Page, slug: AllToolSlug) {
   await validateOutput(slug, target);
   const error = page.locator(".status-message.error,.status-message.status-error");
   assert.equal(await error.count(), 0, `${slug}: terminou com erro visível`);
+  if (unifiedConverterSlugs.has(slug)) {
+    const success = page.locator(".unified-converter-host .status-message.success, .unified-converter-host .status-message.status-success");
+    await success.waitFor({ state: "visible", timeout: 20_000 });
+    await page.waitForFunction(() => {
+      const button = document.querySelector<HTMLButtonElement>(".unified-converter .process-button");
+      return Boolean(button && !button.disabled);
+    }, undefined, { timeout: 20_000 });
+    assert.equal(await page.locator(".unified-converter-host .drop-zone:visible").count(), 0, `${slug}: uploader redundante visível no workspace incorporado`);
+    assert.equal(await page.locator(".unified-converter-host .selected-files:visible").count(), 0, `${slug}: resumo duplicado do arquivo visível no workspace incorporado`);
+    assert.equal(await page.locator(".converter-format-options button:disabled").count(), 0, `${slug}: opções de formato continuam bloqueadas após o sucesso`);
+  }
 }
 
 async function waitForProcessButton(page: Page) {

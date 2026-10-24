@@ -12,14 +12,14 @@ export const workflows: WorkflowDefinition[] = [
   {
     slug: "preparar-envio",
     title: "Preparar PDF para envio",
-    description: "Compacte, remova metadados e proteja a apresentacao antes de compartilhar.",
+    description: "Compacte, remova metadados e proteja a apresentação antes de compartilhar.",
     accent: "blue",
     tools: ["compactar-pdf", "remover-metadados", "pdf-em-escala-de-cinza"],
   },
   {
     slug: "editar-assinar",
     title: "Editar, preencher e assinar",
-    description: "Ajuste texto, preencha campos, assine e fixe o formulario final.",
+    description: "Ajuste o texto, preencha campos, assine e finalize o formulário.",
     accent: "purple",
     tools: ["editar-pdf", "preencher-formulario-pdf", "assinar-pdf", "achatar-formulario-pdf"],
   },
@@ -39,8 +39,8 @@ export const workflows: WorkflowDefinition[] = [
   },
   {
     slug: "impressao",
-    title: "Preparar para impressao",
-    description: "Ajuste tamanho, margens, orientacao e economia de papel.",
+    title: "Preparar para impressão",
+    description: "Ajuste o tamanho, as margens, a orientação e economize papel.",
     accent: "orange",
     tools: ["redimensionar-pdf", "criar-livreto-pdf", "recortar-pdf", "paginas-por-folha"],
   },

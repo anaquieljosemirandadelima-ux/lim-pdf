@@ -129,12 +129,13 @@ export function ToolCatalog({ initialQuery = "" }: { initialQuery?: string }) {
   const resultCount = filteredSections.reduce((total, group) => total + group.resolved.length, 0);
   const activeLabel = tabs.find((tab) => tab.id === active)?.label || "Todas";
   const hasFilters = Boolean(normalizedQuery) || active !== "todas";
+  const hasFewResults = hasFilters && resultCount > 0 && resultCount <= 3;
   const clearFilters = () => {
     setQuery("");
     setActive("todas");
   };
 
-  return <div className="reference-catalog">
+  return <div className={`reference-catalog${hasFewResults ? " has-few-results" : ""}`}>
     <div className="reference-catalog-head"><div><h1>Todas as ferramentas</h1><p>Escolha uma jornada. Cada função aparece uma só vez e os controles avançados ficam dentro do fluxo certo.</p></div><div className="catalog-filter"><label className="reference-search"><Search size={18} aria-hidden="true" /><input aria-label="Buscar no catálogo de ferramentas" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar dentro do catálogo..." />{query ? <button type="button" className="catalog-filter-clear" aria-label="Limpar busca do catálogo" onClick={() => setQuery("")}><X size={15} aria-hidden="true" /></button> : null}</label><span className="reference-search-note">Busca local no catálogo · aceita termos como imprimir, OCR, Word e juntar.</span></div></div>
     {!normalizedQuery && active === "todas" ? <div className="catalog-free-banner"><span className="catalog-premium-banner-icon"><Sparkles size={18} /></span><span><strong>O LIM PDF é 100% gratuito</strong><small>Processamento local, sem assinatura obrigatória e sem bloquear downloads ou impressão.</small></span></div> : null}
     {!normalizedQuery && active === "todas" ? <section className="catalog-priority-actions" aria-label="Ações principais"><Link href="/ferramentas/converter-pdf"><span><Repeat2 size={19} /></span><div><strong>Converter PDF</strong><small>Escolha a saída depois do upload</small></div><ArrowRight size={17} /></Link><Link href="/ferramentas/editar-pdf"><span><PencilLine size={19} /></span><div><strong>Editar PDF</strong><small>Texto, imagens, páginas e revisão em um só editor</small></div><ArrowRight size={17} /></Link><Link href="/ferramentas/ocr-pdf"><span><FileOutput size={19} /></span><div><strong>OCR PDF</strong><small>Torne digitalizações pesquisáveis</small></div><ArrowRight size={17} /></Link><Link href="/ferramentas/preflight-pdf"><span><ShieldCheck size={19} /></span><div><strong>Revisar e entregar</strong><small>Cheque privacidade, impressão e qualidade</small></div><ArrowRight size={17} /></Link></section> : null}

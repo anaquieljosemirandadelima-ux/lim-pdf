@@ -719,3 +719,10 @@
 .reference-catalog.has-few-results .reference-catalog-grid {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
 }
+
+/* Este stylesheet é importado por último; mantém a única área de upload do conversor ativa. */
+.unified-converter-host .drop-zone,
+.unified-converter-host .workspace-heading,
+.unified-converter-host .selected-files {
+  display: none !important;
+}

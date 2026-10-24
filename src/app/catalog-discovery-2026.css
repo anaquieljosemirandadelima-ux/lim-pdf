@@ -710,3 +710,12 @@
     margin: 6px 8px 0 !important;
   }
 }
+
+/* Evita cards estreitos e isolados quando uma busca retorna poucos resultados. */
+.reference-catalog.has-few-results .reference-tool-section {
+  max-width: 920px;
+}
+
+.reference-catalog.has-few-results .reference-catalog-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+}

@@ -71,6 +71,7 @@ export function MemorySafePdfWorkspace({ tool }: { tool: ToolDefinition }) {
     setStatus({ type: "processing", message: "Montando arquivo ZIP sem duplicar as imagens na memória..." });
     const zip = await createStoredZipFromBlobs(entries);
     prepareOutput(zip, `${file.name.replace(/\.pdf$/i, "")}-${extension}.zip`);
+    setStatus({ type: "success", message: "Conversão concluída. O ZIP com as imagens está pronto para baixar." });
   }
 
   async function processRasterPdf(grayscale: boolean) {
